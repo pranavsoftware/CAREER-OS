@@ -1,0 +1,151 @@
+@import "tailwindcss";
+
+@theme {
+  --color-accent: #4F46E5;
+  --color-accent-hover: #4338CA;
+  --color-bg-page: #F8F9FA;
+  --color-bg-card: #FFFFFF;
+  --color-border: #E5E7EB;
+  --color-text-primary: #111827;
+  --color-text-secondary: #6B7280;
+  --color-text-muted: #9CA3AF;
+  --radius-md: 8px;
+  --font-sans: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+  --breakpoint-md: 768px;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  font-family: var(--font-sans);
+  font-size: 14px;
+  color: var(--color-text-primary);
+  background-color: var(--color-bg-page);
+  margin: 0;
+  padding: 0;
+  line-height: 1.5;
+  overflow-x: hidden;
+}
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: #F1F5F9; }
+::-webkit-scrollbar-thumb { background: #CBD5E1; border-radius: 3px; }
+
+/* Print styles for resume PDF */
+@media print {
+  body * { visibility: hidden; }
+  #resume-preview, #resume-preview * { visibility: visible; }
+  #resume-preview {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: auto;
+    border: none !important;
+    box-shadow: none !important;
+  }
+}
+
+/* Drag over state */
+.drag-over {
+  background-color: #EEF2FF !important;
+  border-color: #4F46E5 !important;
+}
+
+/* ─── Animations ─── */
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(16px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes pulseDot {
+  0%, 100% { transform: scale(1); opacity: 1; }
+  50%       { transform: scale(1.4); opacity: 0.6; }
+}
+
+@keyframes slideInRight {
+  from { transform: translateX(110%); }
+  to   { transform: translateX(0); }
+}
+
+@keyframes slideInLeft {
+  from { transform: translateX(-110%); }
+  to   { transform: translateX(0); }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+.animate-fade-in-up {
+  animation: fadeInUp 0.55s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.animate-pulse-dot {
+  animation: pulseDot 2s infinite ease-in-out;
+}
+
+.animate-slide-in-right {
+  animation: slideInRight 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.animate-slide-in-left {
+  animation: slideInLeft 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.2s ease forwards;
+}
+
+/* ─── Explicit responsive helpers for Tailwind v4 ─── */
+/* These allow us to show/hide elements at the 768px breakpoint */
+.mobile-only {
+  display: block;
+}
+.desktop-only {
+  display: none;
+}
+.desktop-flex {
+  display: none;
+}
+.desktop-inline-flex {
+  display: none;
+}
+
+@media (min-width: 768px) {
+  .mobile-only {
+    display: none !important;
+  }
+  .desktop-only {
+    display: block !important;
+  }
+  .desktop-flex {
+    display: flex !important;
+  }
+  .desktop-inline-flex {
+    display: inline-flex !important;
+  }
+}
+
+/* Table horizontal scroll */
+.table-scroll {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Card hover lift */
+.card-hover {
+  transition: box-shadow 0.2s ease, transform 0.2s ease;
+}
+.card-hover:hover {
+  box-shadow: 0 8px 24px -4px rgba(0, 0, 0, 0.12);
+  transform: translateY(-2px);
+}

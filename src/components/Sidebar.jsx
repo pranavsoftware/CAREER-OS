@@ -1,0 +1,83 @@
+import { NavLink } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
+
+// Nav configs per role
+const studentNav = [
+  { to: '/student/dashboard', label: 'Dashboard' },
+  { to: '/student/profile', label: 'Profile' },
+  { to: '/student/resume', label: 'Resume Builder' },
+  { to: '/student/applications', label: 'Applications' },
+  { to: '/student/certificates', label: 'Certificates' },
+  { to: '/student/skill-gap', label: 'Skill Gap' },
+  { to: '/student/interview-prep', label: 'Interview Prep' },
+];
+
+const universityNav = [
+  { to: '/university/dashboard', label: 'Dashboard' },
+  { to: '/university/students', label: 'Students' },
+  { to: '/university/drives', label: 'Drives' },
+  { to: '/university/mail-filter', label: 'Mail Filter' },
+];
+
+const companyNav = [
+  { to: '/company/dashboard', label: 'Dashboard' },
+  { to: '/company/jobs', label: 'Jobs' },
+  { to: '/company/candidates', label: 'Candidates' },
+  { to: '/company/pipeline', label: 'Pipeline' },
+];
+
+const NAV_BY_ROLE = {
+  student: studentNav,
+  university: universityNav,
+  company: companyNav,
+};
+
+export default function Sidebar() {
+  const { user } = useAuth();
+  const navItems = NAV_BY_ROLE[user?.role] || [];
+
+  return (
+    <aside
+      style={{ width: 240, minHeight: '100vh', background: '#fff', borderRight: '1px solid #E5E7EB' }}
+      className="flex flex-col flex-shrink-0"
+    >
+      {/* Logo / App name */}
+      <div style={{ padding: '20px 16px 16px', borderBottom: '1px solid #E5E7EB' }}>
+        <span style={{ fontSize: 18, fontWeight: 700, color: '#2563EB', letterSpacing: '-0.5px' }}>
+          CAREER-OS
+        </span>
+        <div style={{ fontSize: 11, color: '#9CA3AF', marginTop: 2 }}>Placement management platform</div>
+      </div>
+
+      {/* Nav links */}
+      <nav style={{ padding: '12px 8px', flex: 1 }}>
+        {navItems.map(item => (
+          <NavLink
+            key={item.to}
+            to={item.to}
+            style={({ isActive }) => ({
+              display: 'block',
+              padding: '8px 12px',
+              marginBottom: 2,
+              borderRadius: 6,
+              fontSize: 14,
+              fontWeight: 500,
+              textDecoration: 'none',
+              color: isActive ? '#2563EB' : '#374151',
+              background: isActive ? '#EFF6FF' : 'transparent',
+            })}
+          >
+            {item.label}
+          </NavLink>
+        ))}
+      </nav>
+
+      {/* Role badge at bottom */}
+      <div style={{ padding: '12px 16px', borderTop: '1px solid #E5E7EB' }}>
+        <div style={{ fontSize: 11, color: '#9CA3AF', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+          {user?.role} portal
+        </div>
+      </div>
+    </aside>
+  );
+}

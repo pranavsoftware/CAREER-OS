@@ -1,0 +1,48 @@
+// Mock notifications for Aarav (s1)
+export const initialNotifications = [
+  {
+    id: 'n1',
+    studentId: 's1',
+    type: 'email_filter',
+    title: 'Mail from Zoho Careers detected',
+    message: 'You are eligible for Zoho Product Engineer drive (CGPA 8.4 >= 7.5, CSE). Drive not yet floated on portal.',
+    read: false,
+    createdAt: '2026-01-10T09:30:00',
+  },
+  {
+    id: 'n2',
+    studentId: 's1',
+    type: 'email_filter',
+    title: 'Mail from Amazon University Relations detected',
+    message: 'You are eligible for Amazon SDE-1 drive (CGPA 8.4 >= 8.0, CSE). Application deadline: March 28, 2026.',
+    read: false,
+    createdAt: '2026-01-15T12:00:00',
+  },
+  {
+    id: 'n3',
+    studentId: 's1',
+    type: 'drive',
+    title: 'New drive posted: Freshworks SDE',
+    message: 'Freshworks has posted a new drive for Software Development Engineer role. CTC: 12 LPA. Deadline: April 10, 2026.',
+    read: true,
+    createdAt: '2026-02-01T10:00:00',
+  },
+  {
+    id: 'n4',
+    studentId: 's1',
+    type: 'application',
+    title: 'Application update: Wipro Project Engineer',
+    message: 'Congratulations! You have received an offer from Wipro for the Project Engineer role. CTC: 5.5 LPA.',
+    read: true,
+    createdAt: '2026-02-10T15:00:00',
+  },
+  {
+    id: 'n5',
+    studentId: 's1',
+    type: 'certificate',
+    title: 'Certificate expiring soon',
+    message: 'Your Google Project Management Certificate expires on November 1, 2026. Consider renewing it.',
+    read: false,
+    createdAt: '2026-09-01T09:00:00',
+  },
+];
