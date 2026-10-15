@@ -1,0 +1,206 @@
+{
+  "voice": "indian_male",
+  "model": "en_US-kusal-medium (Piper ONNX)",
+  "character": "Vikram Malhotra (Lead Technical HR)",
+  "license": "MIT (Commercial Use Allowed)",
+  "sample_rate": 16000,
+  "generated_at": "2026-10-14T21:43:55Z",
+  "prompts": {
+    "sys_welcome": {
+      "path": "/audio/questions/welcome.wav",
+      "duration": 11.22,
+      "raw_text": "Hello! Welcome to your placement interview. I'm Vikram Malhotra, your technical HR partner. Feel relaxed, speak naturally like a colleague, and let's have a great conversation. Let's get started with our first question.",
+      "normalized_text": "Hello! Welcome to your placement interview. I'm Vikram Malhotra, your technical HR partner. Feel relaxed, speak naturally like a colleague, and let's have a great conversation. Let's get started with our first question.",
+      "generation_time_s": 13.57
+    },
+    "sys_hands_up": {
+      "path": "/audio/questions/hands_up.wav",
+      "duration": 7.99,
+      "raw_text": "Excuse me, I noticed a change in your camera focus or tab. Please raise both hands clearly in front of the camera for a moment so we can verify your workspace and continue.",
+      "normalized_text": "Excuse me, I noticed a change in your camera focus or tab. Please raise both hands clearly in front of the camera for a moment so we can verify your workspace and continue.",
+      "generation_time_s": 7.37
+    },
+    "sys_wrap_up": {
+      "path": "/audio/questions/wrap_up.wav",
+      "duration": 8.84,
+      "raw_text": "Thank you so much for your thoughtful answers. That completes our interview session today. I am now generating your comprehensive technical evaluation and placement feedback scorecard.",
+      "normalized_text": "Thank you so much for your thoughtful answers. That completes our interview session today. I am now generating your comprehensive technical evaluation and placement feedback scorecard.",
+      "generation_time_s": 7.59
+    },
+    "fe_q1": {
+      "path": "/audio/questions/fe_q1.wav",
+      "duration": 7.45,
+      "raw_text": "Can you explain how the Virtual DOM works in React, and how the reconciliation algorithm decides when and what to re-render in the actual DOM?",
+      "normalized_text": "Can you explain how the Virtual dom works in React, and how the reconciliation algorithm decides when and what to re-render in the actual dom?",
+      "generation_time_s": 5.49
+    },
+    "fe_q2": {
+      "path": "/audio/questions/fe_q2.wav",
+      "duration": 5.31,
+      "raw_text": "When should you use `useCallback` and `useMemo` hooks, and what are the performance overheads or antipatterns if overused?",
+      "normalized_text": "When should you use useCallback and useMemo hooks, and what are the performance overheads or antipatterns if overused?",
+      "generation_time_s": 4.88
+    },
+    "fe_q3": {
+      "path": "/audio/questions/fe_q3.wav",
+      "duration": 8.19,
+      "raw_text": "Coding Challenge: Implement a debounce utility function in JavaScript that prevents rapid-fire API calls on an autocomplete search input.",
+      "normalized_text": "Coding Challenge: Implement a debounce utility function in JavaScript that prevents rapid-fire A P I calls on an autocomplete search input.",
+      "generation_time_s": 6.2
+    },
+    "fe_q4": {
+      "path": "/audio/questions/fe_q4.wav",
+      "duration": 9.85,
+      "raw_text": "Your web application has a poor Largest Contentful Paint (LCP) and high Cumulative Layout Shift (CLS). What steps and tools would you take to diagnose and resolve these issues?",
+      "normalized_text": "Your web application has a poor Largest Contentful Paint (LCP) and high Cumulative Layout Shift (CLS). What steps and tools would you take to diagnose and resolve these issues?",
+      "generation_time_s": 7.81
+    },
+    "fe_q5": {
+      "path": "/audio/questions/fe_q5.wav",
+      "duration": 8.52,
+      "raw_text": "Tell me about a time you encountered a stubborn frontend bug or disagreement with a backend engineer regarding API payload formats. How did you resolve it?",
+      "normalized_text": "Tell me about a time you encountered a stubborn frontend bug or disagreement with a backend engineer regarding A P I payload formats. How did you resolve it?",
+      "generation_time_s": 7.97
+    },
+    "be_q1": {
+      "path": "/audio/questions/be_q1.wav",
+      "duration": 7.27,
+      "raw_text": "How does the Node.js event loop handle asynchronous I/O despite JavaScript being single-threaded? What is the role of libuv and the worker thread pool?",
+      "normalized_text": "How does the Node.JavaScript event loop handle asynchronous I O despite JavaScript being single-threaded? What is the role of libuv and the worker thread pool?",
+      "generation_time_s": 7.09
+    },
+    "be_q2": {
+      "path": "/audio/questions/be_q2.wav",
+      "duration": 7.84,
+      "raw_text": "Explain how B-tree indexing in PostgreSQL or MySQL accelerates SELECT queries. When might an index degrade performance instead of improving it?",
+      "normalized_text": "Explain how bee tree indexing in Postgres Q L or My S Q L accelerates SELECT queries. When might an index degrade performance instead of improving it?",
+      "generation_time_s": 6.58
+    },
+    "be_q3": {
+      "path": "/audio/questions/be_q3.wav",
+      "duration": 10.5,
+      "raw_text": "Coding Challenge: Write an in-memory Rate Limiter function in Node.js that restricts a client IP to a maximum number of requests within a sliding time window.",
+      "normalized_text": "Coding Challenge: Write an in-memory Rate Limiter function in Node.JavaScript that restricts a client I P to a maximum number of requests within a sliding time window.",
+      "generation_time_s": 10.21
+    },
+    "be_q4": {
+      "path": "/audio/questions/be_q4.wav",
+      "duration": 8.34,
+      "raw_text": "Walk me through how you would secure a RESTful API against common attacks: SQL Injection, Broken Object Level Authorization (BOLA), and Rate Limit abuse.",
+      "normalized_text": "Walk me through how you would secure a restful A P I against common attacks: sequel Injection, Broken Object Level Authorization (BOLA), and Rate Limit abuse.",
+      "generation_time_s": 3.6
+    },
+    "be_q5": {
+      "path": "/audio/questions/be_q5.wav",
+      "duration": 8.66,
+      "raw_text": "Describe a situation where a production service or database experienced high latency or a crash. How did you troubleshoot it under pressure, and what post-mortem action did you take?",
+      "normalized_text": "Describe a situation where a production service or database experienced high latency or a crash. How did you troubleshoot it under pressure, and what post-mortem action did you take?",
+      "generation_time_s": 1.0
+    },
+    "fs_q1": {
+      "path": "/audio/questions/fs_q1.wav",
+      "duration": 8.0,
+      "raw_text": "How do you design an authentication and authorization workflow for a web application using JWT and Refresh Tokens? Where do you store them securely on the client?",
+      "normalized_text": "How do you design an authentication and authorization workflow for a web application using J W T and Refresh Tokens? Where do you store them securely on the client?",
+      "generation_time_s": 0.84
+    },
+    "fs_q2": {
+      "path": "/audio/questions/fs_q2.wav",
+      "duration": 10.09,
+      "raw_text": "Suppose you are building a real-time collaborative document or live test portal where multiple users update state simultaneously. How do you maintain data consistency between client and server?",
+      "normalized_text": "Suppose you are building a real-time collaborative document or live test portal where multiple users update state simultaneously. How do you maintain data consistency between client and server?",
+      "generation_time_s": 1.1
+    },
+    "fs_q3": {
+      "path": "/audio/questions/fs_q3.wav",
+      "duration": 12.27,
+      "raw_text": "Coding Challenge: Write an Express.js JWT authentication middleware function authenticateToken(req, res, next) that extracts the Bearer token from the Authorization header and verifies it.",
+      "normalized_text": "Coding Challenge: Write an Express.JavaScript J W T authentication middleware function authenticateToken(req, res, next) that extracts the Bearer token from the Authorization header and verifies it.",
+      "generation_time_s": 1.3
+    },
+    "fs_q4": {
+      "path": "/audio/questions/fs_q4.wav",
+      "duration": 9.78,
+      "raw_text": "Walk through your CI/CD pipeline from a Git pull request to production deployment on cloud infrastructure (e.g., Docker, AWS/Vercel). What automated checks occur?",
+      "normalized_text": "Walk through your C I C D pipeline from a Git pull request to production deployment on cloud infrastructure (e.g., Docker, A W S/Vercel). What automated checks occur?",
+      "generation_time_s": 1.03
+    },
+    "fs_q5": {
+      "path": "/audio/questions/fs_q5.wav",
+      "duration": 7.23,
+      "raw_text": "Tell me about a complex full-stack feature you built from scratch. What technical trade-off did you make to meet a deadline, and what would you improve with more time?",
+      "normalized_text": "Tell me about a complex full-stack feature you built from scratch. What technical trade-off did you make to meet a deadline, and what would you improve with more time?",
+      "generation_time_s": 0.86
+    },
+    "da_q1": {
+      "path": "/audio/questions/da_q1.wav",
+      "duration": 7.57,
+      "raw_text": "Coding Challenge: Write a SQL query using DENSE_RANK() to retrieve the top 3 highest student placement packages per department from the placements table.",
+      "normalized_text": "Coding Challenge: Write a sequel query using DENSE_RANK() to retrieve the top 3 highest student placement packages per department from the placements table.",
+      "generation_time_s": 0.76
+    },
+    "da_q2": {
+      "path": "/audio/questions/da_q2.wav",
+      "duration": 7.17,
+      "raw_text": "How do you handle missing values, duplicate records, and outliers in a messy dataset before presenting analytics to company leadership?",
+      "normalized_text": "How do you handle missing values, duplicate records, and outliers in a messy dataset before presenting analytics to company leadership?",
+      "generation_time_s": 0.71
+    },
+    "da_q3": {
+      "path": "/audio/questions/da_q3.wav",
+      "duration": 10.12,
+      "raw_text": "If a company reports a 20% increase in monthly active users (MAU) but revenue drops by 8%, how would you investigate and pinpoint the root cause?",
+      "normalized_text": "If a company reports a 20% increase in monthly active users (MAU) but revenue drops by 8%, how would you investigate and pinpoint the root cause?",
+      "generation_time_s": 0.95
+    },
+    "da_q4": {
+      "path": "/audio/questions/da_q4.wav",
+      "duration": 7.66,
+      "raw_text": "What principles do you follow when designing an executive dashboard in Power BI or Tableau to ensure leaders make decisions without cognitive overload?",
+      "normalized_text": "What principles do you follow when designing an executive dashboard in Power BI or Tableau to ensure leaders make decisions without cognitive overload?",
+      "generation_time_s": 0.77
+    },
+    "da_q5": {
+      "path": "/audio/questions/da_q5.wav",
+      "duration": 6.48,
+      "raw_text": "Tell me about a time when your data analysis contradicted a senior manager\u2019s intuition. How did you present your findings and manage the pushback?",
+      "normalized_text": "Tell me about a time when your data analysis contradicted a senior manager\u2019s intuition. How did you present your findings and manage the pushback?",
+      "generation_time_s": 0.64
+    },
+    "ml_q1": {
+      "path": "/audio/questions/ml_q1.wav",
+      "duration": 10.39,
+      "raw_text": "Coding Challenge: Write a Python function compute_classification_metrics(y_true, y_pred) that calculates Precision, Recall, and F1-Score from scratch without importing scikit-learn.",
+      "normalized_text": "Coding Challenge: Write a Python function compute_classification_metrics(y_true, y_pred) that calculates Precision, Recall, and F1-Score from scratch without importing scikit-learn.",
+      "generation_time_s": 0.92
+    },
+    "ml_q2": {
+      "path": "/audio/questions/ml_q2.wav",
+      "duration": 8.15,
+      "raw_text": "Explain the architecture and workflow of Retrieval-Augmented Generation (RAG). How does chunking strategy and vector similarity search impact answer hallucination?",
+      "normalized_text": "Explain the architecture and workflow of Retrieval-Augmented Generation (RAG). How does chunking strategy and vector similarity search impact answer hallucination?",
+      "generation_time_s": 0.78
+    },
+    "ml_q3": {
+      "path": "/audio/questions/ml_q3.wav",
+      "duration": 7.76,
+      "raw_text": "What is the role of the Self-Attention mechanism in Transformer models compared to traditional RNNs/LSTMs? Why does self-attention scale better?",
+      "normalized_text": "What is the role of the Self-Attention mechanism in Transformer models compared to traditional RNNs/LSTMs? Why does self-attention scale better?",
+      "generation_time_s": 0.71
+    },
+    "ml_q4": {
+      "path": "/audio/questions/ml_q4.wav",
+      "duration": 7.0,
+      "raw_text": "How do you monitor a machine learning model deployed in production for Data Drift and Concept Drift, and what automated actions should be triggered?",
+      "normalized_text": "How do you monitor a machine learning model deployed in production for Data Drift and Concept Drift, and what automated actions should be triggered?",
+      "generation_time_s": 0.64
+    },
+    "ml_q5": {
+      "path": "/audio/questions/ml_q5.wav",
+      "duration": 7.56,
+      "raw_text": "Tell me about a project where your machine learning model exhibited unintended bias or poor edge-case performance. How did you diagnose and remediate it?",
+      "normalized_text": "Tell me about a project where your machine learning model exhibited unintended bias or poor edge-case performance. How did you diagnose and remediate it?",
+      "generation_time_s": 0.71
+    }
+  }
+}

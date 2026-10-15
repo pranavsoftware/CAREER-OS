@@ -33,7 +33,8 @@ function buildResumeText(student) {
     student.projects.forEach(p => {
       parts.push(p.title.toLowerCase());
       parts.push(p.description.toLowerCase());
-      parts.push((p.technologies || []).join(' ').toLowerCase());
+      const techs = Array.isArray(p.technologies) ? p.technologies : typeof p.technologies === 'string' ? p.technologies.split(',').map(s => s.trim()) : [];
+      parts.push(techs.join(' ').toLowerCase());
     });
   }
   if (student.experience) {

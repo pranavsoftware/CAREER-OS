@@ -14,14 +14,6 @@ export default function Topbar({ title }) {
     navigate('/login');
   }
 
-  function handleReset() {
-    if (window.confirm('Reset all demo data to defaults? This cannot be undone.')) {
-      dispatch({ type: 'RESET_DATA' });
-      logout();
-      navigate('/login');
-    }
-    setMenuOpen(false);
-  }
 
   const displayRole = user?.displayRole || (user?.role ? (user.role.charAt(0).toUpperCase() + user.role.slice(1)) : '');
 
@@ -88,7 +80,7 @@ export default function Topbar({ title }) {
               right: 0,
               top: '100%',
               marginTop: 4,
-              width: 180,
+              width: 160,
               background: '#fff',
               border: '1px solid #E5E7EB',
               borderRadius: 6,
@@ -96,13 +88,6 @@ export default function Topbar({ title }) {
               zIndex: 100,
             }}
           >
-            <button
-              onClick={handleReset}
-              style={{ display: 'block', width: '100%', padding: '10px 16px', textAlign: 'left', border: 'none', background: 'none', cursor: 'pointer', fontSize: 14, color: '#6B7280' }}
-            >
-              Reset demo data
-            </button>
-            <div style={{ borderTop: '1px solid #E5E7EB' }} />
             <button
               onClick={handleLogout}
               style={{ display: 'block', width: '100%', padding: '10px 16px', textAlign: 'left', border: 'none', background: 'none', cursor: 'pointer', fontSize: 14, color: '#DC2626' }}

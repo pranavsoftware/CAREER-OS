@@ -10,7 +10,10 @@ lerna-debug.log*
 node_modules
 dist
 dist-ssr
+.next
 *.local
+.env.local
+.env
 
 # Editor directories and files
 .vscode/*
@@ -21,4 +24,12 @@ dist-ssr
 *.ntvs*
 *.njsproj
 *.sln
-*.sw?
+# Python & AI Models
+__pycache__/
+*.py[cod]
+*$py.class
+venv/
+.venv/
+ai-service/models/
+*.mp4
+ai-interview-fixes.jsx

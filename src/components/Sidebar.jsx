@@ -4,6 +4,7 @@ import { useAuth } from '../context/AuthContext';
 // Nav configs per role
 const studentNav = [
   { to: '/student/dashboard', label: 'Dashboard' },
+  { to: '/student/portfolio', label: 'Projects & Portfolio' },
   { to: '/student/profile', label: 'Profile' },
   { to: '/student/resume', label: 'Resume Builder' },
   { to: '/student/applications', label: 'Applications' },

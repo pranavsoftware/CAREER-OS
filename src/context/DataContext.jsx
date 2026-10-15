@@ -1,65 +1,94 @@
-import { createContext, useContext, useReducer, useEffect } from 'react';
-import { initialStudents } from '../data/students';
-import { initialDrives } from '../data/drives';
-import { initialJobs } from '../data/jobs';
-import { initialApplications, driveApplications } from '../data/applications';
-import { initialCertificates } from '../data/certificates';
-import { initialNotifications } from '../data/notifications';
-import { initialMails } from '../data/mails';
+'use client';
+
+import { createContext, useContext, useReducer, useEffect, useState } from 'react';
 
 const DataContext = createContext(null);
 const STORAGE_KEY = 'career_os_data';
 
-const initialState = {
-  students: initialStudents,
-  drives: initialDrives,
-  jobs: initialJobs,
-  applications: initialApplications,
-  driveApplications: driveApplications,
-  certificates: initialCertificates,
-  notifications: initialNotifications,
-  mails: initialMails,
-  // Company pipeline: candidateId -> jobId -> stage
+const defaultEmptyState = {
+  students: [],
+  drives: [],
+  jobs: [],
+  applications: [],
+  driveApplications: [],
+  certificates: [],
+  notifications: [],
+  mails: [],
+  sentMails: [],
+  materials: [],
   pipeline: {},
-  // Resume versions per student
+  questionBank: [],
+  skillTaxonomy: {},
+  roleOptions: [],
   resumeVersions: {},
-  // Skill gap roadmap progress per student
   roadmapProgress: {},
-  // Test attempts history
-  testAttempts: [
-    { id: 'ta1', studentId: 's1', topic: 'DSA', date: '2026-09-01', score: 6, total: 10, percentage: 60, weakAreas: [] },
-    { id: 'ta2', studentId: 's1', topic: 'React', date: '2026-09-15', score: 7, total: 10, percentage: 70, weakAreas: [] },
-    { id: 'ta3', studentId: 's1', topic: 'DBMS', date: '2026-09-28', score: 5, total: 10, percentage: 50, weakAreas: ['DBMS'] },
-  ],
+  testAttempts: [],
 };
-
-function getInitialState() {
-  try {
-    const stored = localStorage.getItem(STORAGE_KEY);
-    if (stored) {
-      return JSON.parse(stored);
-    }
-  } catch (e) {
-    // ignore
-  }
-  return initialState;
-}
 
 function dataReducer(state, action) {
   switch (action.type) {
+    case 'SET_SERVER_DATA': {
+      return {
+        ...state,
+        ...action.payload,
+      };
+    }
+
     // ---- STUDENT ----
     case 'UPDATE_STUDENT': {
       const students = state.students.map(s =>
         s.id === action.payload.id ? { ...s, ...action.payload } : s
       );
+      // Persist to backend
+      fetch(`/api/students/${action.payload.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(action.payload),
+      }).catch(err => console.error('Error updating student in db:', err));
+
       return { ...state, students };
+    }
+
+    case 'ADD_STUDENT': {
+      fetch('/api/students', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(action.payload),
+      }).catch(err => console.error('Error adding student to db:', err));
+
+      return { ...state, students: [...state.students, action.payload] };
+    }
+
+    case 'ADD_STUDENTS': {
+      fetch('/api/students', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ students: action.payload }),
+      }).catch(err => console.error('Error mass adding students to db:', err));
+
+      return { ...state, students: [...state.students, ...action.payload] };
     }
 
     // ---- DRIVES ----
     case 'ADD_DRIVE': {
-      return { ...state, drives: [...state.drives, action.payload] };
+      // Persist to backend
+      fetch('/api/drives', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(action.payload),
+      }).catch(err => console.error('Error adding drive to db:', err));
+
+      return { ...state, drives: [action.payload, ...state.drives] };
     }
+
     case 'UPDATE_DRIVE': {
+      // Persist to backend
+      fetch(`/api/drives/${action.payload.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(action.payload),
+      }).catch(err => console.error('Error updating drive in db:', err));
+
       const drives = state.drives.map(d =>
         d.id === action.payload.id ? { ...d, ...action.payload } : d
       );
@@ -68,9 +97,24 @@ function dataReducer(state, action) {
 
     // ---- JOBS ----
     case 'ADD_JOB': {
+      // Persist to backend
+      fetch('/api/jobs', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(action.payload),
+      }).catch(err => console.error('Error adding job to db:', err));
+
       return { ...state, jobs: [...state.jobs, action.payload] };
     }
+
     case 'UPDATE_JOB': {
+      // Persist to backend
+      fetch(`/api/jobs/${action.payload.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(action.payload),
+      }).catch(err => console.error('Error updating job in db:', err));
+
       const jobs = state.jobs.map(j =>
         j.id === action.payload.id ? { ...j, ...action.payload } : j
       );
@@ -79,22 +123,55 @@ function dataReducer(state, action) {
 
     // ---- APPLICATIONS ----
     case 'ADD_APPLICATION': {
+      // Persist to backend
+      fetch('/api/applications', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(action.payload),
+      }).catch(err => console.error('Error adding application to db:', err));
+
       return { ...state, applications: [...state.applications, action.payload] };
     }
+
     case 'UPDATE_APPLICATION': {
+      // Persist to backend
+      fetch('/api/applications', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(action.payload),
+      }).catch(err => console.error('Error updating application in db:', err));
+
       const applications = state.applications.map(a =>
         a.id === action.payload.id ? { ...a, ...action.payload } : a
       );
       return { ...state, applications };
     }
+
     case 'DELETE_APPLICATION': {
       return { ...state, applications: state.applications.filter(a => a.id !== action.payload) };
     }
 
     // ---- DRIVE APPLICATIONS ----
     case 'ADD_DRIVE_APPLICATION': {
+      // Also register as an application in DB
+      fetch('/api/applications', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          ...action.payload,
+          id: action.payload.id,
+          studentId: action.payload.studentId,
+          driveId: action.payload.driveId,
+          company: action.payload.company,
+          role: action.payload.role,
+          ctc: action.payload.ctc,
+          status: action.payload.status || 'Applied',
+        }),
+      }).catch(err => console.error('Error adding drive application:', err));
+
       return { ...state, driveApplications: [...state.driveApplications, action.payload] };
     }
+
     case 'UPDATE_DRIVE_APPLICATION': {
       const driveApplications = state.driveApplications.map(a =>
         a.id === action.payload.id ? { ...a, ...action.payload } : a
@@ -104,22 +181,49 @@ function dataReducer(state, action) {
 
     // ---- CERTIFICATES ----
     case 'ADD_CERTIFICATE': {
+      // Persist to backend
+      fetch('/api/certificates', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(action.payload),
+      }).catch(err => console.error('Error adding certificate to db:', err));
+
       return { ...state, certificates: [...state.certificates, action.payload] };
     }
+
     case 'DELETE_CERTIFICATE': {
+      // Persist to backend
+      fetch(`/api/certificates?id=${action.payload}`, {
+        method: 'DELETE',
+      }).catch(err => console.error('Error deleting certificate from db:', err));
+
       return { ...state, certificates: state.certificates.filter(c => c.id !== action.payload) };
     }
 
     // ---- NOTIFICATIONS ----
     case 'ADD_NOTIFICATION': {
+      fetch('/api/notifications', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(action.payload),
+      }).catch(err => console.error('Error creating notification in db:', err));
+
       return { ...state, notifications: [action.payload, ...state.notifications] };
     }
+
     case 'MARK_NOTIFICATION_READ': {
+      fetch('/api/notifications', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: action.payload, read: true }),
+      }).catch(err => console.error('Error marking notification read in db:', err));
+
       const notifications = state.notifications.map(n =>
         n.id === action.payload ? { ...n, read: true } : n
       );
       return { ...state, notifications };
     }
+
     case 'MARK_ALL_READ': {
       const notifications = state.notifications.map(n => ({ ...n, read: true }));
       return { ...state, notifications };
@@ -127,23 +231,90 @@ function dataReducer(state, action) {
 
     // ---- MAILS ----
     case 'UPDATE_MAIL': {
+      fetch('/api/mails', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(action.payload),
+      }).catch(err => console.error('Error updating mail in db:', err));
+
       const mails = state.mails.map(m =>
         m.id === action.payload.id ? { ...m, ...action.payload } : m
       );
       return { ...state, mails };
     }
 
+    case 'ADD_SENT_MAIL': {
+      fetch('/api/sent-mails', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(action.payload),
+      }).catch(err => console.error('Error recording sent mail in db:', err));
+
+      return {
+        ...state,
+        sentMails: [action.payload, ...(state.sentMails || [])],
+      };
+    }
+
+    // ---- MATERIALS (Study Materials & Notes) ----
+    case 'ADD_MATERIAL': {
+      fetch('/api/materials', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(action.payload),
+      }).catch(err => console.error('Error adding material in db:', err));
+
+      return { ...state, materials: [action.payload, ...(state.materials || [])] };
+    }
+
+    case 'DELETE_MATERIAL': {
+      fetch(`/api/materials/${action.payload}`, {
+        method: 'DELETE',
+      }).catch(err => console.error('Error deleting material from db:', err));
+
+      return {
+        ...state,
+        materials: (state.materials || []).filter(m => m.id !== action.payload),
+      };
+    }
+
+    case 'UPDATE_MATERIAL': {
+      fetch(`/api/materials/${action.payload.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(action.payload),
+      }).catch(err => console.error('Error updating material in db:', err));
+
+      return {
+        ...state,
+        materials: (state.materials || []).map(m =>
+          m.id === action.payload.id ? { ...m, ...action.payload } : m
+        ),
+      };
+    }
+
     // ---- VERIFICATION (university verifies student sections) ----
     case 'VERIFY_STUDENT_SECTION': {
       const { studentId, section, status, remark } = action.payload;
+      const targetStudent = state.students.find(s => s.id === studentId);
+      const newVerification = { ...(targetStudent?.verificationStatus || {}), [section]: status };
+      const statuses = Object.values(newVerification);
+      const profileStatus = statuses.every(v => v === 'Verified') ? 'Verified'
+        : statuses.some(v => v === 'Verified') ? 'Partial'
+        : 'Pending';
+
+      // Persist to DB
+      fetch(`/api/students/${studentId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          verificationStatus: newVerification,
+          profileStatus,
+        }),
+      }).catch(err => console.error('Error updating verification status in db:', err));
+
       const students = state.students.map(s => {
         if (s.id !== studentId) return s;
-        const newVerification = { ...s.verificationStatus, [section]: status };
-        // Recalculate overall profileStatus
-        const statuses = Object.values(newVerification);
-        const profileStatus = statuses.every(v => v === 'Verified') ? 'Verified'
-          : statuses.some(v => v === 'Verified') ? 'Partial'
-          : 'Pending';
         return {
           ...s,
           verificationStatus: newVerification,
@@ -160,12 +331,17 @@ function dataReducer(state, action) {
       const jobPipeline = { ...(state.pipeline[jobId] || {}), [studentId]: stage };
       const newPipeline = { ...state.pipeline, [jobId]: jobPipeline };
 
-      // Cross-role: if stage is 'Offer Sent', update student application to 'Offer'
+      // Persist to DB
+      fetch('/api/pipeline', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ jobId, studentId, stage }),
+      }).catch(err => console.error('Error updating pipeline in db:', err));
+
       let applications = state.applications;
-      if (stage === 'Offer Sent') {
+      if (stage === 'Offer Sent' || stage === 'Offer') {
         applications = state.applications.map(a => {
           if (a.studentId === studentId) {
-            // Find matching application for this job
             const job = state.jobs.find(j => j.id === jobId);
             if (job && a.company === job.company) {
               return {
@@ -188,6 +364,12 @@ function dataReducer(state, action) {
     // ---- RESUME VERSIONS ----
     case 'SAVE_RESUME_VERSION': {
       const { studentId, version } = action.payload;
+      fetch('/api/resume-versions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ studentId, ...version }),
+      }).catch(err => console.error('Error saving resume version to db:', err));
+
       const existing = state.resumeVersions[studentId] || [];
       return {
         ...state,
@@ -197,8 +379,13 @@ function dataReducer(state, action) {
         },
       };
     }
+
     case 'DELETE_RESUME_VERSION': {
       const { studentId, versionId } = action.payload;
+      fetch(`/api/resume-versions?id=${versionId}`, {
+        method: 'DELETE',
+      }).catch(err => console.error('Error deleting resume version from db:', err));
+
       const existing = state.resumeVersions[studentId] || [];
       return {
         ...state,
@@ -214,24 +401,40 @@ function dataReducer(state, action) {
       const { studentId, role, stepId } = action.payload;
       const key = `${studentId}_${role}`;
       const current = state.roadmapProgress[key] || {};
+      const newStatus = !current[stepId];
+
+      fetch('/api/roadmap', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ studentId, role, stepId, completed: newStatus }),
+      }).catch(err => console.error('Error saving roadmap progress to db:', err));
+
       return {
         ...state,
         roadmapProgress: {
           ...state.roadmapProgress,
-          [key]: { ...current, [stepId]: !current[stepId] },
+          [key]: { ...current, [stepId]: newStatus },
         },
       };
     }
 
     // ---- TEST ATTEMPTS ----
     case 'ADD_TEST_ATTEMPT': {
+      fetch('/api/test-attempts', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(action.payload),
+      }).catch(err => console.error('Error saving test attempt to db:', err));
+
       return { ...state, testAttempts: [...state.testAttempts, action.payload] };
     }
 
     // ---- RESET ----
     case 'RESET_DATA': {
-      localStorage.removeItem(STORAGE_KEY);
-      return initialState;
+      if (typeof window !== 'undefined') {
+        localStorage.removeItem(STORAGE_KEY);
+      }
+      return defaultEmptyState;
     }
 
     default:
@@ -239,16 +442,77 @@ function dataReducer(state, action) {
   }
 }
 
-export function DataProvider({ children }) {
-  const [state, dispatch] = useReducer(dataReducer, getInitialState());
+function getInitialState() {
+  if (typeof window !== 'undefined') {
+    try {
+      const stored = localStorage.getItem(STORAGE_KEY);
+      if (stored) return JSON.parse(stored);
+    } catch (e) {
+      // ignore
+    }
+  }
+  return defaultEmptyState;
+}
 
-  // Persist data state to localStorage
+export function DataProvider({ children }) {
+  const [state, dispatch] = useReducer(dataReducer, defaultEmptyState, getInitialState);
+  const [loading, setLoading] = useState(true);
+
+  // Fetch all initial data from PostgreSQL Backend
   useEffect(() => {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
-  }, [state]);
+    let isMounted = true;
+
+    async function loadBackendData() {
+      try {
+        const res = await fetch('/api/initial-data');
+        if (!res.ok) throw new Error(`HTTP error ${res.status}`);
+        const data = await res.json();
+        if (!isMounted) return;
+
+        dispatch({
+          type: 'SET_SERVER_DATA',
+          payload: {
+            students: data.students || [],
+            jobs: data.jobs || [],
+            drives: data.drives || [],
+            applications: data.applications || [],
+            driveApplications: data.applications || [],
+            certificates: data.certificates || [],
+            notifications: data.notifications || [],
+            mails: data.mails || [],
+            sentMails: data.sentMails || [],
+            materials: data.materials || [],
+            pipeline: data.pipeline || {},
+            questionBank: data.questionBank || [],
+            skillTaxonomy: data.skillTaxonomy || {},
+            roleOptions: data.roleOptions || [],
+            testAttempts: data.testAttempts || [],
+            resumeVersions: data.resumeVersions || {},
+            roadmapProgress: data.roadmapProgress || {},
+          },
+        });
+      } catch (err) {
+        console.warn('Initial data load warning:', err.message || err);
+      } finally {
+        if (isMounted) setLoading(false);
+      }
+    }
+
+    loadBackendData();
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  // Sync to local storage for offline responsiveness
+  useEffect(() => {
+    if (typeof window !== 'undefined' && !loading) {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+    }
+  }, [state, loading]);
 
   return (
-    <DataContext.Provider value={{ state, dispatch }}>
+    <DataContext.Provider value={{ state, dispatch, loading }}>
       {children}
     </DataContext.Provider>
   );

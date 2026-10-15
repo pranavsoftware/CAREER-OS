@@ -1,24 +1,28 @@
 import { useState } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
-import { Menu, X, LogOut, RefreshCw, LayoutDashboard, User, FileText, Briefcase, Award, TrendingUp, Mic, Users, BookMarked, Mail, PieChart } from 'lucide-react';
+import { Menu, X, LogOut, LayoutDashboard, User, FileText, Briefcase, Award, TrendingUp, Mic, Users, BookMarked, Mail, PieChart, BookOpen, Bot } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useData } from '../context/DataContext';
 import Topbar from './Topbar';
 
 const studentNav = [
   { to: '/student/dashboard', label: 'Dashboard', icon: LayoutDashboard },
+  { to: '/student/mail', label: 'Mailbox', icon: Mail },
   { to: '/student/profile', label: 'Profile', icon: User },
   { to: '/student/resume', label: 'Resume Builder', icon: FileText },
   { to: '/student/applications', label: 'Applications', icon: Briefcase },
   { to: '/student/certificates', label: 'Certificates', icon: Award },
+  { to: '/student/materials', label: 'Study Materials', icon: BookOpen },
   { to: '/student/skill-gap', label: 'Skill Gap', icon: TrendingUp },
   { to: '/student/interview-prep', label: 'Interview Prep', icon: Mic },
+  { to: '/student/ai-interview', label: 'AI Interview', icon: Bot },
 ];
 
 const universityNav = [
   { to: '/university/dashboard', label: 'Dashboard', icon: PieChart },
   { to: '/university/students', label: 'Students', icon: Users },
   { to: '/university/drives', label: 'Drives', icon: BookMarked },
+  { to: '/university/materials', label: 'Class Materials', icon: BookOpen },
   { to: '/university/mail-filter', label: 'Mail Filter', icon: Mail },
 ];
 
@@ -47,14 +51,6 @@ function SidebarContent({ onClose }) {
     if (onClose) onClose();
   }
 
-  function handleReset() {
-    if (window.confirm('Reset all demo data to defaults?')) {
-      dispatch({ type: 'RESET_DATA' });
-      logout();
-      navigate('/login');
-    }
-    if (onClose) onClose();
-  }
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
@@ -112,12 +108,6 @@ function SidebarContent({ onClose }) {
           <div style={{ fontSize: 13, fontWeight: 600, color: '#111827' }}>{user?.name}</div>
           <div style={{ fontSize: 11, color: '#9CA3AF', textTransform: 'uppercase', letterSpacing: '0.05em', marginTop: 2 }}>{user?.role} portal</div>
         </div>
-        <button
-          onClick={handleReset}
-          style={{ display: 'flex', alignItems: 'center', gap: 8, width: '100%', padding: '8px 12px', borderRadius: 8, border: 'none', background: 'none', cursor: 'pointer', fontSize: 13, color: '#6B7280', textAlign: 'left' }}
-        >
-          <RefreshCw size={14} /> Reset demo data
-        </button>
         <button
           onClick={handleLogout}
           style={{ display: 'flex', alignItems: 'center', gap: 8, width: '100%', padding: '8px 12px', borderRadius: 8, border: 'none', background: 'none', cursor: 'pointer', fontSize: 13, color: '#DC2626', textAlign: 'left' }}

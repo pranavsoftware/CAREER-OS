@@ -4,34 +4,36 @@ import { DataProvider } from './context/DataContext';
 import ProtectedRoute from './components/ProtectedRoute';
 
 // Pages
-import Landing from './pages/Landing';
-import Login from './pages/Login';
-import NotFound from './pages/NotFound';
+import Landing from './views/Landing';
+import Login from './views/Login';
+import NotFound from './views/NotFound';
 
 // Student Pages
-import StudentDashboard from './pages/student/Dashboard';
-import StudentProfile from './pages/student/Profile';
-import StudentResume from './pages/student/Resume';
-import StudentApplications from './pages/student/Applications';
-import StudentCertificates from './pages/student/Certificates';
-import StudentSkillGap from './pages/student/SkillGap';
-import StudentInterviewPrep from './pages/student/InterviewPrep';
-import StudentPortfolio from './pages/student/Portfolio';
+import StudentDashboard from './views/student/Dashboard';
+import StudentProfile from './views/student/Profile';
+import StudentResume from './views/student/Resume';
+import StudentApplications from './views/student/Applications';
+import StudentCertificates from './views/student/Certificates';
+import StudentSkillGap from './views/student/SkillGap';
+import StudentInterviewPrep from './views/student/InterviewPrep';
+import StudentAiInterview from './views/student/AiInterview';
+import StudentPortfolio from './views/student/Portfolio';
+import StudentMail from './views/student/Mail';
 
 // University Pages
-import UniversityDashboard from './pages/university/Dashboard';
-import UniversityStudents from './pages/university/Students';
-import UniversityStudentDetail from './pages/university/StudentDetail';
-import UniversityDrives from './pages/university/Drives';
-import UniversityDriveDetail from './pages/university/DriveDetail';
-import UniversityMailFilter from './pages/university/MailFilter';
+import UniversityDashboard from './views/university/Dashboard';
+import UniversityStudents from './views/university/Students';
+import UniversityStudentDetail from './views/university/StudentDetail';
+import UniversityDrives from './views/university/Drives';
+import UniversityDriveDetail from './views/university/DriveDetail';
+import UniversityMailFilter from './views/university/MailFilter';
 
 // Company Pages
-import CompanyDashboard from './pages/company/Dashboard';
-import CompanyJobs from './pages/company/Jobs';
-import CompanyCandidates from './pages/company/Candidates';
-import CompanyCandidateDetail from './pages/company/CandidateDetail';
-import CompanyPipeline from './pages/company/Pipeline';
+import CompanyDashboard from './views/company/Dashboard';
+import CompanyJobs from './views/company/Jobs';
+import CompanyCandidates from './views/company/Candidates';
+import CompanyCandidateDetail from './views/company/CandidateDetail';
+import CompanyPipeline from './views/company/Pipeline';
 
 function RootRedirect() {
   const { isAuthenticated, user } = useAuth();
@@ -58,6 +60,14 @@ export default function App() {
               element={
                 <ProtectedRoute allowedRole="student">
                   <StudentDashboard />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/student/mail"
+              element={
+                <ProtectedRoute allowedRole="student">
+                  <StudentMail />
                 </ProtectedRoute>
               }
             />
@@ -106,6 +116,14 @@ export default function App() {
               element={
                 <ProtectedRoute allowedRole="student">
                   <StudentInterviewPrep />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/student/ai-interview"
+              element={
+                <ProtectedRoute allowedRole="student">
+                  <StudentAiInterview />
                 </ProtectedRoute>
               }
             />

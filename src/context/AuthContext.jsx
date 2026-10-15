@@ -1,8 +1,8 @@
-import { createContext, useContext, useReducer, useEffect } from 'react';
-import { users } from '../data/users';
+'use client';
+
+import { createContext, useContext, useReducer, useEffect, useState } from 'react';
 
 const AuthContext = createContext(null);
-
 const STORAGE_KEY = 'career_os_auth';
 
 function authReducer(state, action) {
@@ -17,12 +17,14 @@ function authReducer(state, action) {
 }
 
 function getInitialState() {
+  if (typeof window === 'undefined') {
+    return { user: null, isAuthenticated: false };
+  }
   try {
     const stored = localStorage.getItem(STORAGE_KEY);
     if (stored) {
       const parsed = JSON.parse(stored);
-      // Validate the stored user still exists
-      if (parsed.user && users.find(u => u.id === parsed.user.id)) {
+      if (parsed.user) {
         return parsed;
       }
     }
@@ -33,25 +35,73 @@ function getInitialState() {
 }
 
 export function AuthProvider({ children }) {
-  const [state, dispatch] = useReducer(authReducer, getInitialState());
+  const [state, dispatch] = useReducer(authReducer, { user: null, isAuthenticated: false });
+  const [availableUsers, setAvailableUsers] = useState([]);
+  const [isLoaded, setIsLoaded] = useState(false);
+
+  // Restore stored user from localStorage on mount
+  useEffect(() => {
+    let isMounted = true;
+
+    try {
+      const stored = localStorage.getItem(STORAGE_KEY);
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (parsed.user) {
+          dispatch({ type: 'LOGIN', payload: parsed.user });
+        }
+      }
+    } catch (e) {
+      // ignore
+    }
+
+    // Fetch demo users from database
+    fetch('/api/auth/users')
+      .then(res => {
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        return res.json();
+      })
+      .then(data => {
+        if (isMounted && data.users) {
+          setAvailableUsers(data.users);
+        }
+      })
+      .catch(err => {
+        console.warn('Auth users load warning:', err.message || err);
+      })
+      .finally(() => {
+        if (isMounted) setIsLoaded(true);
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   // Persist auth state to localStorage
   useEffect(() => {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
-  }, [state]);
-
-  function login(email, password) {
-    const cleanEmail = (email || '').trim().toLowerCase();
-    const user = users.find(
-      u => (u.email.toLowerCase() === cleanEmail || u.id.toLowerCase() === cleanEmail) && u.password === password
-    );
-    if (user) {
-      // Don't store password in state
-      const { password: _pw, ...safeUser } = user;
-      dispatch({ type: 'LOGIN', payload: safeUser });
-      return { success: true, user: safeUser };
+    if (typeof window !== 'undefined' && isLoaded) {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
     }
-    return { success: false, error: 'Invalid User ID or password.' };
+  }, [state, isLoaded]);
+
+  async function login(email, password, role) {
+    try {
+      const res = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password, role }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        return { success: false, error: data.error || 'Invalid credentials' };
+      }
+      dispatch({ type: 'LOGIN', payload: data.user });
+      return { success: true, user: data.user };
+    } catch (err) {
+      console.error('Login error:', err);
+      return { success: false, error: 'Failed to connect to authentication server.' };
+    }
   }
 
   function logout() {
@@ -59,7 +109,7 @@ export function AuthProvider({ children }) {
   }
 
   return (
-    <AuthContext.Provider value={{ ...state, login, logout }}>
+    <AuthContext.Provider value={{ ...state, login, logout, availableUsers, isLoaded }}>
       {children}
     </AuthContext.Provider>
   );

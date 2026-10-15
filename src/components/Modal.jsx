@@ -6,10 +6,10 @@ import { useEffect } from 'react';
  * title: string
  * width: optional px value
  */
-export default function Modal({ isOpen, onClose, title, children, width = 520 }) {
+export default function Modal({ isOpen = true, onClose, title, children, width = 520 }) {
   // Close on Escape key
   useEffect(() => {
-    if (!isOpen) return;
+    if (isOpen === false) return;
     function handleKey(e) {
       if (e.key === 'Escape') onClose();
     }
@@ -17,7 +17,7 @@ export default function Modal({ isOpen, onClose, title, children, width = 520 })
     return () => document.removeEventListener('keydown', handleKey);
   }, [isOpen, onClose]);
 
-  if (!isOpen) return null;
+  if (isOpen === false) return null;
 
   return (
     <div
@@ -37,11 +37,12 @@ export default function Modal({ isOpen, onClose, title, children, width = 520 })
         style={{
           background: '#fff',
           border: '1px solid #E5E7EB',
-          borderRadius: 6,
+          borderRadius: 8,
           width: '100%',
-          maxWidth: width,
-          maxHeight: '90vh',
+          maxWidth: typeof width === 'number' ? `${width}px` : width,
+          maxHeight: '92vh',
           overflowY: 'auto',
+          boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.2), 0 10px 10px -5px rgba(0, 0, 0, 0.04)',
         }}
       >
         {/* Header */}

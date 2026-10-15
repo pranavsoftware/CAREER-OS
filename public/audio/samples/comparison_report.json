@@ -1,0 +1,74 @@
+[
+  {
+    "model": "Piper TTS",
+    "voice": "en_gb_female",
+    "license": "MIT (Commercial Use Allowed)",
+    "prompt_id": "intro",
+    "prompt_text": "Welcome to your interview. Let's start with a brief overview of your background.",
+    "synth_time_s": 0.45,
+    "audio_duration_s": 4.08,
+    "rtf": 0.11,
+    "sample_rate": 16000,
+    "file": "/audio/samples/piper_en_gb_female_intro.wav"
+  },
+  {
+    "model": "Piper TTS",
+    "voice": "en_gb_female",
+    "license": "MIT (Commercial Use Allowed)",
+    "prompt_id": "technical",
+    "prompt_text": "Can you explain how a B-tree index optimizes SQL query performance?",
+    "synth_time_s": 0.31,
+    "audio_duration_s": 4.22,
+    "rtf": 0.074,
+    "sample_rate": 16000,
+    "file": "/audio/samples/piper_en_gb_female_technical.wav"
+  },
+  {
+    "model": "Piper TTS",
+    "voice": "en_gb_female",
+    "license": "MIT (Commercial Use Allowed)",
+    "prompt_id": "scenario",
+    "prompt_text": "That's an interesting approach. How would you handle race conditions in that scenario?",
+    "synth_time_s": 0.32,
+    "audio_duration_s": 4.4,
+    "rtf": 0.072,
+    "sample_rate": 16000,
+    "file": "/audio/samples/piper_en_gb_female_scenario.wav"
+  },
+  {
+    "model": "Piper TTS",
+    "voice": "en_us_amy",
+    "license": "MIT (Commercial Use Allowed)",
+    "prompt_id": "intro",
+    "prompt_text": "Welcome to your interview. Let's start with a brief overview of your background.",
+    "synth_time_s": 0.5,
+    "audio_duration_s": 5.26,
+    "rtf": 0.095,
+    "sample_rate": 22050,
+    "file": "/audio/samples/piper_en_us_amy_intro.wav"
+  },
+  {
+    "model": "Piper TTS",
+    "voice": "en_us_amy",
+    "license": "MIT (Commercial Use Allowed)",
+    "prompt_id": "technical",
+    "prompt_text": "Can you explain how a B-tree index optimizes SQL query performance?",
+    "synth_time_s": 0.44,
+    "audio_duration_s": 4.96,
+    "rtf": 0.088,
+    "sample_rate": 22050,
+    "file": "/audio/samples/piper_en_us_amy_technical.wav"
+  },
+  {
+    "model": "Piper TTS",
+    "voice": "en_us_amy",
+    "license": "MIT (Commercial Use Allowed)",
+    "prompt_id": "scenario",
+    "prompt_text": "That's an interesting approach. How would you handle race conditions in that scenario?",
+    "synth_time_s": 0.49,
+    "audio_duration_s": 5.55,
+    "rtf": 0.089,
+    "sample_rate": 22050,
+    "file": "/audio/samples/piper_en_us_amy_scenario.wav"
+  }
+]

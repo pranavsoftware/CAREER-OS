@@ -3,7 +3,22 @@
  * type: text | textarea | select | number | date | email | password
  * options: for select type [{ value, label }] or string[]
  */
-export default function FormField({ label, id, type = 'text', value, onChange, options, required, placeholder, disabled, rows = 4, min, max, step }) {
+export default function FormField({
+  label,
+  id,
+  type = 'text',
+  value,
+  onChange,
+  options,
+  required,
+  placeholder,
+  disabled,
+  rows = 4,
+  min,
+  max,
+  step,
+  children,
+}) {
   const inputStyle = {
     width: '100%',
     padding: '8px 12px',
@@ -15,6 +30,12 @@ export default function FormField({ label, id, type = 'text', value, onChange, o
     outline: 'none',
   };
 
+  const handleChange = (e) => {
+    if (typeof onChange === 'function') {
+      onChange(e.target.value);
+    }
+  };
+
   return (
     <div style={{ marginBottom: 16 }}>
       {label && (
@@ -23,11 +44,13 @@ export default function FormField({ label, id, type = 'text', value, onChange, o
         </label>
       )}
 
-      {type === 'textarea' ? (
+      {children ? (
+        children
+      ) : type === 'textarea' ? (
         <textarea
           id={id}
           value={value}
-          onChange={e => onChange(e.target.value)}
+          onChange={handleChange}
           placeholder={placeholder}
           required={required}
           disabled={disabled}
@@ -38,7 +61,7 @@ export default function FormField({ label, id, type = 'text', value, onChange, o
         <select
           id={id}
           value={value}
-          onChange={e => onChange(e.target.value)}
+          onChange={handleChange}
           required={required}
           disabled={disabled}
           style={{ ...inputStyle, cursor: disabled ? 'not-allowed' : 'pointer' }}
@@ -55,7 +78,7 @@ export default function FormField({ label, id, type = 'text', value, onChange, o
           id={id}
           type={type}
           value={value}
-          onChange={e => onChange(e.target.value)}
+          onChange={handleChange}
           placeholder={placeholder}
           required={required}
           disabled={disabled}
