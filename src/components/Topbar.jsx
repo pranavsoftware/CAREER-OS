@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useData } from '../context/DataContext';
+import { NetworkBadge } from './NetworkStatusIndicator';
 
 export default function Topbar({ title }) {
   const { user, logout } = useAuth();
@@ -32,10 +33,15 @@ export default function Topbar({ title }) {
         zIndex: 10,
       }}
     >
-      <h1 style={{ margin: 0, fontSize: 18, fontWeight: 600, color: '#111827' }}>{title}</h1>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+        <h1 style={{ margin: 0, fontSize: 18, fontWeight: 600, color: '#111827' }}>{title}</h1>
+      </div>
 
-      {/* User menu */}
-      <div style={{ position: 'relative' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+        <NetworkBadge />
+
+        {/* User menu */}
+        <div style={{ position: 'relative' }}>
         <button
           onClick={() => setMenuOpen(!menuOpen)}
           style={{
@@ -97,6 +103,7 @@ export default function Topbar({ title }) {
           </div>
         )}
       </div>
+    </div>
 
       {/* Close menu on outside click */}
       {menuOpen && (

@@ -2,6 +2,8 @@ import { useEffect, useRef, useState } from 'react';
 
 /**
  * Hook to manage camera & mic stream lifecycle safely for AI Interview.
+ * - Adaptive network constraints: dynamically adjusts frameRate & resolution on mobile 3G/2G vs Wi-Fi/4G.
+ * - WakeLock API: prevents mobile device screens from sleeping during the interview.
  * - Enabled for the entire duration in the interview room.
  * - Moving between interviewing -> evaluating_answer -> feedback_step does NOT restart camera or reset calibration.
  * - Race-safe cleanup prevents memory leaks if unmounted before getUserMedia resolves.
@@ -10,6 +12,7 @@ import { useEffect, useRef, useState } from 'react';
 export function useCameraStream({ enabled, onEvent }) {
   const videoRef = useRef(null);
   const streamRef = useRef(null);
+  const wakeLockRef = useRef(null);
   const [status, setStatus] = useState('idle'); // 'idle' | 'starting' | 'live' | 'denied' | 'error'
 
   useEffect(() => {
@@ -26,16 +29,52 @@ export function useCameraStream({ enabled, onEvent }) {
       return undefined;
     }
 
-    navigator.mediaDevices
-      .getUserMedia({
-        video: { width: { ideal: 640 }, height: { ideal: 480 }, facingMode: 'user' },
-        audio: { echoCancellation: true, noiseSuppression: true },
-      })
-      .then((stream) => {
+    // Adaptive constraints based on mobile connection
+    const conn = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
+    const isMobileSlow = conn && (conn.effectiveType === '2g' || conn.effectiveType === 'slow-2g' || conn.effectiveType === '3g' || conn.saveData);
+
+    const videoConstraints = isMobileSlow
+      ? {
+          width: { ideal: 480, max: 640 },
+          height: { ideal: 360, max: 480 },
+          frameRate: { ideal: 15, max: 20 },
+          facingMode: 'user',
+        }
+      : {
+          width: { ideal: 640 },
+          height: { ideal: 480 },
+          frameRate: { ideal: 30 },
+          facingMode: 'user',
+        };
+
+    const audioConstraints = {
+      echoCancellation: true,
+      noiseSuppression: true,
+      autoGainControl: true,
+    };
+
+    async function startStream() {
+      try {
+        let stream;
+        try {
+          stream = await navigator.mediaDevices.getUserMedia({
+            video: videoConstraints,
+            audio: audioConstraints,
+          });
+        } catch (initialErr) {
+          // Fallback to minimal constraints for strict mobile devices
+          console.warn('Adaptive constraints fallback:', initialErr?.message);
+          stream = await navigator.mediaDevices.getUserMedia({
+            video: { facingMode: 'user' },
+            audio: true,
+          });
+        }
+
         if (cancelled) {
           stream.getTracks().forEach((t) => t.stop());
           return;
         }
+
         streamRef.current = stream;
 
         const videoTracks = stream.getVideoTracks();
@@ -49,17 +88,32 @@ export function useCameraStream({ enabled, onEvent }) {
           };
         }
 
+        // Keep mobile screen awake during interview
+        if ('wakeLock' in navigator && navigator.wakeLock.request) {
+          try {
+            wakeLockRef.current = await navigator.wakeLock.request('screen');
+          } catch (_) {}
+        }
+
         setStatus('live');
-      })
-      .catch((err) => {
+      } catch (err) {
         if (!cancelled) {
           console.warn('Camera access error:', err?.name, err?.message);
           setStatus(err?.name === 'NotAllowedError' ? 'denied' : 'error');
         }
-      });
+      }
+    }
+
+    startStream();
 
     return () => {
       cancelled = true;
+      if (wakeLockRef.current) {
+        try {
+          wakeLockRef.current.release();
+        } catch (_) {}
+        wakeLockRef.current = null;
+      }
       if (streamRef.current) {
         streamRef.current.getTracks().forEach((t) => t.stop());
         streamRef.current = null;

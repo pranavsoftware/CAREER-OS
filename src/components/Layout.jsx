@@ -4,6 +4,7 @@ import { Menu, X, LogOut, LayoutDashboard, User, FileText, Briefcase, Award, Tre
 import { useAuth } from '../context/AuthContext';
 import { useData } from '../context/DataContext';
 import Topbar from './Topbar';
+import NetworkStatusIndicator, { NetworkBadge } from './NetworkStatusIndicator';
 
 const studentNav = [
   { to: '/student/dashboard', label: 'Dashboard', icon: LayoutDashboard },
@@ -167,6 +168,8 @@ export default function Layout({ title, children }) {
 
       {/* ── Main content column ── */}
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0, overflow: 'hidden' }}>
+        {/* Real-time Network Indicator Banner (Offline / Mobile 3G / Reconnected) */}
+        <NetworkStatusIndicator />
 
         {/* Mobile topbar (shows on mobile, hidden on desktop) */}
         <header
@@ -187,6 +190,7 @@ export default function Layout({ title, children }) {
         >
           <span style={{ fontSize: 16, fontWeight: 800, color: '#4F46E5', letterSpacing: '-0.04em' }}>CAREER-OS</span>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <NetworkBadge />
             <span style={{ fontSize: 13, fontWeight: 600, color: '#374151' }}>{title}</span>
             <button
               onClick={() => setDrawerOpen(true)}

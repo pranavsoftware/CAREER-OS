@@ -1,0 +1,16 @@
+{
+  "name": "Career OS",
+  "short_name": "CareerOS",
+  "description": "University Placement, ATS Resume Builder & AI Interview Career Operating System",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#F8F9FA",
+  "theme_color": "#4F46E5",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml"
+    }
+  ]
+}

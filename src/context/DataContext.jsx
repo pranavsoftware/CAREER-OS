@@ -25,6 +25,46 @@ const defaultEmptyState = {
   testAttempts: [],
 };
 
+
+function resilientFetch(url, options = {}) {
+  // If offline or on mobile connection drop, safely queue mutation to localStorage
+  if (typeof window !== 'undefined' && !navigator.onLine && options.method && options.method !== 'GET') {
+    try {
+      const stored = localStorage.getItem('career_os_pending_mutations');
+      const queue = stored ? JSON.parse(stored) : [];
+      queue.push({
+        id: `${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
+        url,
+        method: options.method,
+        headers: options.headers || { 'Content-Type': 'application/json' },
+        body: options.body,
+        timestamp: Date.now(),
+      });
+      localStorage.setItem('career_os_pending_mutations', JSON.stringify(queue));
+      return Promise.resolve({ ok: true, queued: true });
+    } catch (_) {}
+  }
+
+  return fetch(url, options).catch((err) => {
+    console.warn(`[Network] Request to ${url} failed, queueing offline:`, err);
+    if (typeof window !== 'undefined' && options.method && options.method !== 'GET') {
+      try {
+        const stored = localStorage.getItem('career_os_pending_mutations');
+        const queue = stored ? JSON.parse(stored) : [];
+        queue.push({
+          id: `${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
+          url,
+          method: options.method,
+          headers: options.headers || { 'Content-Type': 'application/json' },
+          body: options.body,
+          timestamp: Date.now(),
+        });
+        localStorage.setItem('career_os_pending_mutations', JSON.stringify(queue));
+      } catch (_) {}
+    }
+  });
+}
+
 function dataReducer(state, action) {
   switch (action.type) {
     case 'SET_SERVER_DATA': {
@@ -40,7 +80,7 @@ function dataReducer(state, action) {
         s.id === action.payload.id ? { ...s, ...action.payload } : s
       );
       // Persist to backend
-      fetch(`/api/students/${action.payload.id}`, {
+      resilientFetch(`/api/students/${action.payload.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(action.payload),
@@ -50,7 +90,7 @@ function dataReducer(state, action) {
     }
 
     case 'ADD_STUDENT': {
-      fetch('/api/students', {
+      resilientFetch('/api/students', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(action.payload),
@@ -60,7 +100,7 @@ function dataReducer(state, action) {
     }
 
     case 'ADD_STUDENTS': {
-      fetch('/api/students', {
+      resilientFetch('/api/students', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ students: action.payload }),
@@ -72,7 +112,7 @@ function dataReducer(state, action) {
     // ---- DRIVES ----
     case 'ADD_DRIVE': {
       // Persist to backend
-      fetch('/api/drives', {
+      resilientFetch('/api/drives', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(action.payload),
@@ -83,7 +123,7 @@ function dataReducer(state, action) {
 
     case 'UPDATE_DRIVE': {
       // Persist to backend
-      fetch(`/api/drives/${action.payload.id}`, {
+      resilientFetch(`/api/drives/${action.payload.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(action.payload),
@@ -98,7 +138,7 @@ function dataReducer(state, action) {
     // ---- JOBS ----
     case 'ADD_JOB': {
       // Persist to backend
-      fetch('/api/jobs', {
+      resilientFetch('/api/jobs', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(action.payload),
@@ -109,7 +149,7 @@ function dataReducer(state, action) {
 
     case 'UPDATE_JOB': {
       // Persist to backend
-      fetch(`/api/jobs/${action.payload.id}`, {
+      resilientFetch(`/api/jobs/${action.payload.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(action.payload),
@@ -124,7 +164,7 @@ function dataReducer(state, action) {
     // ---- APPLICATIONS ----
     case 'ADD_APPLICATION': {
       // Persist to backend
-      fetch('/api/applications', {
+      resilientFetch('/api/applications', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(action.payload),
@@ -135,7 +175,7 @@ function dataReducer(state, action) {
 
     case 'UPDATE_APPLICATION': {
       // Persist to backend
-      fetch('/api/applications', {
+      resilientFetch('/api/applications', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(action.payload),
@@ -154,7 +194,7 @@ function dataReducer(state, action) {
     // ---- DRIVE APPLICATIONS ----
     case 'ADD_DRIVE_APPLICATION': {
       // Also register as an application in DB
-      fetch('/api/applications', {
+      resilientFetch('/api/applications', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -182,7 +222,7 @@ function dataReducer(state, action) {
     // ---- CERTIFICATES ----
     case 'ADD_CERTIFICATE': {
       // Persist to backend
-      fetch('/api/certificates', {
+      resilientFetch('/api/certificates', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(action.payload),
@@ -193,7 +233,7 @@ function dataReducer(state, action) {
 
     case 'DELETE_CERTIFICATE': {
       // Persist to backend
-      fetch(`/api/certificates?id=${action.payload}`, {
+      resilientFetch(`/api/certificates?id=${action.payload}`, {
         method: 'DELETE',
       }).catch(err => console.error('Error deleting certificate from db:', err));
 
@@ -202,7 +242,7 @@ function dataReducer(state, action) {
 
     // ---- NOTIFICATIONS ----
     case 'ADD_NOTIFICATION': {
-      fetch('/api/notifications', {
+      resilientFetch('/api/notifications', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(action.payload),
@@ -212,7 +252,7 @@ function dataReducer(state, action) {
     }
 
     case 'MARK_NOTIFICATION_READ': {
-      fetch('/api/notifications', {
+      resilientFetch('/api/notifications', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ id: action.payload, read: true }),
@@ -231,7 +271,7 @@ function dataReducer(state, action) {
 
     // ---- MAILS ----
     case 'UPDATE_MAIL': {
-      fetch('/api/mails', {
+      resilientFetch('/api/mails', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(action.payload),
@@ -244,7 +284,7 @@ function dataReducer(state, action) {
     }
 
     case 'ADD_SENT_MAIL': {
-      fetch('/api/sent-mails', {
+      resilientFetch('/api/sent-mails', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(action.payload),
@@ -258,7 +298,7 @@ function dataReducer(state, action) {
 
     // ---- MATERIALS (Study Materials & Notes) ----
     case 'ADD_MATERIAL': {
-      fetch('/api/materials', {
+      resilientFetch('/api/materials', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(action.payload),
@@ -268,7 +308,7 @@ function dataReducer(state, action) {
     }
 
     case 'DELETE_MATERIAL': {
-      fetch(`/api/materials/${action.payload}`, {
+      resilientFetch(`/api/materials/${action.payload}`, {
         method: 'DELETE',
       }).catch(err => console.error('Error deleting material from db:', err));
 
@@ -279,7 +319,7 @@ function dataReducer(state, action) {
     }
 
     case 'UPDATE_MATERIAL': {
-      fetch(`/api/materials/${action.payload.id}`, {
+      resilientFetch(`/api/materials/${action.payload.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(action.payload),
@@ -304,7 +344,7 @@ function dataReducer(state, action) {
         : 'Pending';
 
       // Persist to DB
-      fetch(`/api/students/${studentId}`, {
+      resilientFetch(`/api/students/${studentId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -332,7 +372,7 @@ function dataReducer(state, action) {
       const newPipeline = { ...state.pipeline, [jobId]: jobPipeline };
 
       // Persist to DB
-      fetch('/api/pipeline', {
+      resilientFetch('/api/pipeline', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ jobId, studentId, stage }),
@@ -364,7 +404,7 @@ function dataReducer(state, action) {
     // ---- RESUME VERSIONS ----
     case 'SAVE_RESUME_VERSION': {
       const { studentId, version } = action.payload;
-      fetch('/api/resume-versions', {
+      resilientFetch('/api/resume-versions', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ studentId, ...version }),
@@ -382,7 +422,7 @@ function dataReducer(state, action) {
 
     case 'DELETE_RESUME_VERSION': {
       const { studentId, versionId } = action.payload;
-      fetch(`/api/resume-versions?id=${versionId}`, {
+      resilientFetch(`/api/resume-versions?id=${versionId}`, {
         method: 'DELETE',
       }).catch(err => console.error('Error deleting resume version from db:', err));
 
@@ -403,7 +443,7 @@ function dataReducer(state, action) {
       const current = state.roadmapProgress[key] || {};
       const newStatus = !current[stepId];
 
-      fetch('/api/roadmap', {
+      resilientFetch('/api/roadmap', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ studentId, role, stepId, completed: newStatus }),
@@ -420,7 +460,7 @@ function dataReducer(state, action) {
 
     // ---- TEST ATTEMPTS ----
     case 'ADD_TEST_ATTEMPT': {
-      fetch('/api/test-attempts', {
+      resilientFetch('/api/test-attempts', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(action.payload),
@@ -464,7 +504,16 @@ export function DataProvider({ children }) {
 
     async function loadBackendData() {
       try {
-        const res = await fetch('/api/initial-data');
+        let res;
+        for (let attempt = 1; attempt <= 3; attempt++) {
+          try {
+            res = await fetch('/api/initial-data');
+            if (res.ok) break;
+          } catch (e) {
+            if (attempt === 3) throw e;
+            await new Promise((r) => setTimeout(r, attempt * 1000));
+          }
+        }
         if (!res.ok) throw new Error(`HTTP error ${res.status}`);
         const data = await res.json();
         if (!isMounted) return;
