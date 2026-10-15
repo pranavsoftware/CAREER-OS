@@ -6,17 +6,27 @@ let pool;
 
 export function getPool() {
   if (!pool) {
-    pool = new Pool({
-      host: process.env.PGHOST || 'aws-0-ap-northeast-2.pooler.supabase.com',
-      port: parseInt(process.env.PGPORT || '5432', 10),
-      database: process.env.PGDATABASE || 'postgres',
-      user: process.env.PGUSER || 'postgres.razmrpxgxlolqtbeblch',
-      password: process.env.PGPASSWORD || '@@E3MLx2pjdeSA3',
-      ssl: { rejectUnauthorized: false },
-      max: 10,
-      idleTimeoutMillis: 30000,
-      connectionTimeoutMillis: 10000,
-    });
+    if (process.env.DATABASE_URL) {
+      pool = new Pool({
+        connectionString: process.env.DATABASE_URL,
+        ssl: { rejectUnauthorized: false },
+        max: 10,
+        idleTimeoutMillis: 30000,
+        connectionTimeoutMillis: 10000,
+      });
+    } else {
+      pool = new Pool({
+        host: process.env.PGHOST || 'aws-0-ap-northeast-2.pooler.supabase.com',
+        port: parseInt(process.env.PGPORT || '5432', 10),
+        database: process.env.PGDATABASE || 'postgres',
+        user: process.env.PGUSER || 'postgres.razmrpxgxlolqtbeblch',
+        password: process.env.PGPASSWORD || '@@E3MLx2pjdeSA3',
+        ssl: { rejectUnauthorized: false },
+        max: 10,
+        idleTimeoutMillis: 30000,
+        connectionTimeoutMillis: 10000,
+      });
+    }
 
     pool.on('error', (err) => {
       console.error('Unexpected error on idle PostgreSQL client', err);
