@@ -90,12 +90,216 @@ class TtsRequest(BaseModel):
     normalize: Optional[bool] = True
 
 
-@app.get("/")
+@app.get("/", response_class=Response)
+def root_status_page():
+    """Beautiful HTML status page shown when visiting the Render backend URL."""
+    voices_html = "".join([
+        f'<div class="endpoint-item"><span class="dot green"></span><strong>{k}</strong> — {v["description"]}</div>'
+        for k, v in VOICE_REGISTRY.items()
+    ])
+    html = f"""<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Career-OS AI Service — Backend Status</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet"/>
+  <style>
+    *, *::before, *::after {{ box-sizing: border-box; margin: 0; padding: 0; }}
+    body {{
+      font-family: 'Inter', sans-serif;
+      background: linear-gradient(135deg, #0f0c29, #302b63, #24243e);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+      color: #fff;
+    }}
+    .card {{
+      background: rgba(255,255,255,0.07);
+      backdrop-filter: blur(20px);
+      border: 1px solid rgba(255,255,255,0.12);
+      border-radius: 24px;
+      padding: 48px 40px;
+      max-width: 640px;
+      width: 100%;
+      box-shadow: 0 32px 64px rgba(0,0,0,0.4);
+    }}
+    .badge {{
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: rgba(74,222,128,0.15);
+      border: 1px solid rgba(74,222,128,0.4);
+      border-radius: 999px;
+      padding: 6px 16px;
+      font-size: 13px;
+      font-weight: 600;
+      color: #4ade80;
+      margin-bottom: 28px;
+    }}
+    .pulse {{
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      background: #4ade80;
+      animation: pulse 2s infinite;
+    }}
+    @keyframes pulse {{
+      0%, 100% {{ opacity: 1; transform: scale(1); }}
+      50% {{ opacity: 0.5; transform: scale(1.4); }}
+    }}
+    h1 {{
+      font-size: 32px;
+      font-weight: 800;
+      background: linear-gradient(90deg, #a78bfa, #60a5fa, #34d399);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      line-height: 1.2;
+      margin-bottom: 12px;
+    }}
+    .subtitle {{
+      font-size: 15px;
+      color: rgba(255,255,255,0.55);
+      margin-bottom: 36px;
+      line-height: 1.6;
+    }}
+    .section-title {{
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: rgba(255,255,255,0.35);
+      margin-bottom: 12px;
+    }}
+    .endpoints {{
+      background: rgba(0,0,0,0.25);
+      border-radius: 14px;
+      padding: 20px;
+      margin-bottom: 24px;
+    }}
+    .endpoint-item {{
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      font-size: 13.5px;
+      color: rgba(255,255,255,0.8);
+      padding: 8px 0;
+      border-bottom: 1px solid rgba(255,255,255,0.06);
+    }}
+    .endpoint-item:last-child {{ border-bottom: none; }}
+    .dot {{
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      flex-shrink: 0;
+      margin-top: 5px;
+    }}
+    .dot.green {{ background: #4ade80; }}
+    .dot.blue  {{ background: #60a5fa; }}
+    .dot.purple{{ background: #a78bfa; }}
+    .route-grid {{
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-bottom: 28px;
+    }}
+    .route-card {{
+      background: rgba(0,0,0,0.25);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 12px;
+      padding: 14px 16px;
+    }}
+    .route-method {{
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      color: #60a5fa;
+      margin-bottom: 4px;
+    }}
+    .route-path {{
+      font-size: 13px;
+      font-weight: 600;
+      color: #fff;
+      font-family: monospace;
+    }}
+    .route-desc {{
+      font-size: 11px;
+      color: rgba(255,255,255,0.4);
+      margin-top: 4px;
+    }}
+    .footer {{
+      text-align: center;
+      font-size: 12px;
+      color: rgba(255,255,255,0.25);
+      margin-top: 8px;
+    }}
+    .footer a {{
+      color: rgba(167,139,250,0.7);
+      text-decoration: none;
+    }}
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="badge">
+      <div class="pulse"></div>
+      All Systems Operational
+    </div>
+    <h1>Career-OS<br/>AI Engine</h1>
+    <p class="subtitle">
+      Self-hosted AI backend powering Speech-to-Text (Whisper), 
+      Neural Text-to-Speech (Piper), and Interview Answer Evaluation.
+      Zero third-party API calls. 100% private.
+    </p>
+
+    <p class="section-title">Active Endpoints</p>
+    <div class="route-grid">
+      <div class="route-card">
+        <div class="route-method">POST</div>
+        <div class="route-path">/tts</div>
+        <div class="route-desc">Neural speech synthesis</div>
+      </div>
+      <div class="route-card">
+        <div class="route-method">POST</div>
+        <div class="route-path">/stt</div>
+        <div class="route-desc">Whisper transcription</div>
+      </div>
+      <div class="route-card">
+        <div class="route-method">POST</div>
+        <div class="route-path">/evaluate</div>
+        <div class="route-desc">Answer rubric scoring</div>
+      </div>
+      <div class="route-card">
+        <div class="route-method">GET</div>
+        <div class="route-path">/health</div>
+        <div class="route-desc">JSON health check</div>
+      </div>
+    </div>
+
+    <p class="section-title">Available Voices</p>
+    <div class="endpoints">
+      {voices_html}
+    </div>
+
+    <div class="footer">
+      Career-OS AI Service v1.0.0 &nbsp;·&nbsp;
+      <a href="/docs">API Docs (Swagger)</a> &nbsp;·&nbsp;
+      <a href="/health">JSON Health</a>
+    </div>
+  </div>
+</body>
+</html>"""
+    return Response(content=html, media_type="text/html")
+
+
 @app.get("/health")
 def health_check():
+    """JSON health check for Render's health check ping."""
     return {
         "status": "ok",
         "service": "Career-OS Self-Hosted AI Engine",
+        "version": "1.0.0",
         "available_voices": list(VOICE_REGISTRY.keys()),
         "models_dir": str(MODELS_DIR)
     }
