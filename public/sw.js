@@ -1,5 +1,5 @@
 // Career-OS Offline & Adaptive Network Service Worker
-const CACHE_NAME = 'career-os-v1';
+const CACHE_NAME = 'career-os-v2';
 const STATIC_ASSETS = [
   '/',
   '/favicon.svg',
@@ -20,19 +20,35 @@ self.addEventListener('activate', (event) => {
   event.waitUntil(
     caches.keys().then((keys) => {
       return Promise.all(
-        keys.filter((key) => key !== CACHE_NAME).map((key) => caches.delete(key))
+        keys.map((key) => {
+          if (key !== CACHE_NAME) {
+            console.log('[SW] Purging old cache:', key);
+            return caches.delete(key);
+          }
+        })
       );
     })
   );
   self.clients.claim();
 });
 
+self.addEventListener('message', (event) => {
+  if (event.data === 'SKIP_WAITING' || event.data?.type === 'SKIP_WAITING') {
+    self.skipWaiting();
+  }
+});
+
 self.addEventListener('fetch', (event) => {
   const { request } = event;
   const url = new URL(request.url);
 
-  // Skip non-GET requests and internal browser chrome requests
-  if (request.method !== 'GET' || !url.protocol.startsWith('http')) {
+  // Skip non-GET requests, internal browser requests, and Next.js internal build chunks
+  // Next.js chunks are already content-hashed by Turbopack/Webpack
+  if (
+    request.method !== 'GET' ||
+    !url.protocol.startsWith('http') ||
+    url.pathname.startsWith('/_next/')
+  ) {
     return;
   }
 

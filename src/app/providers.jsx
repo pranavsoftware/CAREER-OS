@@ -8,7 +8,9 @@ import { NetworkProvider } from '@/context/NetworkContext';
 export function Providers({ children }) {
   useEffect(() => {
     if (typeof window !== 'undefined' && 'serviceWorker' in navigator && process.env.NODE_ENV === 'production') {
-      navigator.serviceWorker.register('/sw.js').catch((err) => {
+      navigator.serviceWorker.register('/sw.js').then((reg) => {
+        reg.update();
+      }).catch((err) => {
         console.debug('ServiceWorker registration skipped:', err);
       });
     }
