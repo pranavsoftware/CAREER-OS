@@ -4,6 +4,7 @@ import { useAuth } from '../context/AuthContext';
 // Nav configs per role
 const studentNav = [
   { to: '/student/dashboard', label: 'Dashboard' },
+  { to: '/student/interviews', label: 'Online Interviews', badge: 'Live' },
   { to: '/student/portfolio', label: 'Projects & Portfolio' },
   { to: '/student/profile', label: 'Profile' },
   { to: '/student/resume', label: 'Resume Builder' },
@@ -22,6 +23,7 @@ const universityNav = [
 
 const companyNav = [
   { to: '/company/dashboard', label: 'Dashboard' },
+  { to: '/company/interviews', label: 'Online Interviews' },
   { to: '/company/jobs', label: 'Jobs' },
   { to: '/company/candidates', label: 'Candidates' },
   { to: '/company/pipeline', label: 'Pipeline' },
@@ -57,7 +59,9 @@ export default function Sidebar() {
             key={item.to}
             to={item.to}
             style={({ isActive }) => ({
-              display: 'block',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
               padding: '8px 12px',
               marginBottom: 2,
               borderRadius: 6,
@@ -68,7 +72,22 @@ export default function Sidebar() {
               background: isActive ? '#EFF6FF' : 'transparent',
             })}
           >
-            {item.label}
+            <span>{item.label}</span>
+            {item.badge && (
+              <span
+                style={{
+                  fontSize: 10,
+                  fontWeight: 700,
+                  background: '#ECFDF5',
+                  color: '#059669',
+                  padding: '2px 6px',
+                  borderRadius: 9999,
+                  border: '1px solid #A7F3D0',
+                }}
+              >
+                {item.badge}
+              </span>
+            )}
           </NavLink>
         ))}
       </nav>

@@ -9,6 +9,7 @@ import { initialNotifications } from '@/data/notifications';
 import { initialMails } from '@/data/mails';
 import { questionBank } from '@/data/questionBank';
 import { skillTaxonomy } from '@/data/skillTaxonomy';
+import { initialInterviews } from '@/data/interviews';
 
 export const dynamic = 'force-dynamic';
 
@@ -131,7 +132,8 @@ export async function GET() {
       roleOptions: Object.keys(taxonomyMap).length ? Object.keys(taxonomyMap) : Object.keys(skillTaxonomy),
       testAttempts: data.test_attempts || [],
       resumeVersions,
-      roadmapProgress
+      roadmapProgress,
+      interviews: initialInterviews
     }, {
       headers: {
         'Cache-Control': 'public, s-maxage=10, stale-while-revalidate=60'
@@ -157,7 +159,8 @@ export async function GET() {
       roleOptions: Object.keys(skillTaxonomy || {}),
       testAttempts: [],
       resumeVersions: {},
-      roadmapProgress: {}
+      roadmapProgress: {},
+      interviews: initialInterviews
     }, {
       headers: {
         'Cache-Control': 'public, s-maxage=5, stale-while-revalidate=30'

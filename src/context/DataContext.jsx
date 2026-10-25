@@ -1,6 +1,7 @@
 'use client';
 
 import { createContext, useContext, useReducer, useEffect, useState } from 'react';
+import { initialInterviews } from '../data/interviews';
 
 const DataContext = createContext(null);
 const STORAGE_KEY = 'career_os_data';
@@ -23,6 +24,7 @@ const defaultEmptyState = {
   resumeVersions: {},
   roadmapProgress: {},
   testAttempts: [],
+  interviews: initialInterviews,
 };
 
 
@@ -469,6 +471,60 @@ function dataReducer(state, action) {
       return { ...state, testAttempts: [...state.testAttempts, action.payload] };
     }
 
+    // ---- INTERVIEWS (Online Video Calls) ----
+    case 'SCHEDULE_INTERVIEW': {
+      const interview = {
+        ...action.payload,
+        id: action.payload.id || `int_${Date.now()}`,
+        meetingId: action.payload.meetingId || `room-${Date.now().toString(36)}`,
+        status: action.payload.status || 'Scheduled',
+        createdAt: new Date().toISOString(),
+      };
+
+      const notif = {
+        id: `n_int_${Date.now()}`,
+        studentId: interview.studentId,
+        type: 'Interview Scheduled',
+        title: `Online Video Interview: ${interview.company}`,
+        message: `Your interview for ${interview.role} (${interview.type}) is scheduled for ${interview.date} at ${interview.time}. Room code: ${interview.meetingId}`,
+        read: false,
+        createdAt: new Date().toISOString(),
+      };
+
+      resilientFetch('/api/interviews', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(interview),
+      }).catch(err => console.debug('Interview sync to backend:', err));
+
+      return {
+        ...state,
+        interviews: [interview, ...(state.interviews || [])],
+        notifications: [notif, ...(state.notifications || [])],
+      };
+    }
+
+    case 'UPDATE_INTERVIEW': {
+      const interviews = (state.interviews || []).map(i =>
+        i.id === action.payload.id || (action.payload.meetingId && i.meetingId === action.payload.meetingId)
+          ? { ...i, ...action.payload }
+          : i
+      );
+      resilientFetch('/api/interviews', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(action.payload),
+      }).catch(err => console.debug('Interview update sync:', err));
+      return { ...state, interviews };
+    }
+
+    case 'CANCEL_INTERVIEW': {
+      const interviews = (state.interviews || []).map(i =>
+        i.id === action.payload ? { ...i, status: 'Cancelled' } : i
+      );
+      return { ...state, interviews };
+    }
+
     // ---- RESET ----
     case 'RESET_DATA': {
       if (typeof window !== 'undefined') {
@@ -486,7 +542,13 @@ function getInitialState() {
   if (typeof window !== 'undefined') {
     try {
       const stored = localStorage.getItem(STORAGE_KEY);
-      if (stored) return JSON.parse(stored);
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (!parsed.interviews || parsed.interviews.length === 0) {
+          parsed.interviews = initialInterviews;
+        }
+        return parsed;
+      }
     } catch (e) {
       // ignore
     }
@@ -533,6 +595,7 @@ export function DataProvider({ children }) {
             materials: data.materials || [],
             pipeline: data.pipeline || {},
             questionBank: data.questionBank || [],
+            interviews: (data.interviews && data.interviews.length) ? data.interviews : (state.interviews && state.interviews.length ? state.interviews : initialInterviews),
             skillTaxonomy: data.skillTaxonomy || {},
             roleOptions: data.roleOptions || [],
             testAttempts: data.testAttempts || [],

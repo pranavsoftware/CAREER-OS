@@ -20,6 +20,8 @@ import StudentInterviewPrep from './views/student/InterviewPrep';
 import StudentAiInterview from './views/student/AiInterview';
 import StudentPortfolio from './views/student/Portfolio';
 import StudentMail from './views/student/Mail';
+import StudentInterviews from './views/student/Interviews';
+import InterviewRoom from './views/InterviewRoom';
 
 // University Pages
 import UniversityDashboard from './views/university/Dashboard';
@@ -35,6 +37,7 @@ import CompanyJobs from './views/company/Jobs';
 import CompanyCandidates from './views/company/Candidates';
 import CompanyCandidateDetail from './views/company/CandidateDetail';
 import CompanyPipeline from './views/company/Pipeline';
+import CompanyInterviews from './views/company/Interviews';
 
 function RootRedirect() {
   const { isAuthenticated, user } = useAuth();
@@ -137,6 +140,14 @@ export default function App() {
                 </ProtectedRoute>
               }
             />
+            <Route
+              path="/student/interviews"
+              element={
+                <ProtectedRoute allowedRole="student">
+                  <StudentInterviews />
+                </ProtectedRoute>
+              }
+            />
 
             {/* University Protected Routes */}
             <Route
@@ -229,6 +240,17 @@ export default function App() {
                 </ProtectedRoute>
               }
             />
+            <Route
+              path="/company/interviews"
+              element={
+                <ProtectedRoute allowedRole="company">
+                  <CompanyInterviews />
+                </ProtectedRoute>
+              }
+            />
+
+            {/* Live Online Video Interview Room */}
+            <Route path="/interview-room/:id" element={<InterviewRoom />} />
 
             {/* 404 Catch-All */}
             <Route path="*" element={<NotFound />} />

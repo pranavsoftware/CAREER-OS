@@ -125,6 +125,24 @@ export default function CompanyCandidateDetail() {
               >
                 Advance to Interview
               </button>
+              <Link
+                to="/company/interviews"
+                style={{
+                  padding: '6px 14px',
+                  borderRadius: 6,
+                  border: 'none',
+                  background: '#4F46E5',
+                  color: '#fff',
+                  fontSize: 12,
+                  fontWeight: 600,
+                  textDecoration: 'none',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: 5,
+                }}
+              >
+                Schedule Video Call
+              </Link>
               <button
                 onClick={handleReject}
                 style={{

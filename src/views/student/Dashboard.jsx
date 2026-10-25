@@ -21,6 +21,10 @@ export default function StudentDashboard() {
   const myApplications = (state.applications || []).filter(a => a.studentId === student?.id);
   const myCerts = (state.certificates || []).filter(c => c.studentId === student?.id);
   const myNotifs = (state.notifications || []).filter(n => n.studentId === student?.id);
+  const myInterviews = (state.interviews || []).filter(
+    i => i.studentId === student?.id || i.studentEmail === student?.email
+  );
+  const scheduledCall = myInterviews.find(i => i.status === 'Scheduled');
 
   // ATS score from latest resume version
   const myVersions = (state.resumeVersions && student?.id ? state.resumeVersions[student.id] : []) || [];
@@ -120,6 +124,53 @@ export default function StudentDashboard() {
       {expiringSoon.length > 0 && (
         <div style={{ background: '#FFFBEB', border: '1px solid #FDE68A', borderRadius: 6, padding: '10px 16px', marginBottom: 16, fontSize: 13, color: '#92400E' }}>
           Certificate expiring soon: {expiringSoon.map(c => c.title).join(', ')}. Renew before the deadline.
+        </div>
+      )}
+
+      {/* Scheduled Live Online Interview Banner */}
+      {scheduledCall && (
+        <div style={{ background: 'linear-gradient(135deg, #1E1B4B 0%, #312E81 100%)', borderRadius: 12, padding: '16px 20px', marginBottom: 20, color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 14, boxShadow: '0 4px 16px rgba(49, 46, 129, 0.25)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+            <div style={{ width: 40, height: 40, borderRadius: 10, background: '#4F46E5', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <Video size={20} color="#fff" />
+            </div>
+            <div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <span style={{ fontSize: 15, fontWeight: 700 }}>Upcoming Video Interview: {scheduledCall.company}</span>
+                <span style={{ background: '#22C55E', color: '#fff', fontSize: 10, fontWeight: 700, padding: '2px 7px', borderRadius: 9999 }}>Ready to Join</span>
+              </div>
+              <div style={{ fontSize: 12, color: '#C7D2FE', marginTop: 2 }}>
+                {scheduledCall.role} • {scheduledCall.type} • {scheduledCall.date} at {scheduledCall.time} ({scheduledCall.duration || 45} mins)
+              </div>
+            </div>
+          </div>
+
+          <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+            <Link
+              to="/student/interviews"
+              style={{ fontSize: 12, color: '#E0E7FF', textDecoration: 'none', fontWeight: 600 }}
+            >
+              All Interviews ({myInterviews.length})
+            </Link>
+            <Link
+              to={`/interview-room/${scheduledCall.meetingId}`}
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 6,
+                padding: '8px 18px',
+                borderRadius: 8,
+                background: '#22C55E',
+                color: '#fff',
+                fontSize: 13,
+                fontWeight: 700,
+                textDecoration: 'none',
+                boxShadow: '0 4px 12px rgba(34,197,94,0.4)',
+              }}
+            >
+              <Video size={14} /> Join Call Now
+            </Link>
+          </div>
         </div>
       )}
 
