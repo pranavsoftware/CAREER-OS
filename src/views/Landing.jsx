@@ -35,8 +35,12 @@ export default function Landing() {
 
           {/* Desktop Nav — hidden on mobile */}
           <nav className="desktop-flex" style={{ alignItems: 'center', gap: 28, flex: 1, justifyContent: 'center' }}>
-            {[['#home','Home'],['#about','Platform'],['#capabilities','Capabilities'],['#experience','Experience'],['#contact','Placement Cell']].map(([href,label]) => (
-              <a key={href} href={href} style={{ fontSize: 14, fontWeight: 500, color: '#4B5563', textDecoration: 'none', whiteSpace: 'nowrap' }}>{label}</a>
+            {[['#home','Home'],['#about','Platform'],['#capabilities','Capabilities'],['/about','About Us'],['#experience','Experience'],['#contact','Placement Cell']].map(([href,label]) => (
+              href.startsWith('/') ? (
+                <Link key={href} to={href} style={{ fontSize: 14, fontWeight: 500, color: '#4B5563', textDecoration: 'none', whiteSpace: 'nowrap' }}>{label}</Link>
+              ) : (
+                <a key={href} href={href} style={{ fontSize: 14, fontWeight: 500, color: '#4B5563', textDecoration: 'none', whiteSpace: 'nowrap' }}>{label}</a>
+              )
             ))}
           </nav>
 
@@ -100,15 +104,26 @@ export default function Landing() {
             {/* Nav links */}
             <div style={{ padding: '20px', flex: 1 }}>
               <div style={{ fontSize: 11, fontWeight: 700, color: '#9CA3AF', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 12 }}>Navigation</div>
-              {[['#home','Home'],['#about','Platform'],['#capabilities','Capabilities'],['#experience','Experience'],['#contact','Placement Cell']].map(([href,label]) => (
-                <a
-                  key={href}
-                  href={href}
-                  onClick={() => setMobileMenuOpen(false)}
-                  style={{ display: 'block', padding: '11px 0', fontSize: 15, fontWeight: 500, color: '#1F2937', textDecoration: 'none', borderBottom: '1px solid #F3F4F6' }}
-                >
-                  {label}
-                </a>
+              {[['#home','Home'],['#about','Platform'],['#capabilities','Capabilities'],['/about','About Us'],['#experience','Experience'],['#contact','Placement Cell']].map(([href,label]) => (
+                href.startsWith('/') ? (
+                  <Link
+                    key={href}
+                    to={href}
+                    onClick={() => setMobileMenuOpen(false)}
+                    style={{ display: 'block', padding: '11px 0', fontSize: 15, fontWeight: 500, color: '#1F2937', textDecoration: 'none', borderBottom: '1px solid #F3F4F6' }}
+                  >
+                    {label}
+                  </Link>
+                ) : (
+                  <a
+                    key={href}
+                    href={href}
+                    onClick={() => setMobileMenuOpen(false)}
+                    style={{ display: 'block', padding: '11px 0', fontSize: 15, fontWeight: 500, color: '#1F2937', textDecoration: 'none', borderBottom: '1px solid #F3F4F6' }}
+                  >
+                    {label}
+                  </a>
+                )
               ))}
 
               {/* Role links */}
@@ -283,6 +298,66 @@ export default function Landing() {
         </div>
       </section>
 
+      {/* ─── LEADERSHIP & FOUNDERS SPOTLIGHT ─── */}
+      <section style={{ maxWidth: 1140, margin: '0 auto', padding: '0 20px 48px' }}>
+        <div style={{ background: '#fff', borderRadius: 28, border: '1px solid #EBEFFA', padding: '36px 32px', boxShadow: '0 8px 30px -4px rgba(0,0,0,0.05)', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 360px), 1fr))', gap: 32, alignItems: 'center' }}>
+          <div>
+            <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '4px 14px', borderRadius: 9999, background: '#EEF2FF', fontSize: 12, fontWeight: 700, color: '#4F46E5', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 14 }}>
+              The Leadership
+            </div>
+            <h2 style={{ fontSize: 'clamp(24px, 4vw, 36px)', fontWeight: 800, color: '#111827', letterSpacing: '-0.03em', lineHeight: 1.2, margin: '0 0 14px' }}>
+              Built by Founders Who Understand Campus Placements.
+            </h2>
+            <p style={{ fontSize: 14, color: '#4B5563', lineHeight: 1.65, margin: '0 0 20px' }}>
+              Led by Founder Dwarakadhish Patil, CTO Pranav Rayban, and COO Kshitij Jamma, CAREER-OS is engineered to unite students, universities, and enterprise recruiters on one verifiable platform.
+            </p>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 24 }}>
+              {[
+                { name: 'DWARAKADHISH PATIL', role: 'Founder & CEO' },
+                { name: 'Pranav Rayban', role: 'Chief Technology Officer (CTO)' },
+                { name: 'Kshitij Jamma', role: 'Chief Operating Officer (COO)' },
+              ].map(m => (
+                <div key={m.name} style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: 13, color: '#1F2937' }}>
+                  <CheckCircle size={16} color="#4F46E5" />
+                  <span style={{ fontWeight: 700 }}>{m.name}</span>
+                  <span style={{ color: '#6B7280' }}>• {m.role}</span>
+                </div>
+              ))}
+            </div>
+            <Link
+              to="/about"
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 8,
+                padding: '11px 24px',
+                borderRadius: 9999,
+                background: '#4F46E5',
+                color: '#fff',
+                fontSize: 13,
+                fontWeight: 600,
+                textDecoration: 'none',
+                boxShadow: '0 4px 14px rgba(79,70,229,0.3)',
+              }}
+            >
+              Meet the Leadership Team <ArrowRight size={14} />
+            </Link>
+          </div>
+
+          <div style={{ position: 'relative', borderRadius: 20, overflow: 'hidden', border: '1px solid #E5E7EB', boxShadow: '0 12px 32px -4px rgba(0,0,0,0.1)' }}>
+            <img
+              src="/team_founders.jpeg"
+              alt="CAREER-OS Founders"
+              style={{ width: '100%', height: '100%', maxHeight: 380, objectFit: 'cover', objectPosition: 'center 20%', display: 'block' }}
+            />
+            <div style={{ position: 'absolute', bottom: 0, insetInline: 0, background: 'linear-gradient(to top, rgba(17,24,39,0.88) 0%, transparent 100%)', padding: '24px 18px 14px', color: '#fff' }}>
+              <div style={{ fontSize: 14, fontWeight: 700 }}>Founding Executive Team</div>
+              <div style={{ fontSize: 12, color: '#D1D5DB' }}>Pranav Rayban (CTO) • Dwarakadhish Patil (Founder) • Kshitij Jamma (COO)</div>
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* ─── INSPIRING SECTION ─── */}
       <section id="experience" style={{ padding: '16px 20px 64px' }}>
         <div style={{ maxWidth: 1140, margin: '0 auto' }}>
@@ -346,6 +421,7 @@ export default function Landing() {
             <span>• Campus Placement Platform</span>
           </div>
           <div style={{ display: 'flex', gap: 18, flexWrap: 'wrap' }}>
+            <Link to="/about" style={{ color: '#4F46E5', fontWeight: 600, textDecoration: 'none' }}>About Us</Link>
             <Link to="/login" style={{ color: '#4B5563', textDecoration: 'none' }}>Sign In</Link>
             <a href="#about" style={{ color: '#4B5563', textDecoration: 'none' }}>Platform</a>
             <a href="#capabilities" style={{ color: '#4B5563', textDecoration: 'none' }}>Capabilities</a>

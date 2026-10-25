@@ -73,8 +73,28 @@ export default function Sidebar() {
         ))}
       </nav>
 
+      {/* About Leadership link */}
+      <div style={{ padding: '8px 16px', borderTop: '1px solid #E5E7EB' }}>
+        <a
+          href="/about"
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            fontSize: 12,
+            fontWeight: 500,
+            color: '#4B5563',
+            textDecoration: 'none',
+            padding: '6px 0',
+          }}
+        >
+          <span>About Leadership</span>
+          <span style={{ color: '#4F46E5', fontSize: 11, fontWeight: 700 }}>Team →</span>
+        </a>
+      </div>
+
       {/* Role badge at bottom */}
-      <div style={{ padding: '12px 16px', borderTop: '1px solid #E5E7EB' }}>
+      <div style={{ padding: '10px 16px', borderTop: '1px solid #F3F4F6' }}>
         <div style={{ fontSize: 11, color: '#9CA3AF', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
           {user?.role} portal
         </div>

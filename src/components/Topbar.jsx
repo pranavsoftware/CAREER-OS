@@ -94,6 +94,12 @@ export default function Topbar({ title }) {
               zIndex: 100,
             }}
           >
+            <a
+              href="/about"
+              style={{ display: 'block', width: '100%', padding: '10px 16px', textAlign: 'left', borderBottom: '1px solid #F3F4F6', textDecoration: 'none', fontSize: 13, color: '#374151', fontWeight: 500 }}
+            >
+              About Leadership
+            </a>
             <button
               onClick={handleLogout}
               style={{ display: 'block', width: '100%', padding: '10px 16px', textAlign: 'left', border: 'none', background: 'none', cursor: 'pointer', fontSize: 14, color: '#DC2626' }}

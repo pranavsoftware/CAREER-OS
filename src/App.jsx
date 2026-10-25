@@ -5,6 +5,7 @@ import ProtectedRoute from './components/ProtectedRoute';
 
 // Pages
 import Landing from './views/Landing';
+import About from './views/About';
 import Login from './views/Login';
 import NotFound from './views/NotFound';
 
@@ -50,8 +51,9 @@ export default function App() {
       <DataProvider>
         <BrowserRouter>
           <Routes>
-            {/* Public Landing & Login */}
+            {/* Public Landing, About & Login */}
             <Route path="/" element={<Landing />} />
+            <Route path="/about" element={<About />} />
             <Route path="/login" element={<Login />} />
 
             {/* Student Protected Routes */}
