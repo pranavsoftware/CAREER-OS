@@ -1,0 +1,15 @@
+services:
+  # AI Microservice ONLY — Python FastAPI with Whisper STT + TTS
+  # The Next.js frontend is deployed on Vercel separately.
+  - type: web
+    name: career-os-ai-service
+    runtime: docker
+    dockerfilePath: ./ai-service/Dockerfile
+    dockerContext: ./ai-service
+    plan: free
+    region: oregon
+    healthCheckPath: /health
+    autoDeploy: true
+    envVars:
+      - key: PORT
+        value: 8000

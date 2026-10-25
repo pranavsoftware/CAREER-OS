@@ -90,6 +90,7 @@ class TtsRequest(BaseModel):
     normalize: Optional[bool] = True
 
 
+@app.get("/")
 @app.get("/health")
 def health_check():
     return {

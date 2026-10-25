@@ -12,8 +12,9 @@ dist
 dist-ssr
 .next
 *.local
+
+# Local env overrides (keep .env.example tracked)
 .env.local
-.env
 
 # Editor directories and files
 .vscode/*
@@ -24,6 +25,7 @@ dist-ssr
 *.ntvs*
 *.njsproj
 *.sln
+
 # Python & AI Models
 __pycache__/
 *.py[cod]
