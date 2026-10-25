@@ -59,7 +59,7 @@ export default function CompanyJobs() {
 
     const jobObj = {
       id: `job_${Date.now()}`,
-      companyId: user.companyId || 'c1',
+      companyId: user?.companyId || 'c1',
       company: myCompany,
       title: newJob.title,
       description: newJob.description,

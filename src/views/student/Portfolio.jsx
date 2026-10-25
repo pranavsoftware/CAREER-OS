@@ -48,8 +48,8 @@ export default function StudentPortfolio() {
   const { user } = useAuth();
   const { state, dispatch } = useData();
 
-  const student = state.students.find(s => s.id === user?.studentId);
-  const myCerts = state.certificates.filter(c => c.studentId === student?.id && c.status === 'Valid');
+  const student = (state.students || []).find(s => s.id === user?.studentId) || (state.students || [])[0];
+  const myCerts = (state.certificates || []).filter(c => c.studentId === student?.id && c.status === 'Valid');
 
   const [activeTab, setActiveTab] = useState('hub'); // 'hub' | 'preview'
   const [githubInput, setGithubInput] = useState('');

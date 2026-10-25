@@ -87,7 +87,7 @@ export default function StudentProfile() {
   const { user } = useAuth();
   const { state, dispatch } = useData();
 
-  const student = state.students.find(s => s.id === user.studentId);
+  const student = (state.students || []).find(s => s.id === user?.studentId) || (state.students || [])[0];
   const [editing, setEditing] = useState(null); // section name being edited
   const [message, setMessage] = useState(null);
 
@@ -103,7 +103,7 @@ export default function StudentProfile() {
   const [addingExp, setAddingExp] = useState(false);
   const [newExp, setNewExp] = useState({ company: '', role: '', duration: '', description: '', type: 'Internship' });
 
-  if (!student) return <Layout title="Profile"><p>Student not found.</p></Layout>;
+  if (!student) return <Layout title="Profile"><p>Loading student profile...</p></Layout>;
 
   function startEdit(section) {
     setEditing(section);

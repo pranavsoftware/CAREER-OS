@@ -28,8 +28,8 @@ export default function StudentInterviewPrep() {
   const { state, dispatch } = useData();
   const questionBank = state.questionBank || [];
 
-  const student = state.students.find(s => s.id === user.studentId);
-  const myAttempts = state.testAttempts.filter(a => a.studentId === student?.id);
+  const student = (state.students || []).find(s => s.id === user?.studentId) || (state.students || [])[0];
+  const myAttempts = (state.testAttempts || []).filter(a => a.studentId === student?.id);
 
   // Tabs: 'coding' | 'test' | 'bank' | 'tracker'
   const [activeTab, setActiveTab] = useState('coding');

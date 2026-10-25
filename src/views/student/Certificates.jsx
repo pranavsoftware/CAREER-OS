@@ -11,8 +11,8 @@ export default function StudentCertificates() {
   const { user } = useAuth();
   const { state, dispatch } = useData();
 
-  const student = state.students.find(s => s.id === user.studentId);
-  const myCerts = state.certificates.filter(c => c.studentId === student?.id);
+  const student = (state.students || []).find(s => s.id === user?.studentId) || (state.students || [])[0];
+  const myCerts = (state.certificates || []).filter(c => c.studentId === student?.id);
 
   // Expiring soon banner
   const expiringSoon = myCerts.filter(c => c.status === 'Expiring soon');
@@ -26,7 +26,7 @@ export default function StudentCertificates() {
   const [confirmDuplicate, setConfirmDuplicate] = useState(false);
   const [inlineMsg, setInlineMsg] = useState(null);
 
-  if (!student) return <Layout title="Certificates"><p>Student not found.</p></Layout>;
+  if (!student) return <Layout title="Certificates"><p>Loading student profile...</p></Layout>;
 
   function handleFileUpload(e) {
     const file = e.target.files?.[0];

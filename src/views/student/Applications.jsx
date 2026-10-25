@@ -15,8 +15,8 @@ export default function StudentApplications() {
   const { user } = useAuth();
   const { state, dispatch } = useData();
 
-  const student = state.students.find(s => s.id === user.studentId);
-  const myApplications = state.applications.filter(a => a.studentId === student?.id);
+  const student = (state.students || []).find(s => s.id === user?.studentId) || (state.students || [])[0];
+  const myApplications = (state.applications || []).filter(a => a.studentId === student?.id);
 
   // Group applications by stage
   const cardsByStage = {};

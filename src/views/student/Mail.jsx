@@ -23,8 +23,8 @@ export default function StudentMail() {
   const { user } = useAuth();
   const { state, dispatch } = useData();
 
-  const student = state.students.find(s => s.id === user.studentId) || state.students[0];
-  const allNotifs = state.notifications.filter(n => !n.studentId || n.studentId === student?.id);
+  const student = (state.students || []).find(s => s.id === user?.studentId) || (state.students || [])[0];
+  const allNotifs = (state.notifications || []).filter(n => !n.studentId || n.studentId === student?.id);
 
   const [search, setSearch] = useState('');
   const [dateFilter, setDateFilter] = useState('all'); // 'all' | 'today' | 'week' | 'month' | 'custom'

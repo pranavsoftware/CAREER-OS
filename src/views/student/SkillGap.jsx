@@ -57,8 +57,8 @@ export default function StudentSkillGap() {
 
   const [selectedRole, setSelectedRole] = useState('Frontend Developer');
 
-  const student = state.students.find(s => s.id === user.studentId);
-  if (!student) return <Layout title="Skill Gap"><p>Student not found.</p></Layout>;
+  const student = (state.students || []).find(s => s.id === user?.studentId) || (state.students || [])[0];
+  if (!student) return <Layout title="Skill Gap"><p>Loading student profile...</p></Layout>;
 
   // Convert student skills to map: name -> level (1-5)
   const studentSkillMap = {};

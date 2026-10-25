@@ -60,7 +60,7 @@ export default function CompanyCandidateDetail() {
     if (!noteText.trim()) return;
     setCandidateNotes([
       ...candidateNotes,
-      { text: noteText.trim(), date: new Date().toLocaleDateString(), author: user.name || 'HR Recruiter' },
+      { text: noteText.trim(), date: new Date().toLocaleDateString(), author: user?.name || 'HR Recruiter' },
     ]);
     setNoteText('');
     setShowNoteModal(false);

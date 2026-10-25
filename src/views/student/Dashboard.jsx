@@ -15,19 +15,19 @@ export default function StudentDashboard() {
   const { state, dispatch } = useData();
   const [selectedNotif, setSelectedNotif] = useState(null);
 
-  const student = state.students.find(s => s.id === user.studentId);
-  if (!student) return <Layout title="Dashboard"><p>Student not found.</p></Layout>;
+  const student = (state.students || []).find(s => s.id === user?.studentId) || (state.students || [])[0];
+  if (!student) return <Layout title="Dashboard"><p>Loading student profile...</p></Layout>;
 
-  const myApplications = state.applications.filter(a => a.studentId === student.id);
-  const myCerts = state.certificates.filter(c => c.studentId === student.id);
-  const myNotifs = state.notifications.filter(n => n.studentId === student.id);
+  const myApplications = (state.applications || []).filter(a => a.studentId === student?.id);
+  const myCerts = (state.certificates || []).filter(c => c.studentId === student?.id);
+  const myNotifs = (state.notifications || []).filter(n => n.studentId === student?.id);
 
   // ATS score from latest resume version
-  const myVersions = state.resumeVersions[student.id] || [];
+  const myVersions = (state.resumeVersions && student?.id ? state.resumeVersions[student.id] : []) || [];
   const latestAts = myVersions.length > 0 ? myVersions[0].score : null;
 
   // Upcoming drives eligibility
-  const upcomingDrives = state.drives.filter(d => d.status === 'Open' || d.status === 'Upcoming');
+  const upcomingDrives = (state.drives || []).filter(d => d.status === 'Open' || d.status === 'Upcoming');
 
   // Expiring soon certs banner
   const expiringSoon = myCerts.filter(c => c.status === 'Expiring soon');

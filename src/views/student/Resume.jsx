@@ -10,9 +10,9 @@ export default function StudentResume() {
   const { user } = useAuth();
   const { state, dispatch } = useData();
 
-  const student = state.students.find(s => s.id === user.studentId);
-  const myCerts = state.certificates.filter(c => c.studentId === student?.id && c.status === 'Valid');
-  const myVersions = state.resumeVersions[student?.id] || [];
+  const student = (state.students || []).find(s => s.id === user?.studentId) || (state.students || [])[0];
+  const myCerts = (state.certificates || []).filter(c => c.studentId === student?.id && c.status === 'Valid');
+  const myVersions = (state.resumeVersions && student?.id ? state.resumeVersions[student.id] : []) || [];
 
   const [template, setTemplate] = useState('Classic');
   const [includeSections, setIncludeSections] = useState({
