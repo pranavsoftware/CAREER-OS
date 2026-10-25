@@ -1,6 +1,7 @@
 'use client';
 
 import { createContext, useContext, useReducer, useEffect, useState } from 'react';
+import { users as initialUsers } from '../data/users';
 
 const AuthContext = createContext(null);
 const STORAGE_KEY = 'career_os_auth';
@@ -35,9 +36,9 @@ function getInitialState() {
 }
 
 export function AuthProvider({ children }) {
-  const [state, dispatch] = useReducer(authReducer, { user: null, isAuthenticated: false });
-  const [availableUsers, setAvailableUsers] = useState([]);
-  const [isLoaded, setIsLoaded] = useState(false);
+  const [state, dispatch] = useReducer(authReducer, { user: null, isAuthenticated: false }, getInitialState);
+  const [availableUsers, setAvailableUsers] = useState(initialUsers);
+  const [isLoaded, setIsLoaded] = useState(() => typeof window !== 'undefined');
 
   // Restore stored user from localStorage on mount
   useEffect(() => {
@@ -53,24 +54,23 @@ export function AuthProvider({ children }) {
       }
     } catch (e) {
       // ignore
+    } finally {
+      if (isMounted) setIsLoaded(true);
     }
 
-    // Fetch demo users from database
+    // Opportunistically fetch latest users in background
     fetch('/api/auth/users')
       .then(res => {
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         return res.json();
       })
       .then(data => {
-        if (isMounted && data.users) {
+        if (isMounted && data.users && data.users.length > 0) {
           setAvailableUsers(data.users);
         }
       })
       .catch(err => {
-        console.warn('Auth users load warning:', err.message || err);
-      })
-      .finally(() => {
-        if (isMounted) setIsLoaded(true);
+        console.debug('Auth users background refresh notice:', err.message || err);
       });
 
     return () => {

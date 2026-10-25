@@ -7,6 +7,7 @@ import DataTable from '../../components/DataTable';
 import Modal from '../../components/Modal';
 import { useData } from '../../context/DataContext';
 import { useAuth } from '../../context/AuthContext';
+import { initialStudents } from '../../data/students';
 import { checkEligibility } from '../../utils/eligibility';
 import { Video, FileText, Download, ExternalLink, Paperclip, CheckCircle2, Play } from 'lucide-react';
 
@@ -15,8 +16,8 @@ export default function StudentDashboard() {
   const { state, dispatch } = useData();
   const [selectedNotif, setSelectedNotif] = useState(null);
 
-  const student = (state.students || []).find(s => s.id === user?.studentId) || (state.students || [])[0];
-  if (!student) return <Layout title="Dashboard"><p>Loading student profile...</p></Layout>;
+  const student = (state.students || []).find(s => s.id === user?.studentId) || (state.students || [])[0] || initialStudents[0];
+
 
   const myApplications = (state.applications || []).filter(a => a.studentId === student?.id);
   const myCerts = (state.certificates || []).filter(c => c.studentId === student?.id);

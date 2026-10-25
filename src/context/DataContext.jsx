@@ -2,25 +2,34 @@
 
 import { createContext, useContext, useReducer, useEffect, useState } from 'react';
 import { initialInterviews } from '../data/interviews';
+import { initialStudents } from '../data/students';
+import { initialJobs } from '../data/jobs';
+import { initialDrives } from '../data/drives';
+import { initialApplications } from '../data/applications';
+import { initialCertificates } from '../data/certificates';
+import { initialNotifications } from '../data/notifications';
+import { initialMails } from '../data/mails';
+import { questionBank } from '../data/questionBank';
+import { skillTaxonomy } from '../data/skillTaxonomy';
 
 const DataContext = createContext(null);
 const STORAGE_KEY = 'career_os_data';
 
 const defaultEmptyState = {
-  students: [],
-  drives: [],
-  jobs: [],
-  applications: [],
-  driveApplications: [],
-  certificates: [],
-  notifications: [],
-  mails: [],
+  students: initialStudents,
+  drives: initialDrives,
+  jobs: initialJobs,
+  applications: initialApplications,
+  driveApplications: initialApplications,
+  certificates: initialCertificates,
+  notifications: initialNotifications,
+  mails: initialMails,
   sentMails: [],
   materials: [],
   pipeline: {},
-  questionBank: [],
-  skillTaxonomy: {},
-  roleOptions: [],
+  questionBank: questionBank || [],
+  skillTaxonomy: skillTaxonomy || {},
+  roleOptions: Object.keys(skillTaxonomy || {}),
   resumeVersions: {},
   roadmapProgress: {},
   testAttempts: [],
@@ -544,10 +553,14 @@ function getInitialState() {
       const stored = localStorage.getItem(STORAGE_KEY);
       if (stored) {
         const parsed = JSON.parse(stored);
-        if (!parsed.interviews || parsed.interviews.length === 0) {
-          parsed.interviews = initialInterviews;
-        }
-        return parsed;
+        return {
+          ...defaultEmptyState,
+          ...parsed,
+          students: (parsed.students && parsed.students.length > 0) ? parsed.students : defaultEmptyState.students,
+          interviews: (parsed.interviews && parsed.interviews.length > 0) ? parsed.interviews : defaultEmptyState.interviews,
+          jobs: (parsed.jobs && parsed.jobs.length > 0) ? parsed.jobs : defaultEmptyState.jobs,
+          drives: (parsed.drives && parsed.drives.length > 0) ? parsed.drives : defaultEmptyState.drives,
+        };
       }
     } catch (e) {
       // ignore
@@ -558,24 +571,19 @@ function getInitialState() {
 
 export function DataProvider({ children }) {
   const [state, dispatch] = useReducer(dataReducer, defaultEmptyState, getInitialState);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
 
-  // Fetch all initial data from PostgreSQL Backend
+  // Fetch all initial data from PostgreSQL Backend in background
   useEffect(() => {
     let isMounted = true;
 
     async function loadBackendData() {
       try {
-        let res;
-        for (let attempt = 1; attempt <= 3; attempt++) {
-          try {
-            res = await fetch('/api/initial-data');
-            if (res.ok) break;
-          } catch (e) {
-            if (attempt === 3) throw e;
-            await new Promise((r) => setTimeout(r, attempt * 1000));
-          }
-        }
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 6000);
+        const res = await fetch('/api/initial-data', { signal: controller.signal });
+        clearTimeout(timeoutId);
+
         if (!res.ok) throw new Error(`HTTP error ${res.status}`);
         const data = await res.json();
         if (!isMounted) return;
@@ -583,28 +591,28 @@ export function DataProvider({ children }) {
         dispatch({
           type: 'SET_SERVER_DATA',
           payload: {
-            students: data.students || [],
-            jobs: data.jobs || [],
-            drives: data.drives || [],
-            applications: data.applications || [],
-            driveApplications: data.applications || [],
-            certificates: data.certificates || [],
-            notifications: data.notifications || [],
-            mails: data.mails || [],
+            students: (data.students && data.students.length) ? data.students : initialStudents,
+            jobs: (data.jobs && data.jobs.length) ? data.jobs : initialJobs,
+            drives: (data.drives && data.drives.length) ? data.drives : initialDrives,
+            applications: (data.applications && data.applications.length) ? data.applications : initialApplications,
+            driveApplications: (data.applications && data.applications.length) ? data.applications : initialApplications,
+            certificates: (data.certificates && data.certificates.length) ? data.certificates : initialCertificates,
+            notifications: (data.notifications && data.notifications.length) ? data.notifications : initialNotifications,
+            mails: (data.mails && data.mails.length) ? data.mails : initialMails,
             sentMails: data.sentMails || [],
             materials: data.materials || [],
             pipeline: data.pipeline || {},
-            questionBank: data.questionBank || [],
+            questionBank: (data.questionBank && data.questionBank.length) ? data.questionBank : (questionBank || []),
             interviews: (data.interviews && data.interviews.length) ? data.interviews : (state.interviews && state.interviews.length ? state.interviews : initialInterviews),
-            skillTaxonomy: data.skillTaxonomy || {},
-            roleOptions: data.roleOptions || [],
+            skillTaxonomy: data.skillTaxonomy || skillTaxonomy,
+            roleOptions: data.roleOptions || Object.keys(skillTaxonomy || {}),
             testAttempts: data.testAttempts || [],
             resumeVersions: data.resumeVersions || {},
             roadmapProgress: data.roadmapProgress || {},
           },
         });
       } catch (err) {
-        console.warn('Initial data load warning:', err.message || err);
+        console.debug('Initial data sync notice:', err.message || err);
       } finally {
         if (isMounted) setLoading(false);
       }
@@ -618,10 +626,10 @@ export function DataProvider({ children }) {
 
   // Sync to local storage for offline responsiveness
   useEffect(() => {
-    if (typeof window !== 'undefined' && !loading) {
+    if (typeof window !== 'undefined') {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
     }
-  }, [state, loading]);
+  }, [state]);
 
   return (
     <DataContext.Provider value={{ state, dispatch, loading }}>

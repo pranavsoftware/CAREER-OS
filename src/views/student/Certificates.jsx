@@ -5,13 +5,14 @@ import Badge from '../../components/Badge';
 import FormField from '../../components/FormField';
 import { useData } from '../../context/DataContext';
 import { useAuth } from '../../context/AuthContext';
+import { initialStudents } from '../../data/students';
 import { mockOcr } from '../../utils/mockOcr';
 
 export default function StudentCertificates() {
   const { user } = useAuth();
   const { state, dispatch } = useData();
 
-  const student = (state.students || []).find(s => s.id === user?.studentId) || (state.students || [])[0];
+  const student = (state.students || []).find(s => s.id === user?.studentId) || (state.students || [])[0] || initialStudents[0];
   const myCerts = (state.certificates || []).filter(c => c.studentId === student?.id);
 
   // Expiring soon banner
@@ -26,7 +27,6 @@ export default function StudentCertificates() {
   const [confirmDuplicate, setConfirmDuplicate] = useState(false);
   const [inlineMsg, setInlineMsg] = useState(null);
 
-  if (!student) return <Layout title="Certificates"><p>Loading student profile...</p></Layout>;
 
   function handleFileUpload(e) {
     const file = e.target.files?.[0];

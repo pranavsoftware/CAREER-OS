@@ -14,6 +14,7 @@ import Badge from '../../components/Badge';
 import DataTable from '../../components/DataTable';
 import { useData } from '../../context/DataContext';
 import { useAuth } from '../../context/AuthContext';
+import { initialStudents } from '../../data/students';
 
 const ROADMAP_STEPS = {
   'Frontend Developer': [
@@ -57,8 +58,7 @@ export default function StudentSkillGap() {
 
   const [selectedRole, setSelectedRole] = useState('Frontend Developer');
 
-  const student = (state.students || []).find(s => s.id === user?.studentId) || (state.students || [])[0];
-  if (!student) return <Layout title="Skill Gap"><p>Loading student profile...</p></Layout>;
+  const student = (state.students || []).find(s => s.id === user?.studentId) || (state.students || [])[0] || initialStudents[0];
 
   // Convert student skills to map: name -> level (1-5)
   const studentSkillMap = {};

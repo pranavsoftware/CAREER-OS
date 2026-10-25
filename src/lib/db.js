@@ -19,8 +19,8 @@ export function getPool() {
       connectionString: process.env.DATABASE_URL,
       ssl: { rejectUnauthorized: false },
       max: maxConnections,
-      idleTimeoutMillis: 10000,
-      connectionTimeoutMillis: 10000,
+      idleTimeoutMillis: 5000,
+      connectionTimeoutMillis: 2500,
       allowExitOnIdle: true,
     });
   } else {
@@ -32,8 +32,8 @@ export function getPool() {
       password: process.env.PGPASSWORD,
       ssl: { rejectUnauthorized: false },
       max: maxConnections,
-      idleTimeoutMillis: 10000,
-      connectionTimeoutMillis: 10000,
+      idleTimeoutMillis: 5000,
+      connectionTimeoutMillis: 2500,
       allowExitOnIdle: true,
     });
   }

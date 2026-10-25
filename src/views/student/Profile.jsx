@@ -5,6 +5,7 @@ import Badge, { getBadgeVariant } from '../../components/Badge';
 import FormField from '../../components/FormField';
 import { useData } from '../../context/DataContext';
 import { useAuth } from '../../context/AuthContext';
+import { initialStudents } from '../../data/students';
 import { Star, ExternalLink, RefreshCw, FolderGit2, Search, Plus, Check, ChevronDown, Sparkles, X } from 'lucide-react';
 import GithubIcon from '../../components/GithubIcon';
 
@@ -87,7 +88,7 @@ export default function StudentProfile() {
   const { user } = useAuth();
   const { state, dispatch } = useData();
 
-  const student = (state.students || []).find(s => s.id === user?.studentId) || (state.students || [])[0];
+  const student = (state.students || []).find(s => s.id === user?.studentId) || (state.students || [])[0] || initialStudents[0];
   const [editing, setEditing] = useState(null); // section name being edited
   const [message, setMessage] = useState(null);
 
@@ -102,8 +103,6 @@ export default function StudentProfile() {
   const [newProject, setNewProject] = useState({ title: '', description: '', technologies: '', link: '', year: 2026 });
   const [addingExp, setAddingExp] = useState(false);
   const [newExp, setNewExp] = useState({ company: '', role: '', duration: '', description: '', type: 'Internship' });
-
-  if (!student) return <Layout title="Profile"><p>Loading student profile...</p></Layout>;
 
   function startEdit(section) {
     setEditing(section);
