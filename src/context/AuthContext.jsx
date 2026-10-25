@@ -106,6 +106,11 @@ export function AuthProvider({ children }) {
 
   function logout() {
     dispatch({ type: 'LOGOUT' });
+    if (typeof window !== 'undefined') {
+      try {
+        localStorage.removeItem(STORAGE_KEY);
+      } catch (_) {}
+    }
   }
 
   return (

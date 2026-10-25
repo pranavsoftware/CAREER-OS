@@ -13,14 +13,18 @@ import { initialNotifications } from '../src/data/notifications.js';
 import { questionBank } from '../src/data/questionBank.js';
 import { skillTaxonomy } from '../src/data/skillTaxonomy.js';
 
-const client = new pg.Client({
-  host: process.env.PGHOST || 'aws-0-ap-northeast-2.pooler.supabase.com',
-  port: parseInt(process.env.PGPORT || '5432', 10),
-  database: process.env.PGDATABASE || 'postgres',
-  user: process.env.PGUSER || 'postgres.razmrpxgxlolqtbeblch',
-  password: process.env.PGPASSWORD || '@@E3MLx2pjdeSA3',
-  ssl: { rejectUnauthorized: false }
-});
+const client = new pg.Client(
+  process.env.DATABASE_URL
+    ? { connectionString: process.env.DATABASE_URL, ssl: { rejectUnauthorized: false } }
+    : {
+        host: process.env.PGHOST,
+        port: parseInt(process.env.PGPORT || '6543', 10),
+        database: process.env.PGDATABASE || 'postgres',
+        user: process.env.PGUSER,
+        password: process.env.PGPASSWORD,
+        ssl: { rejectUnauthorized: false }
+      }
+);
 
 async function runMigrationAndSeed() {
   console.log('Connecting to Supabase PostgreSQL database...');

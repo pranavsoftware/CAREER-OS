@@ -25,11 +25,11 @@ export function getPool() {
     });
   } else {
     pool = new Pool({
-      host: process.env.PGHOST || 'aws-0-ap-northeast-2.pooler.supabase.com',
+      host: process.env.PGHOST,
       port: parseInt(process.env.PGPORT || '6543', 10),
       database: process.env.PGDATABASE || 'postgres',
-      user: process.env.PGUSER || 'postgres.razmrpxgxlolqtbeblch',
-      password: process.env.PGPASSWORD || '@@E3MLx2pjdeSA3',
+      user: process.env.PGUSER,
+      password: process.env.PGPASSWORD,
       ssl: { rejectUnauthorized: false },
       max: maxConnections,
       idleTimeoutMillis: 10000,

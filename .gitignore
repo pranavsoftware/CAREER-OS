@@ -14,7 +14,10 @@ dist-ssr
 *.local
 
 # Local env overrides (keep .env.example tracked)
-.env.local
+.env
+.env*.local
+.env.production
+.env.development
 
 # Editor directories and files
 .vscode/*
