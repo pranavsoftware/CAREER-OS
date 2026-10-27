@@ -48,7 +48,15 @@ const STUN_SERVERS = {
 // ── Real WebRTC Remote Video Tile with Admin Controls ──
 function RemoteVideoTile({ peer, compact = false, isRecruiter = false, onMute, onDisableVideo, onKick }) {
   const videoRef = useRef(null);
+  const isMountedRef = useRef(true);
   const [, setTrackVersion] = useState(0);
+
+  useEffect(() => {
+    isMountedRef.current = true;
+    return () => {
+      isMountedRef.current = false;
+    };
+  }, []);
 
   useEffect(() => {
     if (videoRef.current && peer.stream) {
@@ -57,7 +65,13 @@ function RemoteVideoTile({ peer, compact = false, isRecruiter = false, onMute, o
       }
       const playPromise = videoRef.current.play();
       if (playPromise !== undefined) {
-        playPromise.catch(e => console.warn('Remote video play attempt:', e));
+        playPromise.catch(e => {
+          // AbortError is normal when browser switches tabs, minimizes window, or unmounts tile
+          if (e.name === 'AbortError' || e.name === 'NotAllowedError') {
+            return;
+          }
+          console.debug('Remote video play state:', e.message || e);
+        });
       }
     }
   }, [peer.stream]);
@@ -1291,6 +1305,10 @@ console.log(twoSum([2, 7, 11, 15], 9)); // Output: [0, 1]
 
     const performUnifiedSync = async () => {
       if (isPolling) return; // Prevent overlapping requests on Vercel
+      // Don't issue requests when the browser tab is hidden/minimized or offline to prevent ERR_NETWORK_IO_SUSPENDED
+      if (typeof document !== 'undefined' && document.visibilityState === 'hidden') return;
+      if (typeof navigator !== 'undefined' && !navigator.onLine) return;
+
       isPolling = true;
 
       try {
@@ -1352,7 +1370,7 @@ console.log(twoSum([2, 7, 11, 15], 9)); // Output: [0, 1]
           }
         }
       } catch (err) {
-        // Silently recover on intermittent network hiccups
+        // Silently recover on intermittent network hiccups or suspended state
       } finally {
         isPolling = false;
       }
@@ -1361,9 +1379,18 @@ console.log(twoSum([2, 7, 11, 15], 9)); // Output: [0, 1]
     performUnifiedSync();
     const syncInterval = setInterval(performUnifiedSync, 750);
 
+    // Immediate sync upon returning to the tab
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        performUnifiedSync();
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
     return () => {
       isMounted = false;
       clearInterval(syncInterval);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
   }, [inLobby, joinStatus, meetingId, myPeerId, isRecruiter, user?.id]);
 
@@ -1532,12 +1559,19 @@ console.log(twoSum([2, 7, 11, 15], 9)); // Output: [0, 1]
 
         // 2. Measure HTTP signaling round-trip ping if WebRTC stats are still connecting
         if (rtt === null) {
-          const t0 = performance.now();
-          try {
-            await fetch('/api/meeting-signal?ping=1', { method: 'HEAD', cache: 'no-store' });
-            rtt = Math.max(12, Math.round(performance.now() - t0));
-          } catch {
-            rtt = Math.floor(22 + Math.random() * 12);
+          // If tab is hidden or device is offline, skip ping to avoid ERR_NETWORK_IO_SUSPENDED
+          if (typeof document !== 'undefined' && document.visibilityState === 'hidden') {
+            rtt = 28;
+          } else if (typeof navigator !== 'undefined' && !navigator.onLine) {
+            rtt = 999;
+          } else {
+            const t0 = performance.now();
+            try {
+              await fetch('/api/meeting-signal?ping=1', { method: 'HEAD', cache: 'no-store' });
+              rtt = Math.max(12, Math.round(performance.now() - t0));
+            } catch {
+              rtt = Math.floor(22 + Math.random() * 12);
+            }
           }
         }
 
@@ -1694,7 +1728,11 @@ console.log(twoSum([2, 7, 11, 15], 9)); // Output: [0, 1]
           });
         }
       } catch (err) {
-        console.warn('Screen share cancelled or failed:', err);
+        // User cancelling the browser screen picker dialog produces NotAllowedError or AbortError
+        if (err.name === 'NotAllowedError' || err.name === 'AbortError') {
+          return;
+        }
+        console.warn('Screen share notice:', err.message || err);
       }
     }
   }
