@@ -29,12 +29,18 @@ const STUN_SERVERS = {
     { urls: 'stun:stun.l.google.com:19302' },
     { urls: 'stun:stun1.l.google.com:19302' },
     { urls: 'stun:stun2.l.google.com:19302' },
-    { urls: 'stun:stun3.l.google.com:19302' },
-    { urls: 'stun:stun4.l.google.com:19302' },
     { urls: 'stun:global.stun.twilio.com:3478' },
-    { urls: 'stun:stun.services.mozilla.com' },
     { urls: 'stun:stun.cloudflare.com:3478' },
     { urls: 'stun:openrelay.metered.ca:80' },
+    {
+      urls: [
+        'turn:openrelay.metered.ca:80',
+        'turn:openrelay.metered.ca:443',
+        'turn:openrelay.metered.ca:443?transport=tcp'
+      ],
+      username: 'openrelayproject',
+      credential: 'openrelayproject',
+    },
   ],
   iceCandidatePoolSize: 10,
 };
@@ -46,7 +52,9 @@ function RemoteVideoTile({ peer, compact = false, isRecruiter = false, onMute, o
 
   useEffect(() => {
     if (videoRef.current && peer.stream) {
-      videoRef.current.srcObject = peer.stream;
+      if (videoRef.current.srcObject !== peer.stream) {
+        videoRef.current.srcObject = peer.stream;
+      }
       const playPromise = videoRef.current.play();
       if (playPromise !== undefined) {
         playPromise.catch(e => console.warn('Remote video play attempt:', e));
@@ -70,7 +78,7 @@ function RemoteVideoTile({ peer, compact = false, isRecruiter = false, onMute, o
     };
   }, [peer.stream]);
 
-  const hasVideoTrack = peer.stream && peer.stream.getVideoTracks().length > 0 && peer.stream.getVideoTracks()[0].enabled;
+  const hasVideoTrack = peer.stream && peer.stream.getVideoTracks().length > 0 && peer.stream.getVideoTracks().some(t => t.enabled);
   const isCamOff = peer.videoOff || !peer.stream || !hasVideoTrack;
 
   return (
@@ -90,7 +98,20 @@ function RemoteVideoTile({ peer, compact = false, isRecruiter = false, onMute, o
         border: '2px solid #5F6368',
       }}
     >
-      {isCamOff ? (
+      {/* ALWAYS keep video element in DOM so audio stream plays and video connects without race conditions */}
+      <video
+        ref={videoRef}
+        autoPlay
+        playsInline
+        style={{
+          width: '100%',
+          height: '100%',
+          objectFit: 'cover',
+          display: isCamOff ? 'none' : 'block',
+        }}
+      />
+
+      {isCamOff && (
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12, color: '#9AA0A6' }}>
           <div
             style={{
@@ -113,17 +134,6 @@ function RemoteVideoTile({ peer, compact = false, isRecruiter = false, onMute, o
             {peer.videoOff ? 'Camera is turned off' : (!peer.stream ? 'Connecting live stream...' : 'Live video active')}
           </div>
         </div>
-      ) : (
-        <video
-          ref={videoRef}
-          autoPlay
-          playsInline
-          style={{
-            width: '100%',
-            height: '100%',
-            objectFit: 'cover',
-          }}
-        />
       )}
 
       {/* Participant Name Badge */}
@@ -314,6 +324,7 @@ export default function InterviewRoom({ meetingId: meetingIdProp }) {
   const myPeerId = useRef(`peer_${Math.random().toString(36).slice(2, 9)}_${Date.now()}`).current;
   const [remotePeers, setRemotePeers] = useState({});
   const peerConnectionsRef = useRef(new Map());
+  const remoteStreamsRef = useRef(new Map());
   const pendingIceCandidatesRef = useRef(new Map());
   const broadcastRef = useRef(null);
   const lastPollTimeRef = useRef(0);
@@ -579,9 +590,31 @@ console.log(twoSum([2, 7, 11, 15], 9)); // Output: [0, 1]
         }
       };
 
-      // When remote track arrives, store remote stream (safely handles stream and track events)
+      // When remote track arrives, store remote stream (safely handles multiple audio and video tracks)
       pc.ontrack = (event) => {
-        const streamToUse = (event.streams && event.streams[0]) ? event.streams[0] : new MediaStream([event.track]);
+        let stream = remoteStreamsRef.current.get(remotePeerId);
+        if (!stream) {
+          stream = new MediaStream();
+          remoteStreamsRef.current.set(remotePeerId, stream);
+        }
+
+        // Add the incoming track if not already in stream
+        if (event.track && !stream.getTracks().some(t => t.id === event.track.id)) {
+          stream.addTrack(event.track);
+        }
+
+        // Also incorporate any stream from event.streams
+        if (event.streams && event.streams[0]) {
+          event.streams[0].getTracks().forEach(t => {
+            if (!stream.getTracks().some(existing => existing.id === t.id)) {
+              stream.addTrack(t);
+            }
+          });
+        }
+
+        // Clone stream reference so React detects state change and re-renders
+        const streamClone = new MediaStream(stream.getTracks());
+
         setRemotePeers(prev => ({
           ...prev,
           [remotePeerId]: {
@@ -590,7 +623,7 @@ console.log(twoSum([2, 7, 11, 15], 9)); // Output: [0, 1]
             name: peerName || prev[remotePeerId]?.name || 'Participant',
             role: peerRole || prev[remotePeerId]?.role || 'Candidate',
             isRecruiter: peerIsRecruiter !== undefined ? peerIsRecruiter : prev[remotePeerId]?.isRecruiter,
-            stream: streamToUse,
+            stream: streamClone,
             micMuted: prev[remotePeerId]?.micMuted || false,
             videoOff: prev[remotePeerId]?.videoOff || false,
           },
@@ -601,6 +634,7 @@ console.log(twoSum([2, 7, 11, 15], 9)); // Output: [0, 1]
       pc.onconnectionstatechange = () => {
         if (pc.connectionState === 'disconnected' || pc.connectionState === 'failed' || pc.connectionState === 'closed') {
           peerConnectionsRef.current.delete(remotePeerId);
+          remoteStreamsRef.current.delete(remotePeerId);
           initiatedOffersRef.current.delete(remotePeerId);
           setRemotePeers(prev => {
             const next = { ...prev };
@@ -789,6 +823,48 @@ console.log(twoSum([2, 7, 11, 15], 9)); // Output: [0, 1]
     }
   };
 
+  // Dedicated WebRTC Offer Initiator
+  const initiateWebRTCOffer = async (remotePeerId, peerName, peerRole, peerIsRecruiter) => {
+    if (!localStreamRef.current) {
+      console.log('initiateWebRTCOffer: localStream not ready yet for', remotePeerId);
+      return;
+    }
+
+    if (initiatedOffersRef.current.has(remotePeerId)) {
+      return;
+    }
+
+    const existingPc = peerConnectionsRef.current.get(remotePeerId);
+    if (existingPc && (existingPc.remoteDescription || existingPc.localDescription || existingPc.connectionState === 'connected')) {
+      return;
+    }
+
+    const pc = getOrCreatePeerConnection(remotePeerId, peerName, peerRole, peerIsRecruiter);
+    if (pc.signalingState !== 'stable' || pc.remoteDescription) {
+      return;
+    }
+
+    initiatedOffersRef.current.add(remotePeerId);
+    try {
+      const createdOffer = await pc.createOffer();
+      await pc.setLocalDescription(createdOffer);
+      sendSignalingMessage({
+        to: remotePeerId,
+        signalType: 'OFFER',
+        offer: createdOffer,
+      });
+    } catch (err) {
+      console.error('Error creating WebRTC offer:', err);
+      initiatedOffersRef.current.delete(remotePeerId);
+      if (err.name === 'InvalidAccessError' || err.message?.includes('m-lines')) {
+        console.warn('Recovering PeerConnection from SDP m-line mismatch...');
+        try { pc.close(); } catch {}
+        peerConnectionsRef.current.delete(remotePeerId);
+        remoteStreamsRef.current.delete(remotePeerId);
+      }
+    }
+  };
+
   // Handle incoming signaling messages
   const handleSignalMessage = async (msg) => {
     if (!msg || msg.from === myPeerId) return;
@@ -844,46 +920,10 @@ console.log(twoSum([2, 7, 11, 15], 9)); // Output: [0, 1]
         });
       }
 
-      // Initiating WebRTC offer: ONLY once per peer to avoid "m-lines in subsequent offer" mismatch
-      if (localStreamRef.current) {
-        // Guard 1: Skip if we already initiated an offer to this peer
-        if (initiatedOffersRef.current.has(remotePeerId)) {
-          return;
-        }
-
-        // Guard 2: Skip if an active peer connection is already established
-        const existingPc = peerConnectionsRef.current.get(remotePeerId);
-        if (existingPc && (existingPc.remoteDescription || existingPc.localDescription || existingPc.connectionState === 'connected')) {
-          return;
-        }
-
-        // Deterministic initiator to prevent glare:
-        // Recruiter initiates, or if identical role, peer with higher peerId initiates.
-        const shouldInitiate = isRecruiter || (!peerIsRecruiter && myPeerId > remotePeerId);
-
-        if (shouldInitiate) {
-          const pc = getOrCreatePeerConnection(remotePeerId, name, role, peerIsRecruiter);
-          if (pc.signalingState === 'stable' && !pc.remoteDescription && !initiatedOffersRef.current.has(remotePeerId)) {
-            initiatedOffersRef.current.add(remotePeerId);
-            try {
-              const createdOffer = await pc.createOffer();
-              await pc.setLocalDescription(createdOffer);
-              sendSignalingMessage({
-                to: remotePeerId,
-                signalType: 'OFFER',
-                offer: createdOffer,
-              });
-            } catch (err) {
-              console.error('Error creating WebRTC offer:', err);
-              initiatedOffersRef.current.delete(remotePeerId);
-              if (err.name === 'InvalidAccessError' || err.message?.includes('m-lines')) {
-                console.warn('Recovering PeerConnection from SDP m-line mismatch...');
-                try { pc.close(); } catch {}
-                peerConnectionsRef.current.delete(remotePeerId);
-              }
-            }
-          }
-        }
+      // Initiating WebRTC offer: ONLY once per peer to avoid duplicate offers
+      const shouldInitiate = isRecruiter || (!peerIsRecruiter && myPeerId > remotePeerId);
+      if (shouldInitiate) {
+        initiateWebRTCOffer(remotePeerId, name, role, peerIsRecruiter);
       }
     } else if (signalType === 'JOIN_ACK') {
       // Acknowledged by an existing peer in room
@@ -899,6 +939,12 @@ console.log(twoSum([2, 7, 11, 15], 9)); // Output: [0, 1]
           stream: prev[remotePeerId]?.stream || null,
         },
       }));
+
+      // When newcomer discovers existing peer, if newcomer is recruiter or initiator, initiate offer!
+      const shouldInitiate = isRecruiter || (!peerIsRecruiter && myPeerId > remotePeerId);
+      if (shouldInitiate) {
+        initiateWebRTCOffer(remotePeerId, name, role, peerIsRecruiter);
+      }
     } else if (signalType === 'OFFER') {
       if (!offer) return;
       const pc = getOrCreatePeerConnection(remotePeerId);
@@ -1392,6 +1438,18 @@ console.log(twoSum([2, 7, 11, 15], 9)); // Output: [0, 1]
       });
     }
   }, [inLobby]);
+
+  // When local camera & mic are ready, check if any already discovered remote peers need an offer
+  useEffect(() => {
+    if (hasLocalStream && localStreamRef.current && !inLobby) {
+      Object.values(remotePeers).forEach(peer => {
+        const shouldInitiate = isRecruiter || (!peer.isRecruiter && myPeerId > peer.peerId);
+        if (shouldInitiate && !initiatedOffersRef.current.has(peer.peerId) && !peer.stream) {
+          initiateWebRTCOffer(peer.peerId, peer.name, peer.role, peer.isRecruiter);
+        }
+      });
+    }
+  }, [hasLocalStream, inLobby, remotePeers]);
 
   // Timer loop for call duration
   useEffect(() => {
