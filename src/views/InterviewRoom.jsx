@@ -240,8 +240,25 @@ function RemoteVideoTile({ peer, compact = false, isRecruiter = false, onMute, o
   );
 }
 
-export default function InterviewRoom() {
-  const { id: meetingId } = useParams();
+export default function InterviewRoom({ meetingId: meetingIdProp }) {
+  let routerId = null;
+  try {
+    const params = useParams();
+    routerId = params?.id;
+  } catch {}
+
+  let pathnameId = null;
+  if (typeof window !== 'undefined') {
+    const parts = window.location.pathname.split('/').filter(Boolean);
+    const roomIdx = parts.indexOf('interview-room');
+    if (roomIdx !== -1 && parts[roomIdx + 1]) {
+      pathnameId = parts[roomIdx + 1];
+    } else {
+      pathnameId = parts[parts.length - 1];
+    }
+  }
+
+  const meetingId = meetingIdProp || routerId || pathnameId;
   const { user } = useAuth();
   const { state, dispatch } = useData();
 
@@ -591,15 +608,22 @@ console.log(twoSum([2, 7, 11, 15], 9)); // Output: [0, 1]
       };
     }
 
-    // Ensure all local audio & video tracks are attached to this peer connection
+    // Ensure all local audio & video tracks are attached to this peer connection in deterministic order
     if (localStreamRef.current) {
       const existingSenders = pc.getSenders();
-      localStreamRef.current.getTracks().forEach(track => {
+      // Crucial: Always add audio tracks first, then video tracks to preserve identical SDP m-line ordering across offers/answers
+      const audioTracks = localStreamRef.current.getAudioTracks();
+      const videoTracks = localStreamRef.current.getVideoTracks();
+      const orderedTracks = [...audioTracks, ...videoTracks];
+
+      orderedTracks.forEach(track => {
         const isAlreadyAdded = existingSenders.some(s => s.track && s.track.id === track.id);
         if (!isAlreadyAdded) {
           try {
             pc.addTrack(track, localStreamRef.current);
-          } catch {}
+          } catch (err) {
+            console.warn('Track addition warning:', err);
+          }
         }
       });
     }
@@ -805,19 +829,32 @@ console.log(twoSum([2, 7, 11, 15], 9)); // Output: [0, 1]
         });
       }
 
-      // Existing peer initiates WebRTC offer
+      // Initiating WebRTC offer: guard against collision / glare
       if (localStreamRef.current) {
         const pc = getOrCreatePeerConnection(remotePeerId, name, role, peerIsRecruiter);
-        try {
-          const createdOffer = await pc.createOffer();
-          await pc.setLocalDescription(createdOffer);
-          sendSignalingMessage({
-            to: remotePeerId,
-            signalType: 'OFFER',
-            offer: createdOffer,
-          });
-        } catch (err) {
-          console.error('Error creating WebRTC offer:', err);
+
+        // Deterministic initiator to prevent glare if both peers send JOIN at the same time:
+        // Recruiter initiates, or if identical role, peer with higher peerId initiates.
+        const shouldInitiate = isRecruiter || (!peerIsRecruiter && myPeerId > remotePeerId);
+
+        if (shouldInitiate && pc.signalingState === 'stable') {
+          try {
+            const createdOffer = await pc.createOffer();
+            await pc.setLocalDescription(createdOffer);
+            sendSignalingMessage({
+              to: remotePeerId,
+              signalType: 'OFFER',
+              offer: createdOffer,
+            });
+          } catch (err) {
+            console.error('Error creating WebRTC offer:', err);
+            // If m-line mismatch or SDP state corruption occurs, reset peer connection cleanly so it can reconnect
+            if (err.name === 'InvalidAccessError' || err.message?.includes('m-lines')) {
+              console.warn('Resetting PeerConnection due to SDP m-line mismatch...');
+              try { pc.close(); } catch {}
+              peerConnectionsRef.current.delete(remotePeerId);
+            }
+          }
         }
       }
     } else if (signalType === 'JOIN_ACK') {
@@ -838,6 +875,21 @@ console.log(twoSum([2, 7, 11, 15], 9)); // Output: [0, 1]
       if (!offer) return;
       const pc = getOrCreatePeerConnection(remotePeerId);
       try {
+        // Perfect Negotiation glare handling
+        if (pc.signalingState !== 'stable') {
+          if (pc.signalingState === 'have-local-offer') {
+            // Polite peer tie-break: rolls back local offer to accept incoming offer
+            const isPolite = !isRecruiter && myPeerId < remotePeerId;
+            if (isPolite) {
+              console.log('Glare detected: polite peer rolling back local offer');
+              await pc.setLocalDescription({ type: 'rollback' });
+            } else {
+              console.log('Glare detected: impolite peer ignoring competing offer');
+              return;
+            }
+          }
+        }
+
         await pc.setRemoteDescription(new RTCSessionDescription(offer));
         // Drain any queued ICE candidates for this peer
         const queued = pendingIceCandidatesRef.current.get(remotePeerId) || [];
@@ -858,11 +910,20 @@ console.log(twoSum([2, 7, 11, 15], 9)); // Output: [0, 1]
         });
       } catch (err) {
         console.warn('Error handling WebRTC offer:', err);
+        if (err.name === 'InvalidAccessError' || err.message?.includes('m-lines')) {
+          console.warn('Resetting PeerConnection due to offer SDP mismatch...');
+          try { pc.close(); } catch {}
+          peerConnectionsRef.current.delete(remotePeerId);
+        }
       }
     } else if (signalType === 'ANSWER') {
       if (!answer) return;
       const pc = peerConnectionsRef.current.get(remotePeerId);
       if (pc) {
+        if (pc.signalingState !== 'have-local-offer') {
+          console.warn('Skipping duplicate or unexpected ANSWER: signalingState is', pc.signalingState);
+          return;
+        }
         try {
           await pc.setRemoteDescription(new RTCSessionDescription(answer));
           // Drain any queued ICE candidates for this peer

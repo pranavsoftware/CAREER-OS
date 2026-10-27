@@ -1,7 +1,9 @@
-'use client';
+import ClientInterviewRoom from './ClientInterviewRoom';
 
-import InterviewRoom from '@/views/InterviewRoom';
+export const dynamic = 'force-dynamic';
 
-export default function InterviewRoomPage() {
-  return <InterviewRoom />;
+export default async function InterviewRoomPage({ params }) {
+  const resolvedParams = await Promise.resolve(params);
+  const meetingId = resolvedParams?.id || '';
+  return <ClientInterviewRoom meetingId={meetingId} />;
 }

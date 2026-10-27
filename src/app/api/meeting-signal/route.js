@@ -3,21 +3,30 @@ import { query } from '@/lib/db';
 
 export const dynamic = 'force-dynamic';
 
+let tableInitPromise = null;
 async function ensureSignalsTable() {
-  await query(`
-    CREATE TABLE IF NOT EXISTS meeting_signals (
-      id VARCHAR(100) PRIMARY KEY,
-      meeting_id VARCHAR(100) NOT NULL,
-      from_peer VARCHAR(100) NOT NULL,
-      to_peer VARCHAR(100),
-      signal_type VARCHAR(100) NOT NULL,
-      payload JSONB NOT NULL,
-      timestamp BIGINT NOT NULL,
-      created_at TIMESTAMPTZ DEFAULT NOW()
-    );
-    CREATE INDEX IF NOT EXISTS idx_signals_meeting ON meeting_signals(meeting_id, timestamp);
-    CREATE INDEX IF NOT EXISTS idx_signals_created ON meeting_signals(created_at);
-  `);
+  if (!tableInitPromise) {
+    tableInitPromise = (async () => {
+      try {
+        await query(`
+          CREATE TABLE IF NOT EXISTS meeting_signals (
+            id VARCHAR(100) PRIMARY KEY,
+            meeting_id VARCHAR(100) NOT NULL,
+            from_peer VARCHAR(100) NOT NULL,
+            to_peer VARCHAR(100),
+            signal_type VARCHAR(100) NOT NULL,
+            payload JSONB NOT NULL,
+            timestamp BIGINT NOT NULL,
+            created_at TIMESTAMPTZ DEFAULT NOW()
+          );
+        `);
+      } catch (err) {
+        console.warn('ensureSignalsTable non-fatal:', err.message);
+        tableInitPromise = null; // allow retry if failed
+      }
+    })();
+  }
+  return tableInitPromise;
 }
 
 export async function HEAD() {
@@ -53,14 +62,19 @@ export async function GET(req) {
         AND timestamp > $3
       ORDER BY timestamp ASC
       LIMIT 100;
-    `, [meetingId, peerId, since]);
+    `, [meetingId, peerId, since]).catch(err => {
+      console.warn('signal query fallback:', err.message);
+      return { rows: [] };
+    });
 
     if (!syncAll) {
       const signalRes = await signalPromise;
       const messages = (signalRes.rows || []).map(r => r.payload);
 
-      // Opportunistic async cleanup of stale signals (> 60s)
-      query(`DELETE FROM meeting_signals WHERE created_at < NOW() - INTERVAL '60 seconds'`).catch(() => {});
+      // Probabilistic opportunistic cleanup (5% of requests) to prevent DB lock contention
+      if (Math.random() < 0.05) {
+        query(`DELETE FROM meeting_signals WHERE created_at < NOW() - INTERVAL '60 seconds'`).catch(() => {});
+      }
 
       return NextResponse.json({
         success: true,
@@ -73,7 +87,10 @@ export async function GET(req) {
     const interviewPromise = query(`
       SELECT join_requests, chat_messages FROM interviews
       WHERE meeting_id = $1 OR id = $1 LIMIT 1;
-    `, [meetingId]);
+    `, [meetingId]).catch(err => {
+      console.warn('interview query fallback:', err.message);
+      return { rows: [] };
+    });
 
     const questionPromise = query(`
       SELECT 
@@ -94,7 +111,10 @@ export async function GET(req) {
       FROM interview_questions
       WHERE (meeting_id = $1 OR meeting_id IS NULL) AND is_active = true
       LIMIT 1;
-    `, [meetingId]);
+    `, [meetingId]).catch(err => {
+      console.warn('question query fallback:', err.message);
+      return { rows: [] };
+    });
 
     const [signalRes, interviewRes, questionRes] = await Promise.all([
       signalPromise,
@@ -107,8 +127,10 @@ export async function GET(req) {
     const chatMessages = interviewRes.rows[0]?.chat_messages || [];
     const activeQuestion = questionRes.rows[0] || null;
 
-    // Opportunistic async cleanup of stale signals (> 60s)
-    query(`DELETE FROM meeting_signals WHERE created_at < NOW() - INTERVAL '60 seconds'`).catch(() => {});
+    // Probabilistic opportunistic cleanup (5% of requests)
+    if (Math.random() < 0.05) {
+      query(`DELETE FROM meeting_signals WHERE created_at < NOW() - INTERVAL '60 seconds'`).catch(() => {});
+    }
 
     return NextResponse.json({
       success: true,

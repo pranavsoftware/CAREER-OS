@@ -6,6 +6,13 @@ export const metadata = {
   title: 'Career OS - University Placement & Career Operating System',
   description: 'AI-powered campus recruitment, ATS resume builder, verification, and talent pipeline operating system.',
   manifest: '/manifest.json',
+  icons: {
+    icon: [
+      { url: '/favicon.ico', sizes: 'any' },
+      { url: '/favicon.svg', type: 'image/svg+xml' },
+    ],
+    apple: '/favicon.svg',
+  },
   appleWebApp: {
     capable: true,
     statusBarStyle: 'default',
