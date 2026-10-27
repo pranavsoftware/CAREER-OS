@@ -317,6 +317,8 @@ export default function InterviewRoom({ meetingId: meetingIdProp }) {
   const pendingIceCandidatesRef = useRef(new Map());
   const broadcastRef = useRef(null);
   const lastPollTimeRef = useRef(0);
+  const initiatedOffersRef = useRef(new Set());
+  const processedSignalsRef = useRef(new Set());
 
   // Network Health & Diagnostic Telemetry State
   const [networkStats, setNetworkStats] = useState({
@@ -599,6 +601,7 @@ console.log(twoSum([2, 7, 11, 15], 9)); // Output: [0, 1]
       pc.onconnectionstatechange = () => {
         if (pc.connectionState === 'disconnected' || pc.connectionState === 'failed' || pc.connectionState === 'closed') {
           peerConnectionsRef.current.delete(remotePeerId);
+          initiatedOffersRef.current.delete(remotePeerId);
           setRemotePeers(prev => {
             const next = { ...prev };
             delete next[remotePeerId];
@@ -794,6 +797,18 @@ console.log(twoSum([2, 7, 11, 15], 9)); // Output: [0, 1]
     // Ignore messages targeted to someone else
     if (to && to !== myPeerId) return;
 
+    // Deduplicate incoming signals by msg.id to prevent duplicate execution in polling intervals
+    if (msg.id) {
+      if (processedSignalsRef.current.has(msg.id)) return;
+      processedSignalsRef.current.add(msg.id);
+      if (processedSignalsRef.current.size > 2000) {
+        const iter = processedSignalsRef.current.values();
+        for (let i = 0; i < 500; i++) {
+          processedSignalsRef.current.delete(iter.next().value);
+        }
+      }
+    }
+
     if (signalType === 'JOIN') {
       // Register remote peer in state
       setRemotePeers(prev => ({
@@ -829,30 +844,43 @@ console.log(twoSum([2, 7, 11, 15], 9)); // Output: [0, 1]
         });
       }
 
-      // Initiating WebRTC offer: guard against collision / glare
+      // Initiating WebRTC offer: ONLY once per peer to avoid "m-lines in subsequent offer" mismatch
       if (localStreamRef.current) {
-        const pc = getOrCreatePeerConnection(remotePeerId, name, role, peerIsRecruiter);
+        // Guard 1: Skip if we already initiated an offer to this peer
+        if (initiatedOffersRef.current.has(remotePeerId)) {
+          return;
+        }
 
-        // Deterministic initiator to prevent glare if both peers send JOIN at the same time:
+        // Guard 2: Skip if an active peer connection is already established
+        const existingPc = peerConnectionsRef.current.get(remotePeerId);
+        if (existingPc && (existingPc.remoteDescription || existingPc.localDescription || existingPc.connectionState === 'connected')) {
+          return;
+        }
+
+        // Deterministic initiator to prevent glare:
         // Recruiter initiates, or if identical role, peer with higher peerId initiates.
         const shouldInitiate = isRecruiter || (!peerIsRecruiter && myPeerId > remotePeerId);
 
-        if (shouldInitiate && pc.signalingState === 'stable') {
-          try {
-            const createdOffer = await pc.createOffer();
-            await pc.setLocalDescription(createdOffer);
-            sendSignalingMessage({
-              to: remotePeerId,
-              signalType: 'OFFER',
-              offer: createdOffer,
-            });
-          } catch (err) {
-            console.error('Error creating WebRTC offer:', err);
-            // If m-line mismatch or SDP state corruption occurs, reset peer connection cleanly so it can reconnect
-            if (err.name === 'InvalidAccessError' || err.message?.includes('m-lines')) {
-              console.warn('Resetting PeerConnection due to SDP m-line mismatch...');
-              try { pc.close(); } catch {}
-              peerConnectionsRef.current.delete(remotePeerId);
+        if (shouldInitiate) {
+          const pc = getOrCreatePeerConnection(remotePeerId, name, role, peerIsRecruiter);
+          if (pc.signalingState === 'stable' && !pc.remoteDescription && !initiatedOffersRef.current.has(remotePeerId)) {
+            initiatedOffersRef.current.add(remotePeerId);
+            try {
+              const createdOffer = await pc.createOffer();
+              await pc.setLocalDescription(createdOffer);
+              sendSignalingMessage({
+                to: remotePeerId,
+                signalType: 'OFFER',
+                offer: createdOffer,
+              });
+            } catch (err) {
+              console.error('Error creating WebRTC offer:', err);
+              initiatedOffersRef.current.delete(remotePeerId);
+              if (err.name === 'InvalidAccessError' || err.message?.includes('m-lines')) {
+                console.warn('Recovering PeerConnection from SDP m-line mismatch...');
+                try { pc.close(); } catch {}
+                peerConnectionsRef.current.delete(remotePeerId);
+              }
             }
           }
         }
@@ -1109,6 +1137,7 @@ console.log(twoSum([2, 7, 11, 15], 9)); // Output: [0, 1]
         pc.close();
         peerConnectionsRef.current.delete(remotePeerId);
       }
+      initiatedOffersRef.current.delete(remotePeerId);
       setRemotePeers(prev => {
         const copy = { ...prev };
         delete copy[remotePeerId];
