@@ -1,20 +1,23 @@
 import { NextResponse } from 'next/server';
+import { query } from '@/lib/db';
 
-// In-memory WebRTC signaling message bus for live human video meetings
-// Structure: meetingId -> Array of { id, from, to, type, payload, timestamp }
-const signalQueues = new Map();
+export const dynamic = 'force-dynamic';
 
-function cleanOldMessages(meetingId) {
-  const queue = signalQueues.get(meetingId);
-  if (!queue) return;
-  const now = Date.now();
-  // Keep signals younger than 60 seconds
-  const filtered = queue.filter(m => (now - m.timestamp) < 60000);
-  if (filtered.length === 0) {
-    signalQueues.delete(meetingId);
-  } else {
-    signalQueues.set(meetingId, filtered);
-  }
+async function ensureSignalsTable() {
+  await query(`
+    CREATE TABLE IF NOT EXISTS meeting_signals (
+      id VARCHAR(100) PRIMARY KEY,
+      meeting_id VARCHAR(100) NOT NULL,
+      from_peer VARCHAR(100) NOT NULL,
+      to_peer VARCHAR(100),
+      signal_type VARCHAR(100) NOT NULL,
+      payload JSONB NOT NULL,
+      timestamp BIGINT NOT NULL,
+      created_at TIMESTAMPTZ DEFAULT NOW()
+    );
+    CREATE INDEX IF NOT EXISTS idx_signals_meeting ON meeting_signals(meeting_id, timestamp);
+    CREATE INDEX IF NOT EXISTS idx_signals_created ON meeting_signals(created_at);
+  `);
 }
 
 export async function HEAD() {
@@ -25,7 +28,7 @@ export async function GET(req) {
   try {
     const { searchParams } = new URL(req.url);
 
-    // Fast network ping/latency health check handler
+    // Fast network ping/latency health check handler (zero DB overhead)
     if (searchParams.get('ping')) {
       return NextResponse.json({ ok: true, timestamp: Date.now() });
     }
@@ -33,29 +36,90 @@ export async function GET(req) {
     const meetingId = searchParams.get('meetingId');
     const peerId = searchParams.get('peerId');
     const since = Number(searchParams.get('since') || 0);
+    const syncAll = searchParams.get('sync') === 'all';
 
     if (!meetingId || !peerId) {
       return NextResponse.json({ error: 'Missing meetingId or peerId' }, { status: 400 });
     }
 
-    cleanOldMessages(meetingId);
-    const queue = signalQueues.get(meetingId) || [];
+    await ensureSignalsTable();
 
-    // Return messages either sent directly to this peerId or broadcast messages (to == null)
-    // and exclude messages originating from this peerId
-    const newMessages = queue.filter(m => {
-      const isForMe = !m.to || m.to === peerId;
-      const isNotFromMe = m.from !== peerId;
-      const isNew = m.timestamp > since;
-      return isForMe && isNotFromMe && isNew;
-    });
+    // 1. Fetch new WebRTC signaling messages
+    const signalPromise = query(`
+      SELECT payload FROM meeting_signals
+      WHERE meeting_id = $1
+        AND (to_peer IS NULL OR to_peer = $2)
+        AND from_peer != $2
+        AND timestamp > $3
+      ORDER BY timestamp ASC
+      LIMIT 100;
+    `, [meetingId, peerId, since]);
+
+    if (!syncAll) {
+      const signalRes = await signalPromise;
+      const messages = (signalRes.rows || []).map(r => r.payload);
+
+      // Opportunistic async cleanup of stale signals (> 60s)
+      query(`DELETE FROM meeting_signals WHERE created_at < NOW() - INTERVAL '60 seconds'`).catch(() => {});
+
+      return NextResponse.json({
+        success: true,
+        messages,
+        serverTime: Date.now(),
+      });
+    }
+
+    // 2. If sync=all, batch query meeting metadata and active question in parallel
+    const interviewPromise = query(`
+      SELECT join_requests, chat_messages FROM interviews
+      WHERE meeting_id = $1 OR id = $1 LIMIT 1;
+    `, [meetingId]);
+
+    const questionPromise = query(`
+      SELECT 
+        id, 
+        meeting_id AS "meetingId", 
+        type, 
+        title, 
+        topic, 
+        difficulty, 
+        question, 
+        options, 
+        correct, 
+        explanation, 
+        points, 
+        code_starter AS "codeStarter", 
+        test_cases AS "testCases", 
+        is_active AS "isActive"
+      FROM interview_questions
+      WHERE (meeting_id = $1 OR meeting_id IS NULL) AND is_active = true
+      LIMIT 1;
+    `, [meetingId]);
+
+    const [signalRes, interviewRes, questionRes] = await Promise.all([
+      signalPromise,
+      interviewPromise,
+      questionPromise
+    ]);
+
+    const messages = (signalRes.rows || []).map(r => r.payload);
+    const joinRequests = interviewRes.rows[0]?.join_requests || [];
+    const chatMessages = interviewRes.rows[0]?.chat_messages || [];
+    const activeQuestion = questionRes.rows[0] || null;
+
+    // Opportunistic async cleanup of stale signals (> 60s)
+    query(`DELETE FROM meeting_signals WHERE created_at < NOW() - INTERVAL '60 seconds'`).catch(() => {});
 
     return NextResponse.json({
       success: true,
-      messages: newMessages,
+      messages,
+      joinRequests: Array.isArray(joinRequests) ? joinRequests : [],
+      chatMessages: Array.isArray(chatMessages) ? chatMessages : [],
+      activeQuestion,
       serverTime: Date.now(),
     });
   } catch (error) {
+    console.error('Error in meeting-signal GET:', error);
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }
@@ -70,27 +134,37 @@ export async function POST(req) {
       return NextResponse.json({ error: 'Missing required signaling fields' }, { status: 400 });
     }
 
-    cleanOldMessages(meetingId);
+    await ensureSignalsTable();
 
-    if (!signalQueues.has(meetingId)) {
-      signalQueues.set(meetingId, []);
-    }
-
-    const message = {
+    const timestamp = Date.now();
+    const id = `sig_${timestamp}_${Math.random().toString(36).slice(2, 7)}`;
+    const fullMessage = {
       ...body,
-      id: `sig_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
+      id,
       meetingId,
       from,
       to: to || null,
       type: signalType,
       signalType,
-      timestamp: Date.now(),
+      timestamp,
     };
 
-    signalQueues.get(meetingId).push(message);
+    await query(`
+      INSERT INTO meeting_signals (id, meeting_id, from_peer, to_peer, signal_type, payload, timestamp)
+      VALUES ($1, $2, $3, $4, $5, $6, $7)
+    `, [
+      id,
+      meetingId,
+      from,
+      to || null,
+      signalType,
+      JSON.stringify(fullMessage),
+      timestamp,
+    ]);
 
-    return NextResponse.json({ success: true, messageId: message.id });
+    return NextResponse.json({ success: true, messageId: id });
   } catch (error) {
+    console.error('Error in meeting-signal POST:', error);
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }
@@ -99,10 +173,11 @@ export async function DELETE(req) {
   try {
     const { searchParams } = new URL(req.url);
     const meetingId = searchParams.get('meetingId');
+    await ensureSignalsTable();
     if (meetingId) {
-      signalQueues.delete(meetingId);
+      await query('DELETE FROM meeting_signals WHERE meeting_id = $1', [meetingId]);
     } else {
-      signalQueues.clear();
+      await query('DELETE FROM meeting_signals');
     }
     return NextResponse.json({ success: true });
   } catch (error) {

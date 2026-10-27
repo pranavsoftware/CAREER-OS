@@ -29,7 +29,14 @@ const STUN_SERVERS = {
     { urls: 'stun:stun.l.google.com:19302' },
     { urls: 'stun:stun1.l.google.com:19302' },
     { urls: 'stun:stun2.l.google.com:19302' },
+    { urls: 'stun:stun3.l.google.com:19302' },
+    { urls: 'stun:stun4.l.google.com:19302' },
+    { urls: 'stun:global.stun.twilio.com:3478' },
+    { urls: 'stun:stun.services.mozilla.com' },
+    { urls: 'stun:stun.cloudflare.com:3478' },
+    { urls: 'stun:openrelay.metered.ca:80' },
   ],
+  iceCandidatePoolSize: 10,
 };
 
 // ── Real WebRTC Remote Video Tile with Admin Controls ──
@@ -334,10 +341,10 @@ export default function InterviewRoom() {
   ]);
   const [chatInput, setChatInput] = useState('');
 
-  // Load and continuously sync persistent chat messages from PostgreSQL database
+  // Initial load of persistent chat messages (continuous sync handled by unified serverless sync)
   useEffect(() => {
     let isMounted = true;
-    const fetchChatMessages = async () => {
+    async function fetchChatMessages() {
       try {
         const res = await fetch(`/api/interviews/messages?meetingId=${encodeURIComponent(meetingId)}`);
         if (!res.ok) return;
@@ -351,13 +358,11 @@ export default function InterviewRoom() {
           });
         }
       } catch {}
-    };
+    }
 
     fetchChatMessages();
-    const chatPollInterval = setInterval(fetchChatMessages, 450);
     return () => {
       isMounted = false;
-      clearInterval(chatPollInterval);
     };
   }, [meetingId]);
 
@@ -399,7 +404,7 @@ console.log(twoSum([2, 7, 11, 15], 9)); // Output: [0, 1]
   const [codingChallenges, setCodingChallenges] = useState([]);
   const [questionsLoading, setQuestionsLoading] = useState(true);
 
-  // Fetch real questions and coding challenges dynamically from PostgreSQL database (fast live fetching)
+  // Initial fetch of real questions and coding challenges from PostgreSQL database
   useEffect(() => {
     let isMounted = true;
     async function loadDatabaseQuestions() {
@@ -414,17 +419,8 @@ console.log(twoSum([2, 7, 11, 15], 9)); // Output: [0, 1]
           if (Array.isArray(data.codingChallenges)) {
             setCodingChallenges(data.codingChallenges);
           }
-          if (!isRecruiter) {
-            if (data.activeQuestion) {
-              setActiveQuestion(prev => {
-                if (prev?.id === data.activeQuestion.id) return prev;
-                setStudentSelectedOption(null);
-                setStudentAnswerSubmitted(false);
-                return data.activeQuestion;
-              });
-            } else if (data.activeQuestion === null) {
-              setActiveQuestion(null);
-            }
+          if (!isRecruiter && data.activeQuestion) {
+            setActiveQuestion(data.activeQuestion);
           }
         }
       } catch (err) {
@@ -435,10 +431,8 @@ console.log(twoSum([2, 7, 11, 15], 9)); // Output: [0, 1]
     }
 
     loadDatabaseQuestions();
-    const qInterval = setInterval(loadDatabaseQuestions, 400);
     return () => {
       isMounted = false;
-      clearInterval(qInterval);
     };
   }, [meetingId, isRecruiter]);
 
@@ -1153,74 +1147,89 @@ console.log(twoSum([2, 7, 11, 15], 9)); // Output: [0, 1]
 
   // Polling HTTP signaling for cross-device & cross-browser connections
   useEffect(() => {
-    if (inLobby && joinStatus !== 'waiting') return;
+    // Only pause if student is idle in lobby (has not knocked/asked to join yet)
+    if (inLobby && !isRecruiter && joinStatus === 'idle') return;
 
     let isMounted = true;
-    const pollInterval = setInterval(async () => {
+    let isPolling = false;
+
+    const performUnifiedSync = async () => {
+      if (isPolling) return; // Prevent overlapping requests on Vercel
+      isPolling = true;
+
       try {
-        const res = await fetch(`/api/meeting-signal?meetingId=${encodeURIComponent(meetingId)}&peerId=${encodeURIComponent(myPeerId)}&since=${lastPollTimeRef.current}`);
-        if (!res.ok) return;
-        const data = await res.json();
-        if (data.success && data.messages && isMounted) {
-          lastPollTimeRef.current = data.serverTime || Date.now();
-          for (const msg of data.messages) {
-            handleSignalMessage(msg);
-          }
-        }
-      } catch {}
-    }, 350);
-
-    return () => {
-      isMounted = false;
-      clearInterval(pollInterval);
-    };
-  }, [inLobby, joinStatus, meetingId, myPeerId]);
-
-  // Poll /api/interviews/join-request for PostgreSQL persistent synchronization
-  useEffect(() => {
-    // Run if host is in the meeting room, OR if student is waiting to join
-    const shouldPoll = (!inLobby && isRecruiter) || (inLobby && !isRecruiter && joinStatus === 'waiting');
-    if (!shouldPoll) return;
-
-    let isMounted = true;
-    const fetchJoinRequests = async () => {
-      try {
-        const res = await fetch(`/api/interviews/join-request?meetingId=${encodeURIComponent(meetingId)}`);
+        const res = await fetch(
+          `/api/meeting-signal?meetingId=${encodeURIComponent(meetingId)}&peerId=${encodeURIComponent(myPeerId)}&since=${lastPollTimeRef.current}&sync=all`
+        );
         if (!res.ok) return;
         const data = await res.json();
         if (!isMounted || !data.success) return;
 
-        const requests = data.requests || [];
+        lastPollTimeRef.current = data.serverTime || Date.now();
 
-        if (isRecruiter) {
-          // Update host's pending requests list
-          const pending = requests.filter(r => r.status === 'pending');
-          setPendingJoinRequests(pending);
-        } else if (!isRecruiter && joinStatus === 'waiting') {
-          // Check if student's request was resolved
-          const myReq = requests.find(r => (r.peerId === myPeerId) || (user?.id && r.studentId === user?.id));
-          if (myReq) {
-            if (myReq.status === 'admitted') {
-              setJoinStatus('admitted');
-              setInLobby(false);
-            } else if (myReq.status === 'denied') {
-              setJoinStatus('denied');
+        // 1. Process new WebRTC signaling messages
+        if (Array.isArray(data.messages) && data.messages.length > 0) {
+          for (const msg of data.messages) {
+            handleSignalMessage(msg);
+          }
+        }
+
+        // 2. Process Join Requests
+        if (Array.isArray(data.joinRequests)) {
+          if (isRecruiter) {
+            const pending = data.joinRequests.filter(r => r.status === 'pending');
+            setPendingJoinRequests(pending);
+          } else if (!isRecruiter && joinStatus === 'waiting') {
+            const myReq = data.joinRequests.find(r => (r.peerId === myPeerId) || (user?.id && r.studentId === user?.id));
+            if (myReq) {
+              if (myReq.status === 'admitted') {
+                setJoinStatus('admitted');
+                setInLobby(false);
+              } else if (myReq.status === 'denied') {
+                setJoinStatus('denied');
+              }
             }
           }
         }
+
+        // 3. Process In-Call Chat Messages
+        if (Array.isArray(data.chatMessages) && data.chatMessages.length > 0) {
+          setChatMessages(prev => {
+            const existingIds = new Set(prev.map(m => m.id));
+            const newFromDb = data.chatMessages.filter(m => !existingIds.has(m.id));
+            if (newFromDb.length === 0) return prev;
+            return [...prev, ...newFromDb];
+          });
+        }
+
+        // 4. Process Active Question
+        if (!isRecruiter) {
+          if (data.activeQuestion) {
+            setActiveQuestion(prev => {
+              if (prev?.id === data.activeQuestion.id) return prev;
+              setStudentSelectedOption(null);
+              setStudentAnswerSubmitted(false);
+              return data.activeQuestion;
+            });
+          } else if (data.activeQuestion === null) {
+            setActiveQuestion(null);
+          }
+        }
       } catch (err) {
-        console.warn('Error polling join requests:', err);
+        // Silently recover on intermittent network hiccups
+      } finally {
+        isPolling = false;
       }
     };
 
-    fetchJoinRequests();
-    const interval = setInterval(fetchJoinRequests, 350);
+    performUnifiedSync();
+    const syncInterval = setInterval(performUnifiedSync, 750);
 
     return () => {
       isMounted = false;
-      clearInterval(interval);
+      clearInterval(syncInterval);
     };
-  }, [inLobby, isRecruiter, joinStatus, meetingId, myPeerId, user?.id]);
+  }, [inLobby, joinStatus, meetingId, myPeerId, isRecruiter, user?.id]);
 
   // Request local camera and microphone stream
   useEffect(() => {
