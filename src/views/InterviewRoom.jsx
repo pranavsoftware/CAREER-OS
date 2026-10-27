@@ -1374,27 +1374,57 @@ console.log(twoSum([2, 7, 11, 15], 9)); // Output: [0, 1]
     async function initMedia() {
       try {
         if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
-          const stream = await navigator.mediaDevices.getUserMedia({
-            video: { width: { ideal: 1280 }, height: { ideal: 720 } },
-            audio: true,
-          });
+          let stream = null;
+          // 1. Try high-definition video + audio
+          try {
+            stream = await navigator.mediaDevices.getUserMedia({
+              video: {
+                width: { ideal: 1280, max: 1920 },
+                height: { ideal: 720, max: 1080 },
+                facingMode: 'user',
+              },
+              audio: { echoCancellation: true, noiseSuppression: true },
+            });
+          } catch (e1) {
+            // 2. Fallback to basic unconstrained video + audio (common on iOS Safari / older Android)
+            try {
+              stream = await navigator.mediaDevices.getUserMedia({
+                video: true,
+                audio: true,
+              });
+            } catch (e2) {
+              // 3. Fallback to audio-only if camera is blocked/in-use by another app
+              try {
+                stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                setIsCamOff(true);
+              } catch (e3) {
+                console.warn('Camera and mic permission denied or unavailable:', e3);
+              }
+            }
+          }
+
           if (!active) {
-            stream.getTracks().forEach(t => t.stop());
+            if (stream) stream.getTracks().forEach(t => t.stop());
             return;
           }
-          localStreamRef.current = stream;
-          setHasLocalStream(true);
-          if (lobbyVideoRef.current) {
-            lobbyVideoRef.current.srcObject = stream;
-          }
-          if (localVideoRef.current) {
-            localVideoRef.current.srcObject = stream;
+
+          if (stream) {
+            localStreamRef.current = stream;
+            setHasLocalStream(true);
+            if (lobbyVideoRef.current) {
+              lobbyVideoRef.current.srcObject = stream;
+            }
+            if (localVideoRef.current) {
+              localVideoRef.current.srcObject = stream;
+            }
+          } else {
+            setHasLocalStream(true);
           }
         } else {
           setHasLocalStream(true);
         }
       } catch (err) {
-        console.warn('Real camera not accessible or denied:', err);
+        console.warn('Media initialization notice:', err);
         setHasLocalStream(true);
       }
     }

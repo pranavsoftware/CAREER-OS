@@ -42,13 +42,14 @@ self.addEventListener('fetch', (event) => {
   const { request } = event;
   const url = new URL(request.url);
 
-  // Skip non-GET requests, internal browser requests, Next.js build chunks, live interview rooms, and meeting signals
+  // Skip non-GET requests, internal browser requests, Next.js build chunks, live interview rooms, and real-time meeting/interview signals
   if (
     request.method !== 'GET' ||
     !url.protocol.startsWith('http') ||
     url.pathname.startsWith('/_next/') ||
     url.pathname.startsWith('/interview-room') ||
-    url.pathname.startsWith('/api/meeting-signal')
+    url.pathname.startsWith('/api/meeting-signal') ||
+    url.pathname.startsWith('/api/interviews')
   ) {
     return;
   }
