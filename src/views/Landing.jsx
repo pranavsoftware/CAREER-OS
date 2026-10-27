@@ -9,6 +9,11 @@ import { useAuth } from '../context/AuthContext';
 export default function Landing() {
   const { isAuthenticated, user } = useAuth();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   // Lock body scroll when drawer open
   useEffect(() => {
@@ -16,6 +21,7 @@ export default function Landing() {
     return () => { document.body.style.overflow = ''; };
   }, [mobileMenuOpen]);
 
+  const hasAuth = mounted && isAuthenticated;
   const dashboardRoute =
     user?.role === 'student' ? '/student/dashboard' :
     user?.role === 'university' ? '/university/dashboard' :
@@ -48,11 +54,11 @@ export default function Landing() {
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>
             {/* Desktop CTA button */}
             <Link
-              to={isAuthenticated ? dashboardRoute : '/login'}
+              to={hasAuth ? dashboardRoute : '/login'}
               className="desktop-inline-flex"
               style={{ padding: '9px 22px', borderRadius: 9999, background: '#4F46E5', color: '#fff', fontSize: 13, fontWeight: 600, textDecoration: 'none', boxShadow: '0 4px 12px rgba(79,70,229,0.25)', alignItems: 'center', whiteSpace: 'nowrap' }}
             >
-              {isAuthenticated ? 'Dashboard' : 'Launch Portal'}
+              {hasAuth ? 'Dashboard' : 'Launch Portal'}
             </Link>
 
             {/* Mobile hamburger — hidden on desktop */}

@@ -1514,9 +1514,9 @@ export default function StudentAiInterview() {
                       </div>
                       <div style={{ fontSize: 10, color: bothHandsVisible ? '#86EFAC' : '#FCA5A5', marginTop: 2, fontWeight: 600 }}>
                         {bothHandsVisible
-                          ? '✓ Both hands detected. Verifying workspace...'
+                          ? 'Both hands detected. Verifying workspace...'
                           : isUnverifiedTimerFallback
-                          ? '⚠ Hand detector unready — countdown active'
+                          ? 'Hand detector unready — countdown active'
                           : 'Hold BOTH hands visible (' + handsDetectedCount + '/2 detected)'}
                       </div>
                       <div style={{ width: 110, height: 4, background: 'rgba(255,255,255,0.2)', borderRadius: 2, marginTop: 6, overflow: 'hidden' }}>

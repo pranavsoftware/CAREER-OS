@@ -82,7 +82,12 @@ export async function GET() {
 
         (SELECT COALESCE(json_agg(t), '[]'::json) FROM (
           SELECT id, sender, subject, body, target_type AS "targetType", target_summary AS "targetSummary", recipient_count AS "recipientCount", attachment_url AS "attachmentUrl", attachment_type AS "attachmentType", attachment_name AS "attachmentName", sent_at AS "sentAt", linked_mail_id AS "linkedMailId" FROM sent_mails ORDER BY sent_at DESC
-        ) t) AS sent_mails
+        ) t) AS sent_mails,
+
+        (SELECT COALESCE(json_agg(t), '[]'::json) FROM (
+          SELECT id, meeting_id AS "meetingId", job_id AS "jobId", company, role, student_id AS "studentId", student_name AS "studentName", student_email AS "studentEmail", student_branch AS "studentBranch", CAST(student_cgpa AS FLOAT) AS "studentCgpa", COALESCE(students, '[]'::jsonb) AS students, COALESCE(join_requests, '[]'::jsonb) AS "joinRequests", date, time, duration, type, status, notes, recruiter_name AS "recruiterName", evaluation, created_at AS "createdAt"
+          FROM interviews ORDER BY created_at DESC
+        ) t) AS interviews
     `);
 
     const data = res.rows[0] || {};
@@ -133,7 +138,7 @@ export async function GET() {
       testAttempts: data.test_attempts || [],
       resumeVersions,
       roadmapProgress,
-      interviews: initialInterviews
+      interviews: data.interviews || []
     }, {
       headers: {
         'Cache-Control': 'public, s-maxage=10, stale-while-revalidate=60'
@@ -160,7 +165,7 @@ export async function GET() {
       testAttempts: [],
       resumeVersions: {},
       roadmapProgress: {},
-      interviews: initialInterviews
+      interviews: []
     }, {
       headers: {
         'Cache-Control': 'public, s-maxage=5, stale-while-revalidate=30'

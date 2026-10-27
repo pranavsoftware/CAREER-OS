@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { Eye, ShieldAlert, Scan, Smartphone, AlertTriangle, CheckCircle2, RefreshCw } from 'lucide-react';
+import { Eye, ShieldAlert, Scan, Smartphone, AlertTriangle, CheckCircle2, RefreshCw, Hand } from 'lucide-react';
 
 // Suppress benign MediaPipe/TFLite informational startup log from triggering Next.js Turbopack error overlay
 if (typeof window !== 'undefined' && !window.__tfLiteInfoFiltered) {
@@ -647,7 +647,7 @@ export default function CameraVisionProctor({
               letterSpacing: '0.4px',
             }}
           >
-            <span>✋</span>
+            <Hand size={13} color="#fff" />
             <span>{handsDetectedCount >= 2 ? 'BOTH HANDS VISIBLE' : 'KEEP BOTH HANDS IN VIEW'}</span>
           </div>
         ) : (

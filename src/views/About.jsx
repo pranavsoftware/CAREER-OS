@@ -10,12 +10,18 @@ import { useAuth } from '../context/AuthContext';
 export default function About() {
   const { isAuthenticated, user } = useAuth();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   useEffect(() => {
     document.body.style.overflow = mobileMenuOpen ? 'hidden' : '';
     return () => { document.body.style.overflow = ''; };
   }, [mobileMenuOpen]);
 
+  const hasAuth = mounted && isAuthenticated;
   const dashboardRoute =
     user?.role === 'student' ? '/student/dashboard' :
     user?.role === 'university' ? '/university/dashboard' :
@@ -79,7 +85,7 @@ export default function About() {
           {/* Right side */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>
             <Link
-              to={isAuthenticated ? dashboardRoute : '/login'}
+              to={hasAuth ? dashboardRoute : '/login'}
               className="desktop-inline-flex"
               style={{
                 padding: '9px 22px',
@@ -94,7 +100,7 @@ export default function About() {
                 whiteSpace: 'nowrap'
               }}
             >
-              {isAuthenticated ? 'Dashboard' : 'Launch Portal'}
+              {hasAuth ? 'Dashboard' : 'Launch Portal'}
             </Link>
 
             {/* Mobile hamburger */}
@@ -149,11 +155,11 @@ export default function About() {
               
               <div style={{ borderTop: '1px solid #F3F4F6', paddingTop: 16, marginTop: 8 }}>
                 <Link
-                  to={isAuthenticated ? dashboardRoute : '/login'}
+                  to={hasAuth ? dashboardRoute : '/login'}
                   onClick={() => setMobileMenuOpen(false)}
                   style={{ display: 'block', textAlign: 'center', padding: '12px', borderRadius: 10, background: '#4F46E5', color: '#fff', fontWeight: 600, textDecoration: 'none' }}
                 >
-                  {isAuthenticated ? 'Go to Dashboard' : 'Launch Portal'}
+                  {hasAuth ? 'Go to Dashboard' : 'Launch Portal'}
                 </Link>
               </div>
             </div>

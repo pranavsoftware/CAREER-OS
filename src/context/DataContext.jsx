@@ -490,15 +490,20 @@ function dataReducer(state, action) {
         createdAt: new Date().toISOString(),
       };
 
-      const notif = {
-        id: `n_int_${Date.now()}`,
-        studentId: interview.studentId,
+      // Support multi-candidate notifications
+      const targetCandidates = Array.isArray(interview.students) && interview.students.length > 0
+        ? interview.students
+        : (interview.studentId ? [{ id: interview.studentId, name: interview.studentName }] : []);
+
+      const newNotifs = targetCandidates.map((st, idx) => ({
+        id: `n_int_${Date.now()}_${idx}`,
+        studentId: st.id,
         type: 'Interview Scheduled',
         title: `Online Video Interview: ${interview.company}`,
         message: `Your interview for ${interview.role} (${interview.type}) is scheduled for ${interview.date} at ${interview.time}. Room code: ${interview.meetingId}`,
         read: false,
         createdAt: new Date().toISOString(),
-      };
+      }));
 
       resilientFetch('/api/interviews', {
         method: 'POST',
@@ -509,7 +514,7 @@ function dataReducer(state, action) {
       return {
         ...state,
         interviews: [interview, ...(state.interviews || [])],
-        notifications: [notif, ...(state.notifications || [])],
+        notifications: [...newNotifs, ...(state.notifications || [])],
       };
     }
 
@@ -531,6 +536,11 @@ function dataReducer(state, action) {
       const interviews = (state.interviews || []).map(i =>
         i.id === action.payload ? { ...i, status: 'Cancelled' } : i
       );
+      resilientFetch('/api/interviews', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: action.payload, status: 'Cancelled' }),
+      }).catch(err => console.debug('Interview cancel sync:', err));
       return { ...state, interviews };
     }
 
@@ -547,6 +557,20 @@ function dataReducer(state, action) {
   }
 }
 
+const DEMO_INTERVIEW_IDS = new Set(['int_101', 'int_102', 'int_103', 'int_104', 'int_105', 'int_106', 'int_108', 'int_109', 'int_110']);
+function isDemoInterview(i) {
+  if (!i) return true;
+  if (DEMO_INTERVIEW_IDS.has(i.id)) return true;
+  if (typeof i.meetingId === 'string' && (
+    i.meetingId.includes('live-101') ||
+    i.meetingId.includes('locked-102') ||
+    i.meetingId.includes('locked-104') ||
+    i.meetingId.includes('demo-completed') ||
+    i.meetingId.includes('demo-scheduled')
+  )) return true;
+  return false;
+}
+
 function getInitialState() {
   if (typeof window !== 'undefined') {
     try {
@@ -557,7 +581,7 @@ function getInitialState() {
           ...defaultEmptyState,
           ...parsed,
           students: (parsed.students && parsed.students.length > 0) ? parsed.students : defaultEmptyState.students,
-          interviews: (parsed.interviews && parsed.interviews.length > 0) ? parsed.interviews : defaultEmptyState.interviews,
+          interviews: (parsed.interviews && Array.isArray(parsed.interviews)) ? parsed.interviews.filter(i => !isDemoInterview(i)) : [],
           jobs: (parsed.jobs && parsed.jobs.length > 0) ? parsed.jobs : defaultEmptyState.jobs,
           drives: (parsed.drives && parsed.drives.length > 0) ? parsed.drives : defaultEmptyState.drives,
         };
@@ -603,7 +627,7 @@ export function DataProvider({ children }) {
             materials: data.materials || [],
             pipeline: data.pipeline || {},
             questionBank: (data.questionBank && data.questionBank.length) ? data.questionBank : (questionBank || []),
-            interviews: (data.interviews && data.interviews.length) ? data.interviews : (state.interviews && state.interviews.length ? state.interviews : initialInterviews),
+            interviews: (data.interviews && Array.isArray(data.interviews)) ? data.interviews.filter(i => !isDemoInterview(i)) : [],
             skillTaxonomy: data.skillTaxonomy || skillTaxonomy,
             roleOptions: data.roleOptions || Object.keys(skillTaxonomy || {}),
             testAttempts: data.testAttempts || [],

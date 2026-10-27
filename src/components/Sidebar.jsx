@@ -4,7 +4,7 @@ import { useAuth } from '../context/AuthContext';
 // Nav configs per role
 const studentNav = [
   { to: '/student/dashboard', label: 'Dashboard' },
-  { to: '/student/interviews', label: 'Online Interviews', badge: 'Live' },
+  { to: '/student/calls', label: 'Call Section (Live Meet)', badge: 'Meet' },
   { to: '/student/portfolio', label: 'Projects & Portfolio' },
   { to: '/student/profile', label: 'Profile' },
   { to: '/student/resume', label: 'Resume Builder' },
@@ -23,7 +23,7 @@ const universityNav = [
 
 const companyNav = [
   { to: '/company/dashboard', label: 'Dashboard' },
-  { to: '/company/interviews', label: 'Online Interviews' },
+  { to: '/company/calls', label: 'Call History & Schedule', badge: 'Meet' },
   { to: '/company/jobs', label: 'Jobs' },
   { to: '/company/candidates', label: 'Candidates' },
   { to: '/company/pipeline', label: 'Pipeline' },

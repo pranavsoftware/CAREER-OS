@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
-import { Menu, X, LogOut, LayoutDashboard, User, FileText, Briefcase, Award, TrendingUp, Mic, Users, BookMarked, Mail, PieChart, BookOpen, Bot } from 'lucide-react';
+import { Menu, X, LogOut, LayoutDashboard, User, FileText, Briefcase, Award, TrendingUp, Mic, Users, BookMarked, Mail, PieChart, BookOpen, Bot, Video } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useData } from '../context/DataContext';
 import Topbar from './Topbar';
@@ -8,6 +8,7 @@ import NetworkStatusIndicator, { NetworkBadge } from './NetworkStatusIndicator';
 
 const studentNav = [
   { to: '/student/dashboard', label: 'Dashboard', icon: LayoutDashboard },
+  { to: '/student/calls', label: 'Call Section (Live Meet)', icon: Video, badge: 'Meet' },
   { to: '/student/mail', label: 'Mailbox', icon: Mail },
   { to: '/student/profile', label: 'Profile', icon: User },
   { to: '/student/resume', label: 'Resume Builder', icon: FileText },
@@ -29,6 +30,7 @@ const universityNav = [
 
 const companyNav = [
   { to: '/company/dashboard', label: 'Dashboard', icon: PieChart },
+  { to: '/company/calls', label: 'Call History & Schedule', icon: Video, badge: 'Meet' },
   { to: '/company/jobs', label: 'Jobs', icon: Briefcase },
   { to: '/company/candidates', label: 'Candidates', icon: Users },
   { to: '/company/pipeline', label: 'Pipeline', icon: TrendingUp },
@@ -84,7 +86,7 @@ function SidebarContent({ onClose }) {
               style={({ isActive }) => ({
                 display: 'flex',
                 alignItems: 'center',
-                gap: 10,
+                justifyContent: 'space-between',
                 padding: '9px 12px',
                 marginBottom: 3,
                 borderRadius: 8,
@@ -96,8 +98,27 @@ function SidebarContent({ onClose }) {
                 transition: 'all 0.15s ease',
               })}
             >
-              <Icon size={16} />
-              {item.label}
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                <Icon size={16} />
+                <span>{item.label}</span>
+              </div>
+              {item.badge && (
+                <span
+                  style={{
+                    fontSize: 10,
+                    fontWeight: 700,
+                    background: '#ECFDF5',
+                    color: '#059669',
+                    padding: '2px 7px',
+                    borderRadius: 9999,
+                    border: '1px solid #A7F3D0',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                  }}
+                >
+                  {item.badge}
+                </span>
+              )}
             </NavLink>
           );
         })}

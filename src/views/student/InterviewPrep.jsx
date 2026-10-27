@@ -689,7 +689,7 @@ export default function StudentInterviewPrep() {
                   }}
                 >
                   <Zap size={14} color="#FDE047" />
-                  <span>{isGeneratingDrill ? 'Generating Level-Up Drills...' : '⚡ Generate Next Level Adaptive Drills'}</span>
+                  <span>{isGeneratingDrill ? 'Generating Level-Up Drills...' : 'Generate Next Level Adaptive Drills'}</span>
                 </button>
 
                 <button
@@ -991,8 +991,9 @@ export default function StudentInterviewPrep() {
               </h3>
 
               {allWeakAreas.length === 0 ? (
-                <div style={{ fontSize: 13, color: '#059669', lineHeight: 1.5 }}>
-                  🎉 No critical weak topics identified yet. Take more adaptive mock tests to detect baseline gaps!
+                <div style={{ fontSize: 13, color: '#059669', lineHeight: 1.5, display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <CheckCircle2 size={16} color="#059669" />
+                  <span>No critical weak topics identified yet. Take more adaptive mock tests to detect baseline gaps!</span>
                 </div>
               ) : (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>

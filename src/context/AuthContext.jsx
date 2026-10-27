@@ -17,28 +17,12 @@ function authReducer(state, action) {
   }
 }
 
-function getInitialState() {
-  if (typeof window === 'undefined') {
-    return { user: null, isAuthenticated: false };
-  }
-  try {
-    const stored = localStorage.getItem(STORAGE_KEY);
-    if (stored) {
-      const parsed = JSON.parse(stored);
-      if (parsed.user) {
-        return parsed;
-      }
-    }
-  } catch (e) {
-    // ignore
-  }
-  return { user: null, isAuthenticated: false };
-}
+const defaultAuthState = { user: null, isAuthenticated: false };
 
 export function AuthProvider({ children }) {
-  const [state, dispatch] = useReducer(authReducer, { user: null, isAuthenticated: false }, getInitialState);
+  const [state, dispatch] = useReducer(authReducer, defaultAuthState);
   const [availableUsers, setAvailableUsers] = useState(initialUsers);
-  const [isLoaded, setIsLoaded] = useState(() => typeof window !== 'undefined');
+  const [isLoaded, setIsLoaded] = useState(false);
 
   // Restore stored user from localStorage on mount
   useEffect(() => {

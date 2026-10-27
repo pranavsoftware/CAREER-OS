@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import Layout from '../../components/Layout';
 import StatCard from '../../components/StatCard';
@@ -9,12 +9,19 @@ import { useData } from '../../context/DataContext';
 import { useAuth } from '../../context/AuthContext';
 import { initialStudents } from '../../data/students';
 import { checkEligibility } from '../../utils/eligibility';
-import { Video, FileText, Download, ExternalLink, Paperclip, CheckCircle2, Play } from 'lucide-react';
+import { getCallTimeStatus } from '../../utils/callTimer';
+import { Video, FileText, Download, ExternalLink, Paperclip, CheckCircle2, Play, Lock, Clock } from 'lucide-react';
 
 export default function StudentDashboard() {
   const { user } = useAuth();
   const { state, dispatch } = useData();
   const [selectedNotif, setSelectedNotif] = useState(null);
+  const [currentTime, setCurrentTime] = useState(new Date());
+
+  useEffect(() => {
+    const timer = setInterval(() => setCurrentTime(new Date()), 1000);
+    return () => clearInterval(timer);
+  }, []);
 
   const student = (state.students || []).find(s => s.id === user?.studentId) || (state.students || [])[0] || initialStudents[0];
 
@@ -22,10 +29,16 @@ export default function StudentDashboard() {
   const myApplications = (state.applications || []).filter(a => a.studentId === student?.id);
   const myCerts = (state.certificates || []).filter(c => c.studentId === student?.id);
   const myNotifs = (state.notifications || []).filter(n => n.studentId === student?.id);
-  const myInterviews = (state.interviews || []).filter(
-    i => i.studentId === student?.id || i.studentEmail === student?.email
-  );
+  const myInterviews = (state.interviews || []).filter(i => {
+    if (!student) return false;
+    if (i.studentId === student.id || i.studentEmail === student.email) return true;
+    if (typeof i.studentId === 'string' && i.studentId.split(',').map(s => s.trim()).includes(student.id)) return true;
+    if (typeof i.studentEmail === 'string' && i.studentEmail.split(',').map(s => s.trim()).includes(student.email)) return true;
+    if (Array.isArray(i.students) && i.students.some(s => s.id === student.id || s.email === student.email)) return true;
+    return false;
+  });
   const scheduledCall = myInterviews.find(i => i.status === 'Scheduled');
+  const callStatus = scheduledCall ? getCallTimeStatus(scheduledCall, currentTime) : null;
 
   // ATS score from latest resume version
   const myVersions = (state.resumeVersions && student?.id ? state.resumeVersions[student.id] : []) || [];
@@ -132,45 +145,84 @@ export default function StudentDashboard() {
       {scheduledCall && (
         <div style={{ background: 'linear-gradient(135deg, #1E1B4B 0%, #312E81 100%)', borderRadius: 12, padding: '16px 20px', marginBottom: 20, color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 14, boxShadow: '0 4px 16px rgba(49, 46, 129, 0.25)' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-            <div style={{ width: 40, height: 40, borderRadius: 10, background: '#4F46E5', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <div style={{ width: 42, height: 42, borderRadius: 10, background: callStatus?.isLive ? '#059669' : '#4F46E5', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
               <Video size={20} color="#fff" />
             </div>
             <div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
                 <span style={{ fontSize: 15, fontWeight: 700 }}>Upcoming Video Interview: {scheduledCall.company}</span>
-                <span style={{ background: '#22C55E', color: '#fff', fontSize: 10, fontWeight: 700, padding: '2px 7px', borderRadius: 9999 }}>Ready to Join</span>
+                {callStatus?.isLive ? (
+                  <span style={{ background: '#22C55E', color: '#fff', fontSize: 10, fontWeight: 700, padding: '2px 8px', borderRadius: 9999, display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                    <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#fff' }} className="animate-pulse-dot" />
+                    Live Now
+                  </span>
+                ) : (
+                  <span style={{ background: '#F59E0B', color: '#fff', fontSize: 10, fontWeight: 700, padding: '2px 8px', borderRadius: 9999, display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                    <Lock size={10} /> Locked until time
+                  </span>
+                )}
               </div>
               <div style={{ fontSize: 12, color: '#C7D2FE', marginTop: 2 }}>
                 {scheduledCall.role} • {scheduledCall.type} • {scheduledCall.date} at {scheduledCall.time} ({scheduledCall.duration || 45} mins)
               </div>
+              {callStatus?.isUpcoming && (
+                <div style={{ fontSize: 11, color: '#FDE68A', marginTop: 3, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 4 }}>
+                  <Clock size={12} color="#FDE68A" />
+                  <span>{callStatus.countdownText} (button unlocks automatically)</span>
+                </div>
+              )}
             </div>
           </div>
 
           <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
             <Link
-              to="/student/interviews"
+              to="/student/calls"
               style={{ fontSize: 12, color: '#E0E7FF', textDecoration: 'none', fontWeight: 600 }}
             >
-              All Interviews ({myInterviews.length})
+              Call Section ({myInterviews.length}) →
             </Link>
-            <Link
-              to={`/interview-room/${scheduledCall.meetingId}`}
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: 6,
-                padding: '8px 18px',
-                borderRadius: 8,
-                background: '#22C55E',
-                color: '#fff',
-                fontSize: 13,
-                fontWeight: 700,
-                textDecoration: 'none',
-                boxShadow: '0 4px 12px rgba(34,197,94,0.4)',
-              }}
-            >
-              <Video size={14} /> Join Call Now
-            </Link>
+
+            {callStatus?.canJoin ? (
+              <Link
+                to={`/interview-room/${scheduledCall.meetingId}`}
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: 6,
+                  padding: '9px 20px',
+                  borderRadius: 8,
+                  background: '#22C55E',
+                  color: '#fff',
+                  fontSize: 13,
+                  fontWeight: 700,
+                  textDecoration: 'none',
+                  boxShadow: '0 4px 12px rgba(34,197,94,0.4)',
+                }}
+              >
+                <Video size={15} /> Join Call Now
+              </Link>
+            ) : (
+              <button
+                type="button"
+                disabled={true}
+                title={callStatus?.lockReason || 'Button unlocks at scheduled time'}
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: 6,
+                  padding: '9px 18px',
+                  borderRadius: 8,
+                  background: 'rgba(255,255,255,0.15)',
+                  color: '#CBD5E1',
+                  border: '1px solid rgba(255,255,255,0.25)',
+                  fontSize: 12,
+                  fontWeight: 700,
+                  cursor: 'not-allowed',
+                }}
+              >
+                <Lock size={13} /> Join Locked (Starts at {scheduledCall.time})
+              </button>
+            )}
           </div>
         </div>
       )}

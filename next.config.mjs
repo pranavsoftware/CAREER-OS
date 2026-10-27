@@ -10,6 +10,10 @@ const nextConfig = {
   compress: true,
   poweredByHeader: false,
 
+  experimental: {
+    agentUpgrade: 'security',
+  },
+
   // Trailing slash ensures iOS Safari & PWA deep links resolve correctly
   trailingSlash: false,
 

@@ -148,6 +148,14 @@ export default function App() {
                 </ProtectedRoute>
               }
             />
+            <Route
+              path="/student/calls"
+              element={
+                <ProtectedRoute allowedRole="student">
+                  <StudentInterviews />
+                </ProtectedRoute>
+              }
+            />
 
             {/* University Protected Routes */}
             <Route
@@ -242,6 +250,14 @@ export default function App() {
             />
             <Route
               path="/company/interviews"
+              element={
+                <ProtectedRoute allowedRole="company">
+                  <CompanyInterviews />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/company/calls"
               element={
                 <ProtectedRoute allowedRole="company">
                   <CompanyInterviews />
