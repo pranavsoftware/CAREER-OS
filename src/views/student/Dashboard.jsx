@@ -23,6 +23,29 @@ export default function StudentDashboard() {
     return () => clearInterval(timer);
   }, []);
 
+  // Fast background polling & on-mount fetch so scheduled call card displays immediately
+  useEffect(() => {
+    let isMounted = true;
+    const fetchLatestInterviews = async () => {
+      try {
+        const res = await fetch('/api/interviews?t=' + Date.now(), { cache: 'no-store' });
+        if (res.ok && isMounted) {
+          const data = await res.json();
+          if (Array.isArray(data.interviews)) {
+            dispatch({ type: 'SYNC_INTERVIEWS', payload: data.interviews });
+          }
+        }
+      } catch (_) {}
+    };
+
+    fetchLatestInterviews();
+    const interval = setInterval(fetchLatestInterviews, 3000);
+    return () => {
+      isMounted = false;
+      clearInterval(interval);
+    };
+  }, [dispatch]);
+
   const student = (state.students || []).find(s => s.id === user?.studentId) || (state.students || [])[0] || initialStudents[0];
 
 

@@ -481,6 +481,15 @@ function dataReducer(state, action) {
     }
 
     // ---- INTERVIEWS (Online Video Calls) ----
+    case 'SYNC_INTERVIEWS': {
+      const incoming = Array.isArray(action.payload) ? action.payload : [];
+      const filtered = incoming.filter(i => !isDemoInterview(i));
+      return {
+        ...state,
+        interviews: filtered,
+      };
+    }
+
     case 'SCHEDULE_INTERVIEW': {
       const interview = {
         ...action.payload,
@@ -505,6 +514,22 @@ function dataReducer(state, action) {
         createdAt: new Date().toISOString(),
       }));
 
+      // Immediately notify other tabs on this machine
+      if (typeof window !== 'undefined') {
+        try {
+          if ('BroadcastChannel' in window) {
+            const bc = new BroadcastChannel('career_os_realtime_sync');
+            bc.postMessage({ type: 'INTERVIEW_SCHEDULED', interview });
+            bc.close();
+          }
+          localStorage.setItem('career_os_last_interview_sync', JSON.stringify({
+            timestamp: Date.now(),
+            action: 'SCHEDULE',
+            interview,
+          }));
+        } catch (_) {}
+      }
+
       resilientFetch('/api/interviews', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -524,6 +549,22 @@ function dataReducer(state, action) {
           ? { ...i, ...action.payload }
           : i
       );
+
+      if (typeof window !== 'undefined') {
+        try {
+          if ('BroadcastChannel' in window) {
+            const bc = new BroadcastChannel('career_os_realtime_sync');
+            bc.postMessage({ type: 'INTERVIEW_UPDATED', interview: action.payload });
+            bc.close();
+          }
+          localStorage.setItem('career_os_last_interview_sync', JSON.stringify({
+            timestamp: Date.now(),
+            action: 'UPDATE',
+            interview: action.payload,
+          }));
+        } catch (_) {}
+      }
+
       resilientFetch('/api/interviews', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
@@ -536,6 +577,22 @@ function dataReducer(state, action) {
       const interviews = (state.interviews || []).map(i =>
         i.id === action.payload ? { ...i, status: 'Cancelled' } : i
       );
+
+      if (typeof window !== 'undefined') {
+        try {
+          if ('BroadcastChannel' in window) {
+            const bc = new BroadcastChannel('career_os_realtime_sync');
+            bc.postMessage({ type: 'INTERVIEW_CANCELLED', id: action.payload });
+            bc.close();
+          }
+          localStorage.setItem('career_os_last_interview_sync', JSON.stringify({
+            timestamp: Date.now(),
+            action: 'CANCEL',
+            id: action.payload,
+          }));
+        } catch (_) {}
+      }
+
       resilientFetch('/api/interviews', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
@@ -654,6 +711,67 @@ export function DataProvider({ children }) {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
     }
   }, [state]);
+
+  // Real-time zero-latency cross-tab sync (BroadcastChannel & storage events)
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    let bc = null;
+    try {
+      if ('BroadcastChannel' in window) {
+        bc = new BroadcastChannel('career_os_realtime_sync');
+        bc.onmessage = async (evt) => {
+          if (!evt.data) return;
+          const { type, interview, id } = evt.data;
+
+          if (type === 'INTERVIEW_SCHEDULED' && interview) {
+            // Re-fetch clean list from backend to ensure consistent DB state
+            try {
+              const res = await fetch('/api/interviews?t=' + Date.now(), { cache: 'no-store' });
+              if (res.ok) {
+                const data = await res.json();
+                if (Array.isArray(data.interviews)) {
+                  dispatch({ type: 'SYNC_INTERVIEWS', payload: data.interviews });
+                }
+              }
+            } catch (_) {}
+          } else if (type === 'INTERVIEW_UPDATED' || type === 'INTERVIEW_CANCELLED') {
+            try {
+              const res = await fetch('/api/interviews?t=' + Date.now(), { cache: 'no-store' });
+              if (res.ok) {
+                const data = await res.json();
+                if (Array.isArray(data.interviews)) {
+                  dispatch({ type: 'SYNC_INTERVIEWS', payload: data.interviews });
+                }
+              }
+            } catch (_) {}
+          }
+        };
+      }
+    } catch (_) {}
+
+    const handleStorageEvent = (evt) => {
+      if (evt.key === 'career_os_last_interview_sync') {
+        fetch('/api/interviews?t=' + Date.now(), { cache: 'no-store' })
+          .then(res => res.json())
+          .then(data => {
+            if (Array.isArray(data.interviews)) {
+              dispatch({ type: 'SYNC_INTERVIEWS', payload: data.interviews });
+            }
+          })
+          .catch(() => {});
+      }
+    };
+
+    window.addEventListener('storage', handleStorageEvent);
+
+    return () => {
+      if (bc) {
+        try { bc.close(); } catch (_) {}
+      }
+      window.removeEventListener('storage', handleStorageEvent);
+    };
+  }, []);
 
   return (
     <DataContext.Provider value={{ state, dispatch, loading }}>

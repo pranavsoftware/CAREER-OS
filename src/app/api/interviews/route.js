@@ -2,6 +2,14 @@ import { NextResponse } from 'next/server';
 import { query } from '@/lib/db';
 
 export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+export const fetchCache = 'force-no-store';
+
+const NO_CACHE_HEADERS = {
+  'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0',
+  'Pragma': 'no-cache',
+  'Expires': '0',
+};
 
 export async function GET() {
   try {
@@ -31,10 +39,10 @@ export async function GET() {
       FROM interviews
       ORDER BY created_at DESC
     `);
-    return NextResponse.json({ interviews: res.rows || [] });
+    return NextResponse.json({ interviews: res.rows || [] }, { headers: NO_CACHE_HEADERS });
   } catch (error) {
     console.error('Error fetching interviews from database:', error);
-    return NextResponse.json({ error: error.message, interviews: [] }, { status: 500 });
+    return NextResponse.json({ error: error.message, interviews: [] }, { status: 500, headers: NO_CACHE_HEADERS });
   }
 }
 
@@ -111,10 +119,10 @@ export async function POST(req) {
       createdAt: new Date().toISOString(),
     };
 
-    return NextResponse.json({ success: true, interview: createdInterview });
+    return NextResponse.json({ success: true, interview: createdInterview }, { headers: NO_CACHE_HEADERS });
   } catch (error) {
     console.error('Error saving interview to database:', error);
-    return NextResponse.json({ error: error.message }, { status: 400 });
+    return NextResponse.json({ error: error.message }, { status: 400, headers: NO_CACHE_HEADERS });
   }
 }
 
@@ -122,7 +130,7 @@ export async function PUT(req) {
   try {
     const data = await req.json();
     if (!data.id) {
-      return NextResponse.json({ error: 'Missing interview id' }, { status: 400 });
+      return NextResponse.json({ error: 'Missing interview id' }, { status: 400, headers: NO_CACHE_HEADERS });
     }
 
     await query(`
@@ -145,10 +153,10 @@ export async function PUT(req) {
       data.students ? JSON.stringify(data.students) : null,
     ]);
 
-    return NextResponse.json({ success: true });
+    return NextResponse.json({ success: true }, { headers: NO_CACHE_HEADERS });
   } catch (error) {
     console.error('Error updating interview in database:', error);
-    return NextResponse.json({ error: error.message }, { status: 400 });
+    return NextResponse.json({ error: error.message }, { status: 400, headers: NO_CACHE_HEADERS });
   }
 }
 
@@ -163,9 +171,9 @@ export async function DELETE(req) {
       await query(`DELETE FROM interviews`);
     }
 
-    return NextResponse.json({ success: true });
+    return NextResponse.json({ success: true }, { headers: NO_CACHE_HEADERS });
   } catch (error) {
     console.error('Error deleting interview from database:', error);
-    return NextResponse.json({ error: error.message }, { status: 400 });
+    return NextResponse.json({ error: error.message }, { status: 400, headers: NO_CACHE_HEADERS });
   }
 }

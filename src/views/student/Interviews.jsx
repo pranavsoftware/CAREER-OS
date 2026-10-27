@@ -14,7 +14,7 @@ import {
 
 export default function StudentInterviews() {
   const { user } = useAuth();
-  const { state } = useData();
+  const { state, dispatch } = useData();
   const { students = [], interviews = [] } = state;
 
   const currentStudent = students.find(s => s.id === user?.studentId) || students[0];
@@ -33,6 +33,39 @@ export default function StudentInterviews() {
   const [filter, setFilter] = useState('all'); // 'all' | 'live' | 'upcoming' | 'completed'
   const [forceUnlockAll, setForceUnlockAll] = useState(false);
   const [currentTime, setCurrentTime] = useState(new Date());
+  const [isRefreshing, setIsRefreshing] = useState(false);
+
+  // Fast background polling & on-mount fetch for instant update when company schedules
+  const refreshInterviews = async (showSpinner = false) => {
+    if (showSpinner) setIsRefreshing(true);
+    try {
+      const res = await fetch('/api/interviews?t=' + Date.now(), { cache: 'no-store' });
+      if (res.ok) {
+        const data = await res.json();
+        if (Array.isArray(data.interviews)) {
+          dispatch({ type: 'SYNC_INTERVIEWS', payload: data.interviews });
+        }
+      }
+    } catch (err) {
+      console.debug('Fast interview fetch error:', err);
+    } finally {
+      if (showSpinner) {
+        setTimeout(() => setIsRefreshing(false), 400);
+      }
+    }
+  };
+
+  useEffect(() => {
+    // 1. Immediate fetch on component mount
+    refreshInterviews();
+
+    // 2. High-frequency polling every 2.5s while on student interviews screen
+    const pollInterval = setInterval(() => {
+      refreshInterviews(false);
+    }, 2500);
+
+    return () => clearInterval(pollInterval);
+  }, []);
 
   // Hardware Check state
   const [testingMedia, setTestingMedia] = useState(false);
@@ -163,8 +196,38 @@ export default function StudentInterviews() {
                 {currentTime.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })}
               </div>
 
+              {/* Live Sync Status & Manual Refresh Button */}
+              <div style={{ marginTop: 8, display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 6 }}>
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 10, color: '#34D399', fontWeight: 600 }}>
+                  <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#10B981', display: 'inline-block', boxShadow: '0 0 6px #10B981' }} />
+                  Live Sync
+                </span>
+                <button
+                  type="button"
+                  onClick={() => refreshInterviews(true)}
+                  disabled={isRefreshing}
+                  title="Check database for newly scheduled interviews"
+                  style={{
+                    padding: '3px 8px',
+                    borderRadius: 6,
+                    border: '1px solid rgba(255,255,255,0.2)',
+                    background: 'rgba(255,255,255,0.08)',
+                    color: '#fff',
+                    fontSize: 10,
+                    fontWeight: 700,
+                    cursor: isRefreshing ? 'wait' : 'pointer',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: 4,
+                  }}
+                >
+                  <RefreshCw size={10} className={isRefreshing ? 'animate-spin' : ''} />
+                  {isRefreshing ? 'Syncing...' : 'Fetch Now'}
+                </button>
+              </div>
+
               {/* Room Early Access Override */}
-              <div style={{ marginTop: 10, paddingTop: 8, borderTop: '1px solid rgba(255,255,255,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 8 }}>
+              <div style={{ marginTop: 8, paddingTop: 8, borderTop: '1px solid rgba(255,255,255,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 8 }}>
                 <span style={{ fontSize: 11, color: forceUnlockAll ? '#4ADE80' : '#CBD5E1', fontWeight: 600 }}>
                   {forceUnlockAll ? 'Early Entry Active' : 'Scheduled Lock Active'}
                 </span>
