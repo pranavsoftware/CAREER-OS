@@ -26,23 +26,37 @@ const REACTION_TYPES = [
 
 const STUN_SERVERS = {
   iceServers: [
+    // Primary Google Global Anycast STUN
     { urls: 'stun:stun.l.google.com:19302' },
     { urls: 'stun:stun1.l.google.com:19302' },
     { urls: 'stun:stun2.l.google.com:19302' },
-    { urls: 'stun:global.stun.twilio.com:3478' },
+    { urls: 'stun:stun3.l.google.com:19302' },
+    { urls: 'stun:stun4.l.google.com:19302' },
+    // Cloudflare Global STUN (Zero-latency edge)
     { urls: 'stun:stun.cloudflare.com:3478' },
+    // Twilio Global WebRTC STUN
+    { urls: 'stun:global.stun.twilio.com:3478' },
+    // Free Enterprise STUN Relays
+    { urls: 'stun:stun.services.mozilla.com:3478' },
+    { urls: 'stun:stun.nextcloud.com:443' },
+    { urls: 'stun:stun.matrix.org:443' },
     { urls: 'stun:openrelay.metered.ca:80' },
+    // Metered TURN Servers (UDP, TCP, and Secure TLS 443 fallback for restricted corporate / college Wi-Fi)
     {
       urls: [
         'turn:openrelay.metered.ca:80',
         'turn:openrelay.metered.ca:443',
-        'turn:openrelay.metered.ca:443?transport=tcp'
+        'turn:openrelay.metered.ca:443?transport=tcp',
+        'turns:openrelay.metered.ca:443?transport=tcp'
       ],
       username: 'openrelayproject',
       credential: 'openrelayproject',
     },
   ],
   iceCandidatePoolSize: 10,
+  iceTransportPolicy: 'all',
+  bundlePolicy: 'max-bundle',
+  rtcpMuxPolicy: 'require',
 };
 
 // ── Real WebRTC Remote Video Tile with Admin Controls ──
@@ -484,7 +498,34 @@ console.log(twoSum([2, 7, 11, 15], 9)); // Output: [0, 1]
   const [questionAnswers, setQuestionAnswers] = useState([]);
   const [studentSelectedOption, setStudentSelectedOption] = useState(null);
   const [studentAnswerSubmitted, setStudentAnswerSubmitted] = useState(false);
+  const [studentCodeSubmitted, setStudentCodeSubmitted] = useState(false);
+  const [questionTimeLeft, setQuestionTimeLeft] = useState(null); // in seconds
   const [assessmentTab, setAssessmentTab] = useState('onspot'); // 'onspot' | 'session' | 'custom'
+
+  // MCQ & Coding countdown timer — starts ticking from active question's display
+  useEffect(() => {
+    if (!activeQuestion) {
+      setQuestionTimeLeft(null);
+      return;
+    }
+
+    // Default duration: 90s for MCQ, 300s (5 min) for Coding Challenge, or question.timeLimit
+    const duration = activeQuestion.timeLimit || (activeQuestion.type === 'code' ? 300 : 90);
+    setQuestionTimeLeft(duration);
+
+    const timer = setInterval(() => {
+      setQuestionTimeLeft(prev => {
+        if (prev === null) return duration;
+        if (prev <= 1) {
+          clearInterval(timer);
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, [activeQuestion?.id]);
 
   // On-the-spot question generator state
   const [onSpotForm, setOnSpotForm] = useState({
@@ -762,17 +803,21 @@ console.log(twoSum([2, 7, 11, 15], 9)); // Output: [0, 1]
     setActiveQuestion(question);
     setStudentSelectedOption(null);
     setStudentAnswerSubmitted(false);
+    setStudentCodeSubmitted(false);
 
     sendSignalingMessage({ signalType: 'POST_QUESTION', question });
     if (broadcastRef.current) {
       broadcastRef.current.postMessage({ type: 'POST_QUESTION', payload: question });
     }
 
-    if (question.type === 'code' && question.codeStarter) {
-      setCodeContent(question.codeStarter);
-      if (broadcastRef.current) {
-        broadcastRef.current.postMessage({ type: 'CODE_SYNC', payload: question.codeStarter });
+    if (question.type === 'code') {
+      if (question.codeStarter) {
+        setCodeContent(question.codeStarter);
+        if (broadcastRef.current) {
+          broadcastRef.current.postMessage({ type: 'CODE_SYNC', payload: question.codeStarter });
+        }
       }
+      setActiveSidebar('code');
     }
 
     // Fast sync active question to PostgreSQL database
@@ -802,6 +847,7 @@ console.log(twoSum([2, 7, 11, 15], 9)); // Output: [0, 1]
     setActiveQuestion(null);
     setStudentSelectedOption(null);
     setStudentAnswerSubmitted(false);
+    setStudentCodeSubmitted(false);
 
     sendSignalingMessage({ signalType: 'CLOSE_QUESTION' });
     if (broadcastRef.current) {
@@ -815,7 +861,7 @@ console.log(twoSum([2, 7, 11, 15], 9)); // Output: [0, 1]
     }).catch(() => {});
   };
 
-  // Student Submits Answer to Host Question
+  // Student Submits MCQ Answer to Host Question
   const handleStudentSubmitAnswer = () => {
     if (studentSelectedOption === null || !activeQuestion || studentAnswerSubmitted) return;
     setStudentAnswerSubmitted(true);
@@ -835,6 +881,42 @@ console.log(twoSum([2, 7, 11, 15], 9)); // Output: [0, 1]
     if (broadcastRef.current) {
       broadcastRef.current.postMessage({ type: 'SUBMIT_ANSWER', payload: answerPayload });
     }
+  };
+
+  // Student Submits Written Code to Host Question
+  const handleStudentSubmitCode = () => {
+    if (studentCodeSubmitted) return;
+    setStudentCodeSubmitted(true);
+
+    const submissionPayload = {
+      studentName: myName,
+      studentId: user?.id,
+      questionId: activeQuestion?.id || 'live_code',
+      questionTitle: activeQuestion?.title || activeQuestion?.question || 'Live Coding Task',
+      code: codeContent,
+      language: codeLanguage,
+      submittedAt: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+    };
+
+    sendSignalingMessage({ signalType: 'SUBMIT_CODE', ...submissionPayload });
+    if (broadcastRef.current) {
+      broadcastRef.current.postMessage({ type: 'SUBMIT_CODE', payload: submissionPayload });
+    }
+
+    // Announce code submission in in-call chat
+    const codeMsg = {
+      id: `m_c_${Date.now()}`,
+      sender: 'Career-OS Assessment',
+      role: 'system',
+      text: `${myName} has submitted their code solution for ${submissionPayload.questionTitle} (${codeLanguage.toUpperCase()}).`,
+      time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+    };
+    setChatMessages(prev => [...prev, codeMsg]);
+    fetch('/api/interviews/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ meetingId, message: codeMsg }),
+    }).catch(() => {});
   };
 
   // Dedicated WebRTC Offer Initiator
@@ -1145,6 +1227,27 @@ console.log(twoSum([2, 7, 11, 15], 9)); // Output: [0, 1]
         };
         setChatMessages(prev => [...prev, announcementMsg]);
       }
+    } else if (signalType === 'SUBMIT_CODE') {
+      if (isRecruiter) {
+        if (msg.code) {
+          setCodeContent(msg.code);
+          setActiveSidebar('code');
+        }
+        const codeAnswerRecord = {
+          studentName: msg.studentName || 'Candidate',
+          questionId: msg.questionId,
+          code: msg.code,
+          language: msg.language,
+          isCodeSubmission: true,
+          points: 15,
+          time: msg.submittedAt || new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        };
+        setQuestionAnswers(prev => {
+          const updated = [...prev, codeAnswerRecord];
+          updateScorecardFromAssessment(updated);
+          return updated;
+        });
+      }
     } else if (signalType === 'ADMIN_ACTION') {
       const isTargetMe = msg.targetPeerId === myPeerId;
       if (isTargetMe) {
@@ -1234,6 +1337,26 @@ console.log(twoSum([2, 7, 11, 15], 9)); // Output: [0, 1]
           if (isRecruiter && payload) {
             setQuestionAnswers(prev => {
               const updated = [...prev, payload];
+              updateScorecardFromAssessment(updated);
+              return updated;
+            });
+          }
+        } else if (type === 'SUBMIT_CODE') {
+          if (isRecruiter && payload) {
+            if (payload.code) {
+              setCodeContent(payload.code);
+              setActiveSidebar('code');
+            }
+            setQuestionAnswers(prev => {
+              const updated = [...prev, {
+                studentName: payload.studentName || 'Candidate',
+                questionId: payload.questionId,
+                code: payload.code,
+                language: payload.language,
+                isCodeSubmission: true,
+                points: 15,
+                time: payload.submittedAt || new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+              }];
               updateScorecardFromAssessment(updated);
               return updated;
             });
@@ -2569,11 +2692,11 @@ console.log(twoSum([2, 7, 11, 15], 9)); // Output: [0, 1]
             position: 'absolute',
             top: isRecruiter && pendingJoinRequests.length > 0 ? 110 : 20,
             right: 20,
-            width: 370,
+            width: 380,
             maxWidth: 'calc(100vw - 40px)',
             background: 'rgba(32, 33, 36, 0.97)',
             backdropFilter: 'blur(20px)',
-            border: '1.5px solid #1A73E8',
+            border: activeQuestion.type === 'code' ? '1.5px solid #10B981' : '1.5px solid #1A73E8',
             borderRadius: 16,
             padding: '18px 20px',
             boxShadow: '0 16px 40px rgba(0,0,0,0.7), 0 0 0 1px rgba(26,115,232,0.3)',
@@ -2583,21 +2706,47 @@ console.log(twoSum([2, 7, 11, 15], 9)); // Output: [0, 1]
             gap: 12,
           }}
         >
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, fontWeight: 700, color: '#8AB4F8' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 6 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, fontWeight: 700, color: activeQuestion.type === 'code' ? '#6EE7B7' : '#8AB4F8' }}>
               <HelpCircle size={15} />
-              <span>{activeQuestion.type === 'code' ? 'Coding Challenge' : 'Live Technical Question'}</span>
+              <span>{activeQuestion.type === 'code' ? 'Live Coding Challenge' : 'Live MCQ Question'}</span>
             </div>
-            <span style={{ fontSize: 11, background: 'rgba(26,115,232,0.2)', color: '#8AB4F8', padding: '2px 8px', borderRadius: 9999, fontWeight: 600 }}>
-              +{activeQuestion.points || 10} pts
-            </span>
+
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+              {/* Question Countdown Timer */}
+              {questionTimeLeft !== null && (
+                <div
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: 4,
+                    padding: '2px 8px',
+                    borderRadius: 9999,
+                    fontSize: 11,
+                    fontWeight: 800,
+                    fontFamily: 'monospace',
+                    background: questionTimeLeft <= 15 ? 'rgba(234,67,53,0.25)' : 'rgba(245,158,11,0.2)',
+                    color: questionTimeLeft <= 15 ? '#F87171' : '#FBBF24',
+                    border: questionTimeLeft <= 15 ? '1px solid #EA4335' : '1px solid rgba(245,158,11,0.4)',
+                  }}
+                >
+                  <Clock size={12} />
+                  <span>{Math.floor(questionTimeLeft / 60)}:{String(questionTimeLeft % 60).padStart(2, '0')}</span>
+                </div>
+              )}
+
+              <span style={{ fontSize: 11, background: 'rgba(26,115,232,0.2)', color: '#8AB4F8', padding: '2px 8px', borderRadius: 9999, fontWeight: 600 }}>
+                +{activeQuestion.points || (activeQuestion.type === 'code' ? 15 : 10)} pts
+              </span>
+            </div>
           </div>
 
           <div style={{ fontSize: 13, fontWeight: 700, color: '#E8EAED', lineHeight: 1.4 }}>
             {activeQuestion.question || activeQuestion.title}
           </div>
 
-          {activeQuestion.options && activeQuestion.options.length > 0 && (
+          {/* MCQ Options */}
+          {activeQuestion.type === 'mcq' && activeQuestion.options && activeQuestion.options.length > 0 && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
               {activeQuestion.options.map((opt, idx) => (
                 <label
@@ -2610,7 +2759,7 @@ console.log(twoSum([2, 7, 11, 15], 9)); // Output: [0, 1]
                     borderRadius: 8,
                     background: studentSelectedOption === idx ? 'rgba(26,115,232,0.25)' : '#303134',
                     border: studentSelectedOption === idx ? '1px solid #1A73E8' : '1px solid #3C4043',
-                    cursor: studentAnswerSubmitted ? 'default' : 'pointer',
+                    cursor: studentAnswerSubmitted || questionTimeLeft === 0 ? 'default' : 'pointer',
                     fontSize: 12,
                     color: '#E8EAED',
                     transition: 'all 0.15s ease',
@@ -2619,7 +2768,7 @@ console.log(twoSum([2, 7, 11, 15], 9)); // Output: [0, 1]
                   <input
                     type="radio"
                     name="candidateAssessmentOption"
-                    disabled={studentAnswerSubmitted}
+                    disabled={studentAnswerSubmitted || questionTimeLeft === 0}
                     checked={studentSelectedOption === idx}
                     onChange={() => setStudentSelectedOption(idx)}
                     style={{ accentColor: '#1A73E8' }}
@@ -2631,11 +2780,51 @@ console.log(twoSum([2, 7, 11, 15], 9)); // Output: [0, 1]
             </div>
           )}
 
-          {!isRecruiter && (
+          {/* Coding Challenge Instructions & Direct Pad Launch */}
+          {activeQuestion.type === 'code' && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              <div style={{ background: '#1E1E1E', padding: '8px 10px', borderRadius: 6, fontSize: 11, color: '#A7F3D0', fontFamily: 'monospace', lineHeight: 1.5 }}>
+                {activeQuestion.testCases || 'Type code in the Live Synchronized Code Pad below and submit to the interviewer.'}
+              </div>
+
+              <div style={{ display: 'flex', gap: 8 }}>
+                <button
+                  type="button"
+                  onClick={() => setActiveSidebar('code')}
+                  style={{
+                    flex: 1,
+                    padding: '8px 12px',
+                    borderRadius: 8,
+                    border: '1px solid #5F6368',
+                    background: '#303134',
+                    color: '#fff',
+                    fontSize: 12,
+                    fontWeight: 700,
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: 6,
+                  }}
+                >
+                  <FileCode size={14} color="#6EE7B7" />
+                  <span>{activeSidebar === 'code' ? 'Code Pad Open' : 'Open Code Pad'}</span>
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Student MCQ Submit Button */}
+          {!isRecruiter && activeQuestion.type === 'mcq' && (
             studentAnswerSubmitted ? (
               <div style={{ display: 'flex', alignItems: 'center', gap: 6, color: '#34A853', fontSize: 12, fontWeight: 600, padding: '4px 0' }}>
                 <CheckCircle2 size={16} />
                 <span>Answer submitted! Points evaluated and synced with scorecard.</span>
+              </div>
+            ) : questionTimeLeft === 0 ? (
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6, color: '#EA4335', fontSize: 12, fontWeight: 600, padding: '4px 0' }}>
+                <AlertCircle size={16} />
+                <span>Time up for this question!</span>
               </div>
             ) : (
               <button
@@ -2655,6 +2844,39 @@ console.log(twoSum([2, 7, 11, 15], 9)); // Output: [0, 1]
                 }}
               >
                 Submit Answer to Host
+              </button>
+            )
+          )}
+
+          {/* Student Coding Submit Button */}
+          {!isRecruiter && activeQuestion.type === 'code' && (
+            studentCodeSubmitted ? (
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6, color: '#34A853', fontSize: 12, fontWeight: 600, padding: '4px 0' }}>
+                <CheckCircle2 size={16} />
+                <span>Code solution submitted to host! Interviewer is reviewing your logic.</span>
+              </div>
+            ) : (
+              <button
+                type="button"
+                onClick={handleStudentSubmitCode}
+                style={{
+                  padding: '9px 14px',
+                  borderRadius: 8,
+                  border: 'none',
+                  background: '#10B981',
+                  color: '#fff',
+                  fontSize: 12,
+                  fontWeight: 700,
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: 6,
+                  boxShadow: '0 2px 10px rgba(16,185,129,0.3)',
+                }}
+              >
+                <Check size={15} />
+                <span>Submit My Code to Host</span>
               </button>
             )
           )}
@@ -3362,9 +3584,22 @@ console.log(twoSum([2, 7, 11, 15], 9)); // Output: [0, 1]
                     </select>
                   </div>
 
+                  {/* Active Question Banner if posted */}
+                  {activeQuestion && activeQuestion.type === 'code' && (
+                    <div style={{ background: '#1A2E26', border: '1px solid #059669', borderRadius: 8, padding: '8px 12px' }}>
+                      <div style={{ fontSize: 11, fontWeight: 700, color: '#6EE7B7', marginBottom: 2 }}>
+                        Current Problem: {activeQuestion.title || activeQuestion.question}
+                      </div>
+                      <div style={{ fontSize: 10, color: '#A7F3D0', lineHeight: 1.4 }}>
+                        {activeQuestion.testCases || 'Write your algorithm below and submit when ready.'}
+                      </div>
+                    </div>
+                  )}
+
                   <textarea
                     value={codeContent}
                     onChange={e => handleCodeChange(e.target.value)}
+                    placeholder="Type or paste your solution here..."
                     spellCheck="false"
                     style={{
                       flex: 1,
@@ -3381,10 +3616,45 @@ console.log(twoSum([2, 7, 11, 15], 9)); // Output: [0, 1]
                       outline: 'none',
                     }}
                   />
-                  <div style={{ fontSize: 11, color: '#9AA0A6', display: 'flex', alignItems: 'center', gap: 6 }}>
-                    <Check size={14} color="#34A853" />
-                    <span>Real-time code editing synchronized across all video call participants.</span>
-                  </div>
+
+                  {/* Student Code Submission Action */}
+                  {!isRecruiter && (
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+                      <div style={{ fontSize: 11, color: '#9AA0A6', display: 'flex', alignItems: 'center', gap: 6 }}>
+                        <Check size={14} color="#34A853" />
+                        <span>Instant multi-peer sync</span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={handleStudentSubmitCode}
+                        disabled={studentCodeSubmitted}
+                        style={{
+                          padding: '7px 16px',
+                          borderRadius: 6,
+                          border: 'none',
+                          background: studentCodeSubmitted ? '#303134' : '#10B981',
+                          color: studentCodeSubmitted ? '#9AA0A6' : '#fff',
+                          fontSize: 12,
+                          fontWeight: 700,
+                          cursor: studentCodeSubmitted ? 'default' : 'pointer',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: 6,
+                          boxShadow: studentCodeSubmitted ? 'none' : '0 2px 8px rgba(16,185,129,0.3)',
+                        }}
+                      >
+                        <Check size={14} />
+                        {studentCodeSubmitted ? 'Code Submitted' : 'Submit Code to Host'}
+                      </button>
+                    </div>
+                  )}
+
+                  {isRecruiter && (
+                    <div style={{ fontSize: 11, color: '#9AA0A6', display: 'flex', alignItems: 'center', gap: 6 }}>
+                      <Check size={14} color="#34A853" />
+                      <span>Viewing candidate live code stream. Changes sync both ways in real-time.</span>
+                    </div>
+                  )}
                 </div>
               )}
 
