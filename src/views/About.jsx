@@ -3,7 +3,8 @@ import { Link } from 'react-router-dom';
 import {
   Cpu, Briefcase, Sparkles,
   ArrowRight, ShieldCheck, Target,
-  ArrowLeft, Menu, X
+  ArrowLeft, Menu, X,
+  GraduationCap, Building2, CheckCircle2
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
@@ -60,6 +61,40 @@ export default function About() {
     },
   ];
 
+  const advisors = [
+    {
+      name: 'Dr. Denis Ashok S.',
+      role: 'Faculty Advisor | Engineering, Design & Innovation',
+      photo: '/images/Dr. DENIS ASHOK.png',
+      institution: 'Vellore Institute of Technology (VIT), Vellore',
+      designations: [
+        'Professor, VIT RANE Centre of Excellence',
+        'School of Mechanical Engineering',
+        'Department of Design and Automation',
+        'Vellore Institute of Technology (VIT), Vellore',
+      ],
+      bio: 'Dr. Denis Ashok S. brings expertise in engineering, design, and automation. His academic background provides valuable perspectives on innovation, technical development, and practical problem-solving.',
+      specialties: ['Engineering Design', 'Design & Automation', 'Applied Innovation', 'Technical Development', 'RANE CoE'],
+      accentColor: '#4F46E5',
+      lightBg: '#EEF2FF',
+    },
+    {
+      name: 'Dr. Mohanasundaram Ranganathan',
+      role: 'Faculty Advisor | Technology, Research & Strategy',
+      photo: '/images/Dr. Mohanasundaram Ranganathan.png',
+      institution: 'Vellore Institute of Technology (VIT), Vellore',
+      designations: [
+        'Professor, Vellore Institute of Technology (VIT), Vellore',
+        "Director – Men's Hostels, VIT",
+        'IEEE Senior Member',
+      ],
+      bio: 'Dr. Mohanasundaram Ranganathan has research interests spanning Wireless Sensor Networks, Blockchain, and Artificial Intelligence. His interdisciplinary expertise provides valuable perspectives on emerging technologies, research-oriented development, and technical innovation.',
+      specialties: ['Wireless Sensor Networks', 'Blockchain Systems', 'Artificial Intelligence', 'IEEE Senior Member', 'Strategic Research'],
+      accentColor: '#0284C7',
+      lightBg: '#F0F9FF',
+    },
+  ];
+
   return (
     <div style={{ minHeight: '100vh', background: '#F8F9FD', color: '#111827', fontFamily: 'var(--font-sans)' }}>
 
@@ -78,6 +113,7 @@ export default function About() {
             <a href="/#about" style={{ fontSize: 14, fontWeight: 500, color: '#4B5563', textDecoration: 'none' }}>Platform</a>
             <a href="/#capabilities" style={{ fontSize: 14, fontWeight: 500, color: '#4B5563', textDecoration: 'none' }}>Capabilities</a>
             <a href="#team" style={{ fontSize: 14, fontWeight: 600, color: '#4F46E5', textDecoration: 'none' }}>Leadership</a>
+            <a href="#advisors" style={{ fontSize: 14, fontWeight: 500, color: '#4B5563', textDecoration: 'none' }}>Advisors</a>
             <a href="#mission" style={{ fontSize: 14, fontWeight: 500, color: '#4B5563', textDecoration: 'none' }}>Mission</a>
             <a href="/#contact" style={{ fontSize: 14, fontWeight: 500, color: '#4B5563', textDecoration: 'none' }}>Contact</a>
           </nav>
@@ -150,6 +186,7 @@ export default function About() {
               <a href="/#about" onClick={() => setMobileMenuOpen(false)} style={{ fontSize: 15, fontWeight: 500, color: '#374151', textDecoration: 'none' }}>Platform</a>
               <a href="/#capabilities" onClick={() => setMobileMenuOpen(false)} style={{ fontSize: 15, fontWeight: 500, color: '#374151', textDecoration: 'none' }}>Capabilities</a>
               <a href="#team" onClick={() => setMobileMenuOpen(false)} style={{ fontSize: 15, fontWeight: 600, color: '#4F46E5', textDecoration: 'none' }}>Leadership Team</a>
+              <a href="#advisors" onClick={() => setMobileMenuOpen(false)} style={{ fontSize: 15, fontWeight: 500, color: '#374151', textDecoration: 'none' }}>Faculty Advisors</a>
               <a href="#mission" onClick={() => setMobileMenuOpen(false)} style={{ fontSize: 15, fontWeight: 500, color: '#374151', textDecoration: 'none' }}>Our Mission</a>
               <a href="/#contact" onClick={() => setMobileMenuOpen(false)} style={{ fontSize: 15, fontWeight: 500, color: '#374151', textDecoration: 'none' }}>Contact Placement Cell</a>
               
@@ -327,6 +364,204 @@ export default function About() {
         </div>
       </section>
 
+      {/* ─── FACULTY ADVISORS & MENTORS ─── */}
+      <section id="advisors" style={{ background: '#F8FAFC', borderTop: '1px solid #E2E8F0', borderBottom: '1px solid #E2E8F0', padding: '64px 20px 76px' }}>
+        <div style={{ maxWidth: 1140, margin: '0 auto' }}>
+          
+          <div style={{ textAlign: 'center', marginBottom: 44 }}>
+            <div style={{ display: 'inline-flex', alignItems: 'center', gap: 7, padding: '5px 16px', borderRadius: 9999, background: '#EEF2FF', border: '1px solid #E0E7FF', marginBottom: 14 }}>
+              <GraduationCap size={15} color="#4F46E5" />
+              <span style={{ fontSize: 12, fontWeight: 700, color: '#4338CA', letterSpacing: '0.06em', textTransform: 'uppercase' }}>
+                Academic Advisory & Mentorship
+              </span>
+            </div>
+            
+            <h2 style={{ fontSize: 'clamp(26px, 4vw, 38px)', fontWeight: 800, color: '#111827', letterSpacing: '-0.03em', margin: '0 0 16px' }}>
+              Our Faculty Advisors & Mentors
+            </h2>
+            
+            <p style={{ fontSize: 'clamp(14px, 1.8vw, 16px)', color: '#4B5563', maxWidth: 760, margin: '0 auto', lineHeight: 1.7 }}>
+              Our startup benefits from the guidance of experienced faculty members at Vellore Institute of Technology (VIT), Vellore. Their academic expertise, research experience, and mentorship help us strengthen our technical foundation, encourage innovation, and approach real-world challenges with a research-driven perspective.
+            </p>
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 480px), 1fr))', gap: 28 }}>
+            {advisors.map((advisor) => (
+              <div
+                key={advisor.name}
+                className="card-hover"
+                style={{
+                  background: '#fff',
+                  borderRadius: 24,
+                  border: '1px solid #E2E8F0',
+                  boxShadow: '0 8px 30px -4px rgba(0,0,0,0.06)',
+                  padding: '32px 28px',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  position: 'relative',
+                  overflow: 'hidden',
+                }}
+              >
+                {/* Top Colored Accent Stripe */}
+                <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 4, background: advisor.accentColor }} />
+
+                {/* Profile Header (Photo + Name & Role) */}
+                <div style={{ display: 'flex', gap: 20, alignItems: 'center', flexWrap: 'wrap', marginBottom: 20 }}>
+                  <div style={{ position: 'relative', flexShrink: 0 }}>
+                    <img
+                      src={advisor.photo}
+                      alt={advisor.name}
+                      style={{
+                        width: 104,
+                        height: 104,
+                        borderRadius: 20,
+                        objectFit: 'cover',
+                        border: '3px solid #fff',
+                        boxShadow: '0 8px 24px -4px rgba(0,0,0,0.14)',
+                        display: 'block',
+                      }}
+                    />
+                    <div
+                      style={{
+                        position: 'absolute',
+                        bottom: -4,
+                        right: -4,
+                        width: 28,
+                        height: 28,
+                        borderRadius: '50%',
+                        background: advisor.accentColor,
+                        color: '#fff',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        border: '2px solid #fff',
+                        boxShadow: '0 2px 6px rgba(0,0,0,0.18)',
+                      }}
+                    >
+                      <GraduationCap size={15} />
+                    </div>
+                  </div>
+
+                  <div style={{ flex: 1, minWidth: 220 }}>
+                    <span
+                      style={{
+                        display: 'inline-block',
+                        padding: '4px 12px',
+                        borderRadius: 9999,
+                        background: advisor.lightBg,
+                        color: advisor.accentColor,
+                        fontSize: 11.5,
+                        fontWeight: 700,
+                        letterSpacing: '0.02em',
+                        marginBottom: 8,
+                      }}
+                    >
+                      {advisor.role}
+                    </span>
+                    <h3 style={{ fontSize: 21, fontWeight: 800, color: '#111827', margin: '0 0 6px', letterSpacing: '-0.02em' }}>
+                      {advisor.name}
+                    </h3>
+                    <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 12.5, fontWeight: 600, color: '#4F46E5' }}>
+                      <Building2 size={14} color="#4F46E5" />
+                      {advisor.institution}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Academic Appointments & Affiliations */}
+                <div
+                  style={{
+                    marginBottom: 18,
+                    padding: '14px 16px',
+                    background: '#F8FAFC',
+                    borderRadius: 14,
+                    border: '1px solid #E2E8F0',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: 6,
+                  }}
+                >
+                  <div style={{ fontSize: 11, fontWeight: 700, color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 2 }}>
+                    Academic Appointments & Designations
+                  </div>
+                  {advisor.designations.map((item, idx) => (
+                    <div key={idx} style={{ display: 'flex', alignItems: 'flex-start', gap: 8, fontSize: 13, color: '#334155', lineHeight: 1.45 }}>
+                      <span style={{ color: advisor.accentColor, fontWeight: 800, lineHeight: 1 }}>•</span>
+                      <span style={{ fontWeight: idx === 0 ? 600 : 400 }}>{item}</span>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Biography / Guidance Narrative */}
+                <p style={{ fontSize: 13.5, color: '#4B5563', lineHeight: 1.68, margin: '0 0 20px', flex: 1 }}>
+                  {advisor.bio}
+                </p>
+
+                {/* Research & Mentorship Specialties */}
+                <div>
+                  <div style={{ fontSize: 11, fontWeight: 700, color: '#9CA3AF', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 8 }}>
+                    Research & Advisory Focus
+                  </div>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                    {advisor.specialties.map((spec) => (
+                      <span
+                        key={spec}
+                        style={{
+                          fontSize: 11,
+                          fontWeight: 600,
+                          color: '#374151',
+                          background: '#F3F4F6',
+                          padding: '4px 10px',
+                          borderRadius: 6,
+                          border: '1px solid #E5E7EB',
+                        }}
+                      >
+                        {spec}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Institutional Trust Callout Banner */}
+          <div
+            style={{
+              marginTop: 36,
+              background: '#FFFFFF',
+              borderRadius: 16,
+              border: '1px solid #E0E7FF',
+              padding: '18px 24px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              flexWrap: 'wrap',
+              gap: 16,
+              boxShadow: '0 2px 12px rgba(79, 70, 229, 0.05)',
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+              <div style={{ width: 38, height: 38, borderRadius: 10, background: '#EEF2FF', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                <CheckCircle2 size={20} color="#4F46E5" />
+              </div>
+              <div>
+                <div style={{ fontSize: 13.5, fontWeight: 700, color: '#1E1B4B' }}>
+                  Institutional Academic Mentorship
+                </div>
+                <div style={{ fontSize: 12, color: '#6B7280' }}>
+                  Faculty guidance aligned with real-world engineering standards, deep-tech research, and placement ecosystem excellence.
+                </div>
+              </div>
+            </div>
+            <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '6px 14px', borderRadius: 9999, background: '#F8FAFC', border: '1px solid #E2E8F0', fontSize: 11.5, fontWeight: 600, color: '#475569' }}>
+              VIT Vellore Mentorship Cohort
+            </div>
+          </div>
+
+        </div>
+      </section>
+
       {/* ─── MISSION & PILLARS ─── */}
       <section id="mission" style={{ background: '#fff', borderTop: '1px solid #EBEFFA', borderBottom: '1px solid #EBEFFA', padding: '64px 20px' }}>
         <div style={{ maxWidth: 1140, margin: '0 auto' }}>
@@ -483,6 +718,7 @@ export default function About() {
           <div style={{ display: 'flex', gap: 18, flexWrap: 'wrap' }}>
             <Link to="/" style={{ color: '#4B5563', textDecoration: 'none' }}>Home</Link>
             <Link to="/about" style={{ color: '#4F46E5', fontWeight: 600, textDecoration: 'none' }}>About Us</Link>
+            <a href="#advisors" style={{ color: '#4B5563', textDecoration: 'none' }}>Faculty Advisors</a>
             <a href="/#about" style={{ color: '#4B5563', textDecoration: 'none' }}>Platform</a>
             <a href="/#capabilities" style={{ color: '#4B5563', textDecoration: 'none' }}>Capabilities</a>
             <Link to="/login" style={{ color: '#4B5563', textDecoration: 'none' }}>Sign In</Link>
