@@ -34,6 +34,13 @@ const defaultEmptyState = {
   roadmapProgress: {},
   testAttempts: [],
   interviews: initialInterviews,
+  jobShortlists: [],
+  universityRecords: [],
+  verificationSettings: { personalInfo: true, education: true, skills: true, projects: true, experience: true },
+  // Phase 2
+  materialEnrollments: [],   // [{ materialId, studentId, enrolled, completed }]
+  materialRatings: [],       // [{ materialId, studentId, stars, review, createdAt }]
+  rescheduleRequests: [],    // [{ id, interviewId, studentId, status, ... }]
 };
 
 
@@ -376,6 +383,108 @@ function dataReducer(state, action) {
       return { ...state, students };
     }
 
+    // ---- SHORTLISTS (CDC & Company) ----
+    case 'SET_JOB_SHORTLIST': {
+      const { jobId, shortlist } = action.payload;
+      const otherShortlists = (state.jobShortlists || []).filter(s => s.jobId !== jobId);
+      return {
+        ...state,
+        jobShortlists: [...otherShortlists, ...shortlist],
+      };
+    }
+
+    case 'UPDATE_SHORTLIST_CANDIDATE': {
+      const { jobId, studentId, status, rank } = action.payload;
+      const updatedShortlists = (state.jobShortlists || []).map(item => {
+        if (item.jobId === jobId && item.studentId === studentId) {
+          return {
+            ...item,
+            status: status !== undefined ? status : item.status,
+            rank: rank !== undefined ? rank : item.rank,
+          };
+        }
+        return item;
+      });
+
+      resilientFetch(`/api/jobs/${jobId}/shortlist`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', 'x-user-role': 'university' },
+        body: JSON.stringify({ studentId, status, rank }),
+      }).catch(err => console.error('Error updating shortlist candidate:', err));
+
+      return {
+        ...state,
+        jobShortlists: updatedShortlists,
+      };
+    }
+
+    case 'SEND_SHORTLIST_TO_COMPANY': {
+      const { jobId, studentIds } = action.payload;
+      const updatedShortlists = (state.jobShortlists || []).map(item => {
+        if (item.jobId === jobId && (!studentIds || studentIds.includes(item.studentId))) {
+          return {
+            ...item,
+            status: 'Sent to Company',
+            emailedAt: new Date().toISOString(),
+          };
+        }
+        return item;
+      });
+
+      // Update candidate_pipelines optimistically
+      const jobPipeline = { ...(state.pipeline[jobId] || {}) };
+      (studentIds || []).forEach(stId => {
+        jobPipeline[stId] = 'Shortlisted';
+      });
+
+      resilientFetch(`/api/jobs/${jobId}/shortlist/send`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-user-role': 'university' },
+        body: JSON.stringify({ studentIds }),
+      }).catch(err => console.error('Error sending shortlist to company:', err));
+
+      return {
+        ...state,
+        jobShortlists: updatedShortlists,
+        pipeline: {
+          ...state.pipeline,
+          [jobId]: jobPipeline,
+        },
+      };
+    }
+
+    // ---- UNIVERSITY RECORDS & VERIFICATION ----
+    case 'IMPORT_UNIVERSITY_RECORDS': {
+      const { records } = action.payload;
+      resilientFetch('/api/university/records', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-user-role': 'university' },
+        body: JSON.stringify({ records }),
+      }).catch(err => console.error('Error importing university records:', err));
+
+      return {
+        ...state,
+        universityRecords: [...(state.universityRecords || []), ...records],
+      };
+    }
+
+    case 'UPDATE_VERIFICATION_SETTINGS': {
+      const { section, autoEnabled } = action.payload;
+      resilientFetch('/api/university/verification', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', 'x-user-role': 'university' },
+        body: JSON.stringify({ section, autoEnabled }),
+      }).catch(err => console.error('Error updating verification settings:', err));
+
+      return {
+        ...state,
+        verificationSettings: {
+          ...(state.verificationSettings || {}),
+          [section]: autoEnabled,
+        },
+      };
+    }
+
     // ---- PIPELINE (company) ----
     case 'UPDATE_PIPELINE': {
       const { jobId, studentId, stage } = action.payload;
@@ -601,6 +710,81 @@ function dataReducer(state, action) {
       return { ...state, interviews };
     }
 
+    // ---- PHASE 2: MATERIAL ENROLLMENTS & RATINGS ----
+    case 'ENROLL_MATERIAL': {
+      const { materialId, studentId } = action.payload;
+      const existing = (state.materialEnrollments || []).find(
+        e => e.materialId === materialId && e.studentId === studentId
+      );
+      if (existing) return state; // already enrolled, no-op
+      const newEnrollment = { materialId, studentId, enrolled: true, completed: false, enrolledAt: new Date().toISOString() };
+      resilientFetch(`/api/materials/${materialId}/enroll`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ studentId }),
+      }).catch(err => console.error('Error enrolling material:', err));
+      return { ...state, materialEnrollments: [...(state.materialEnrollments || []), newEnrollment] };
+    }
+
+    case 'COMPLETE_MATERIAL': {
+      const { materialId, studentId, completed } = action.payload;
+      resilientFetch(`/api/materials/${materialId}/enroll`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ studentId, completed }),
+      }).catch(err => console.error('Error marking material complete:', err));
+      return {
+        ...state,
+        materialEnrollments: (state.materialEnrollments || []).map(e =>
+          e.materialId === materialId && e.studentId === studentId ? { ...e, completed } : e
+        ),
+      };
+    }
+
+    case 'RATE_MATERIAL': {
+      const { materialId, studentId, stars, review } = action.payload;
+      const newRating = { materialId, studentId, stars, review, createdAt: new Date().toISOString() };
+      resilientFetch(`/api/materials/${materialId}/rate`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ studentId, stars, review }),
+      }).catch(err => console.error('Error rating material:', err));
+      const ratings = (state.materialRatings || []).filter(
+        r => !(r.materialId === materialId && r.studentId === studentId)
+      );
+      return { ...state, materialRatings: [...ratings, newRating] };
+    }
+
+    // ---- PHASE 2: RESCHEDULE REQUESTS ----
+    case 'ADD_RESCHEDULE_REQUEST': {
+      const req = { ...action.payload, status: 'Pending', createdAt: new Date().toISOString() };
+      resilientFetch('/api/interviews/reschedule', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(action.payload),
+      }).catch(err => console.error('Error adding reschedule request:', err));
+      return { ...state, rescheduleRequests: [...(state.rescheduleRequests || []), req] };
+    }
+
+    case 'UPDATE_RESCHEDULE_REQUEST': {
+      const { id, ...updates } = action.payload;
+      resilientFetch(`/api/interviews/reschedule/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(updates),
+      }).catch(err => console.error('Error updating reschedule request:', err));
+      return {
+        ...state,
+        rescheduleRequests: (state.rescheduleRequests || []).map(r =>
+          r.id === id ? { ...r, ...updates } : r
+        ),
+      };
+    }
+
+    case 'SYNC_RESCHEDULE_REQUESTS': {
+      return { ...state, rescheduleRequests: action.payload || [] };
+    }
+
     // ---- RESET ----
     case 'RESET_DATA': {
       if (typeof window !== 'undefined') {
@@ -690,6 +874,9 @@ export function DataProvider({ children }) {
             testAttempts: data.testAttempts || [],
             resumeVersions: data.resumeVersions || {},
             roadmapProgress: data.roadmapProgress || {},
+            materialEnrollments: data.materialEnrollments || [],
+            materialRatings: data.materialRatings || [],
+            rescheduleRequests: data.rescheduleRequests || [],
           },
         });
       } catch (err) {

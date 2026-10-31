@@ -14,7 +14,7 @@ export default function DataTable({ columns, rows, onRowClick, emptyMessage = 'N
   }
 
   return (
-    <div style={{ overflowX: 'auto', border: '1px solid #E5E7EB', borderRadius: 6, background: '#fff' }}>
+    <div style={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch', border: '1px solid #E5E7EB', borderRadius: 6, background: '#fff' }}>
       <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 14 }}>
         <thead>
           <tr style={{ background: '#F9FAFB', borderBottom: '1px solid #E5E7EB' }}>

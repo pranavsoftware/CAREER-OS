@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import Layout from '../../components/Layout';
 import Badge from '../../components/Badge';
 import Modal from '../../components/Modal';
@@ -23,7 +23,11 @@ import {
   ChevronRight,
   ChevronLeft,
   ListVideo,
-  X
+  X,
+  Star,
+  Trophy,
+  Users,
+  BarChart3,
 } from 'lucide-react';
 
 const CATEGORIES = [
@@ -60,6 +64,21 @@ export default function UniversityMaterials() {
   const [readingMaterial, setReadingMaterial] = useState(null);
   const [activePlaylistItemIndex, setActivePlaylistItemIndex] = useState(0);
   const [inlineMsg, setInlineMsg] = useState(null);
+
+  // Ratings & Analytics State (Phase 2.1)
+  const [analyticsData, setAnalyticsData] = useState([]);
+  const [analyticsLoading, setAnalyticsLoading] = useState(false);
+
+  useEffect(() => {
+    setAnalyticsLoading(true);
+    fetch('/api/materials/top')
+      .then(res => res.ok ? res.json() : [])
+      .then(data => {
+        setAnalyticsData(Array.isArray(data) ? data : []);
+        setAnalyticsLoading(false);
+      })
+      .catch(() => setAnalyticsLoading(false));
+  }, [materials.length]);
 
   // Upload Progress States
   const [uploadProgress, setUploadProgress] = useState(null); // number 0-100 or null
@@ -715,6 +734,102 @@ export default function UniversityMaterials() {
             <div style={{ fontSize: 13, color: '#9CA3AF', marginTop: 4 }}>
               Click "Upload New Section / Playlist" to publish learning modules for students.
             </div>
+          </div>
+        )}
+      </div>
+
+      {/* Phase 2.1: Ratings & Analytics Aggregate View */}
+      <div style={{ marginTop: 36, background: '#fff', border: '1px solid #E5E7EB', borderRadius: 12, padding: 24, boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <div style={{ width: 36, height: 36, borderRadius: 8, background: '#EFF6FF', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <BarChart3 size={20} color="#2563EB" />
+            </div>
+            <div>
+              <h3 style={{ fontSize: 16, fontWeight: 700, color: '#111827', margin: 0 }}>Course Ratings & Enrolment Analytics</h3>
+              <p style={{ fontSize: 12, color: '#6B7280', margin: 0 }}>Aggregated student feedback, completions, and Bayesian ranking scores</p>
+            </div>
+          </div>
+          <span style={{ fontSize: 12, color: '#9CA3AF' }}>Live from database</span>
+        </div>
+
+        {analyticsLoading ? (
+          <div style={{ padding: 24, textAlign: 'center', color: '#9CA3AF', fontSize: 13 }}>Loading analytics...</div>
+        ) : analyticsData.length === 0 ? (
+          <div style={{ padding: 24, textAlign: 'center', color: '#9CA3AF', fontSize: 13, background: '#F9FAFB', borderRadius: 8 }}>
+            No ratings or enrolments recorded yet.
+          </div>
+        ) : (
+          <div style={{ overflowX: 'auto' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
+              <thead>
+                <tr style={{ background: '#F8FAFC', borderBottom: '2px solid #E2E8F0', textAlign: 'left', color: '#475569' }}>
+                  <th style={{ padding: '10px 14px', fontWeight: 600 }}>Rank & Course</th>
+                  <th style={{ padding: '10px 14px', fontWeight: 600 }}>Category</th>
+                  <th style={{ padding: '10px 14px', fontWeight: 600 }}>Branch</th>
+                  <th style={{ padding: '10px 14px', fontWeight: 600 }}>Average Stars</th>
+                  <th style={{ padding: '10px 14px', fontWeight: 600 }}>Total Ratings</th>
+                  <th style={{ padding: '10px 14px', fontWeight: 600 }}>Enrolled</th>
+                  <th style={{ padding: '10px 14px', fontWeight: 600 }}>Completion Rate</th>
+                  <th style={{ padding: '10px 14px', fontWeight: 600 }}>Bayesian Score</th>
+                </tr>
+              </thead>
+              <tbody>
+                {analyticsData.map((row, idx) => (
+                  <tr key={row.id} style={{ borderBottom: '1px solid #F1F5F9', transition: 'background 0.15s' }}>
+                    <td style={{ padding: '12px 14px', fontWeight: 600, color: '#1E293B', display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <span style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        width: 22,
+                        height: 22,
+                        borderRadius: '50%',
+                        fontSize: 11,
+                        fontWeight: 700,
+                        background: idx === 0 ? '#FEF3C7' : idx === 1 ? '#F1F5F9' : '#FFF7ED',
+                        color: idx === 0 ? '#D97706' : idx === 1 ? '#475569' : '#C2410C',
+                        border: '1px solid #E2E8F0'
+                      }}>
+                        {idx + 1}
+                      </span>
+                      <span>{row.title}</span>
+                    </td>
+                    <td style={{ padding: '12px 14px', color: '#64748B' }}>
+                      <span style={{ background: '#F1F5F9', padding: '2px 8px', borderRadius: 4, fontSize: 11, fontWeight: 500 }}>
+                        {row.category}
+                      </span>
+                    </td>
+                    <td style={{ padding: '12px 14px', color: '#64748B' }}>{row.targetBranch}</td>
+                    <td style={{ padding: '12px 14px', color: '#F59E0B', fontWeight: 600 }}>
+                      ⭐ {Number(row.avgStars).toFixed(1)} / 5.0
+                    </td>
+                    <td style={{ padding: '12px 14px', color: '#475569' }}>{row.ratingCount} reviews</td>
+                    <td style={{ padding: '12px 14px', color: '#475569' }}>
+                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                        <Users size={13} color="#2563EB" />
+                        {row.enrolCount} students
+                      </span>
+                    </td>
+                    <td style={{ padding: '12px 14px' }}>
+                      <span style={{
+                        padding: '2px 8px',
+                        borderRadius: 4,
+                        fontSize: 11,
+                        fontWeight: 600,
+                        background: row.completionRate >= 0.5 ? '#DCFCE7' : '#FEF3C7',
+                        color: row.completionRate >= 0.5 ? '#15803D' : '#B45309',
+                      }}>
+                        {Math.round(row.completionRate * 100)}%
+                      </span>
+                    </td>
+                    <td style={{ padding: '12px 14px', fontWeight: 700, color: '#2563EB' }}>
+                      {(Number(row.score) * 100).toFixed(1)} / 100
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
         )}
       </div>

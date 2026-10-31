@@ -9,8 +9,9 @@ export function parseMeetingDateTime(dateStr, timeStr) {
     const [year, month, day] = dateStr.split('-').map(Number);
     const [hours, minutes] = timeStr.split(':').map(Number);
     if (!year || !month || !day) {
-      // Fallback to native Date parser
-      const d = new Date(`${dateStr} ${timeStr}`);
+      // Fallback to ISO-standard Date parser for Safari / WebKit compatibility
+      const isoFormatted = dateStr.includes('T') ? dateStr : `${dateStr}T${timeStr.includes(':') ? timeStr : timeStr + ':00'}`;
+      const d = new Date(isoFormatted);
       return isNaN(d.getTime()) ? null : d;
     }
     return new Date(year, month - 1, day, hours || 0, minutes || 0, 0, 0);

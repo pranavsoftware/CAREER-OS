@@ -17,9 +17,18 @@ export async function POST(request) {
 
     const aiServiceUrl = process.env.AI_SERVICE_URL || 'http://127.0.0.1:8000';
 
+    // Determine appropriate filename extension matching incoming container (e.g. mp4 on iOS, webm on Chrome/Android)
+    const incomingName = file.name || '';
+    const incomingType = file.type || '';
+    const ext = incomingName.includes('.')
+      ? incomingName.split('.').pop()
+      : incomingType.includes('mp4') || incomingType.includes('aac')
+      ? 'mp4'
+      : 'webm';
+
     // Build outbound FormData for the self-hosted Whisper microservice
     const outboundData = new FormData();
-    outboundData.append('file', file, 'candidate_response.webm');
+    outboundData.append('file', file, `candidate_response.${ext}`);
     if (initialPrompt) {
       outboundData.append('initial_prompt', initialPrompt);
     }

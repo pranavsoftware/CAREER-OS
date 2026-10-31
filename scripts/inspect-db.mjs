@@ -1,15 +1,9 @@
 import { query } from '../src/lib/db.js';
 
 async function check() {
-  const mCols = await query("SELECT column_name, data_type FROM information_schema.columns WHERE table_name = 'materials'");
-  console.log('materials columns:', mCols.rows.map(r => `${r.column_name} (${r.data_type})`));
-
-  const nCols = await query("SELECT column_name, data_type FROM information_schema.columns WHERE table_name = 'notifications'");
-  console.log('notifications columns:', nCols.rows.map(r => `${r.column_name} (${r.data_type})`));
-
-  const mailCols = await query("SELECT column_name, data_type FROM information_schema.columns WHERE table_name = 'mails'");
-  console.log('mails columns:', mailCols.rows.map(r => `${r.column_name} (${r.data_type})`));
-
+  const tables = await query("SELECT table_name FROM information_schema.tables WHERE table_schema = 'public' ORDER BY table_name");
+  console.log('Existing tables in database:');
+  console.log(tables.rows.map(r => r.table_name));
   process.exit(0);
 }
 

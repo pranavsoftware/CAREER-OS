@@ -1,6 +1,10 @@
 import { useState } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
-import { Menu, X, LogOut, LayoutDashboard, User, FileText, Briefcase, Award, TrendingUp, Mic, Users, BookMarked, Mail, PieChart, BookOpen, Bot, Video } from 'lucide-react';
+import {
+  Menu, X, LogOut, LayoutDashboard, User, FileText, Briefcase, Award,
+  TrendingUp, Mic, Users, BookMarked, Mail, PieChart, BookOpen, Bot, Video,
+  GraduationCap, Gift, Database, Building
+} from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useData } from '../context/DataContext';
 import Topbar from './Topbar';
@@ -15,6 +19,8 @@ const studentNav = [
   { to: '/student/applications', label: 'Applications', icon: Briefcase },
   { to: '/student/certificates', label: 'Certificates', icon: Award },
   { to: '/student/materials', label: 'Study Materials', icon: BookOpen },
+  { to: '/student/higher-education', label: 'Higher Education', icon: GraduationCap, badge: 'MS' },
+  { to: '/student/referrals', label: 'Referrals & Rewards', icon: Gift, badge: 'Perks' },
   { to: '/student/skill-gap', label: 'Skill Gap', icon: TrendingUp },
   { to: '/student/interview-prep', label: 'Interview Prep', icon: Mic },
   { to: '/student/ai-interview', label: 'AI Interview', icon: Bot },
@@ -26,6 +32,9 @@ const universityNav = [
   { to: '/university/drives', label: 'Drives', icon: BookMarked },
   { to: '/university/materials', label: 'Class Materials', icon: BookOpen },
   { to: '/university/mail-filter', label: 'Mail Filter', icon: Mail },
+  { to: '/university/records-import', label: 'Registrar Sync', icon: Database, badge: 'Auto' },
+  { to: '/university/referrals', label: 'Endorsements & Perks', icon: Award },
+  { to: '/university/admissions', label: 'Admissions Desk', icon: GraduationCap, badge: '12th' },
 ];
 
 const companyNav = [
@@ -34,12 +43,21 @@ const companyNav = [
   { to: '/company/jobs', label: 'Jobs', icon: Briefcase },
   { to: '/company/candidates', label: 'Candidates', icon: Users },
   { to: '/company/pipeline', label: 'Pipeline', icon: TrendingUp },
+  { to: '/company/university-insights', label: 'University Insights', icon: GraduationCap, badge: 'Rank' },
+];
+
+const aspirantNav = [
+  { to: '/aspirant/dashboard', label: 'Dashboard', icon: LayoutDashboard },
+  { to: '/aspirant/profile', label: 'Academic & Entrance', icon: User },
+  { to: '/aspirant/explore', label: 'College Explorer', icon: Building, badge: 'Cutoffs' },
+  { to: '/aspirant/applications', label: 'My Applications', icon: FileText, badge: 'Live' },
 ];
 
 const NAV_BY_ROLE = {
   student: studentNav,
   university: universityNav,
   company: companyNav,
+  aspirant: aspirantNav,
 };
 
 function SidebarContent({ onClose }) {
@@ -56,9 +74,9 @@ function SidebarContent({ onClose }) {
 
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', minHeight: '100dvh' }}>
       {/* Logo */}
-      <div style={{ padding: '20px 20px 16px', borderBottom: '1px solid #E5E7EB', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0 }}>
+      <div style={{ padding: 'max(20px, env(safe-area-inset-top, 20px)) 20px 16px', borderBottom: '1px solid #E5E7EB', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0 }}>
         <div>
           <span style={{ fontSize: 17, fontWeight: 800, color: '#4F46E5', letterSpacing: '-0.04em' }}>CAREER-OS</span>
           <div style={{ fontSize: 11, color: '#9CA3AF', marginTop: 2 }}>Placement platform</div>
@@ -75,7 +93,7 @@ function SidebarContent({ onClose }) {
       </div>
 
       {/* Nav Links */}
-      <nav style={{ padding: '12px 10px', flex: 1, overflowY: 'auto' }}>
+      <nav style={{ padding: '12px 10px', flex: 1, overflowY: 'auto', WebkitOverflowScrolling: 'touch' }}>
         {navItems.map(item => {
           const Icon = item.icon;
           return (
@@ -87,7 +105,7 @@ function SidebarContent({ onClose }) {
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'space-between',
-                padding: '9px 12px',
+                padding: '10px 12px',
                 marginBottom: 3,
                 borderRadius: 8,
                 fontSize: 14,
@@ -124,8 +142,8 @@ function SidebarContent({ onClose }) {
         })}
       </nav>
 
-      {/* Bottom user info + actions */}
-      <div style={{ borderTop: '1px solid #E5E7EB', padding: '12px 10px', flexShrink: 0 }}>
+      {/* Bottom user info + actions (Padded for iPhone home bar) */}
+      <div style={{ borderTop: '1px solid #E5E7EB', padding: '12px 10px calc(16px + env(safe-area-inset-bottom, 0px))', flexShrink: 0 }}>
         <div style={{ padding: '8px 12px', marginBottom: 6, borderRadius: 8, background: '#F9FAFB' }}>
           <div style={{ fontSize: 13, fontWeight: 600, color: '#111827' }}>{user?.name}</div>
           <div style={{ fontSize: 11, color: '#9CA3AF', textTransform: 'uppercase', letterSpacing: '0.05em', marginTop: 2 }}>{user?.role} portal</div>
@@ -145,7 +163,7 @@ export default function Layout({ title, children }) {
   const [drawerOpen, setDrawerOpen] = useState(false);
 
   return (
-    <div style={{ display: 'flex', minHeight: '100vh', background: '#F8F9FA' }}>
+    <div style={{ display: 'flex', minHeight: '100dvh', background: '#F8F9FA' }}>
 
       {/* ── Desktop Sidebar (hidden on mobile via CSS class) ── */}
       <aside
@@ -173,11 +191,14 @@ export default function Layout({ title, children }) {
             className="animate-slide-in-right"
             style={{
               position: 'fixed', top: 0, right: 0,
-              width: 280, maxWidth: '85vw', height: '100vh',
+              width: 290, maxWidth: '85vw',
+              height: '100dvh',
+              maxHeight: '100dvh',
               background: '#fff',
               boxShadow: '-8px 0 40px rgba(0,0,0,0.18)',
               zIndex: 9999,
               overflowY: 'auto',
+              WebkitOverflowScrolling: 'touch',
               display: 'flex',
               flexDirection: 'column',
             }}
@@ -192,21 +213,24 @@ export default function Layout({ title, children }) {
         {/* Real-time Network Indicator Banner (Offline / Mobile 3G / Reconnected) */}
         <NetworkStatusIndicator />
 
-        {/* Mobile topbar (shows on mobile, hidden on desktop) */}
+        {/* Mobile topbar with iPhone Dynamic Island / Notch Inset Padding */}
         <header
           className="mobile-only"
           style={{
-            height: 56,
+            minHeight: 'calc(56px + env(safe-area-inset-top, 0px))',
+            paddingTop: 'env(safe-area-inset-top, 0px)',
             background: '#fff',
             borderBottom: '1px solid #E5E7EB',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
-            padding: '0 16px',
+            paddingLeft: 'max(16px, env(safe-area-inset-left, 16px))',
+            paddingRight: 'max(16px, env(safe-area-inset-right, 16px))',
             position: 'sticky',
             top: 0,
             zIndex: 100,
             flexShrink: 0,
+            boxSizing: 'border-box',
           }}
         >
           <span style={{ fontSize: 16, fontWeight: 800, color: '#4F46E5', letterSpacing: '-0.04em' }}>CAREER-OS</span>
@@ -228,8 +252,19 @@ export default function Layout({ title, children }) {
           <Topbar title={title} />
         </div>
 
-        {/* Page content */}
-        <main style={{ flex: 1, padding: 16, overflowY: 'auto', overflowX: 'hidden' }}>
+        {/* Page content with iPhone Home Bar Padding */}
+        <main
+          style={{
+            flex: 1,
+            padding: 16,
+            paddingLeft: 'max(16px, env(safe-area-inset-left, 16px))',
+            paddingRight: 'max(16px, env(safe-area-inset-right, 16px))',
+            paddingBottom: 'calc(32px + env(safe-area-inset-bottom, 0px))',
+            overflowY: 'auto',
+            overflowX: 'hidden',
+            WebkitOverflowScrolling: 'touch',
+          }}
+        >
           <div style={{ maxWidth: 1200, margin: '0 auto' }}>
             {children}
           </div>

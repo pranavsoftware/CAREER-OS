@@ -23,6 +23,7 @@ export default function UniversityDashboard() {
   const activeDrives = drives.filter(d => d.status === 'Open' || d.status === 'Upcoming').length;
   const placedStudents = students.filter(s => s.placementStatus === 'Placed').length;
   const placementRate = totalStudents > 0 ? Math.round((placedStudents / totalStudents) * 100) : 0;
+  const exceptionStudents = students.filter(s => s.profileStatus !== 'Verified');
 
   // Placements by branch
   const branches = ['CSE', 'IT', 'ECE', 'EEE', 'Mechanical'];
@@ -64,7 +65,7 @@ export default function UniversityDashboard() {
   return (
     <Layout title="Placement Cell Overview">
       {/* Stat cards */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 16, marginBottom: 24 }}>
+      <div className="grid-stats-responsive-5">
         <StatCard label="Total Students" value={totalStudents} sub="Batch 2026" />
         <StatCard label="Verified Profiles" value={verifiedProfiles} sub={`${Math.round((verifiedProfiles / totalStudents) * 100)}% verified`} />
         <StatCard label="Active Drives" value={activeDrives} sub="Open / Upcoming" />
@@ -73,7 +74,7 @@ export default function UniversityDashboard() {
       </div>
 
       {/* Grid: Bar chart & Recent Activity */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 24, alignItems: 'stretch' }}>
+      <div className="grid-split-responsive-2" style={{ alignItems: 'stretch' }}>
         {/* Placements by branch chart */}
         <div style={{ background: '#fff', border: '1px solid #E5E7EB', borderRadius: 6, padding: 16, display: 'flex', flexDirection: 'column' }}>
           <h2 style={{ margin: '0 0 12px', fontSize: 14, fontWeight: 600, color: '#111827' }}>
@@ -93,56 +94,68 @@ export default function UniversityDashboard() {
           </div>
         </div>
 
-        {/* Verification Alert & Drive Summary */}
-        <div style={{ background: '#fff', border: '1px solid #E5E7EB', borderRadius: 6, padding: 16 }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-            <h2 style={{ margin: 0, fontSize: 14, fontWeight: 600, color: '#111827' }}>
-              Pending Profile Actions
-            </h2>
-            <Link to="/university/students" style={{ fontSize: 13, color: '#2563EB' }}>View all students</Link>
+        {/* Verification Alert & Exceptions Queue (Phase 1.3: Shows Exceptions Only) */}
+        <div style={{ background: '#fff', border: '1px solid #E5E7EB', borderRadius: 8, padding: 18, display: 'flex', flexDirection: 'column' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+              <h2 style={{ margin: 0, fontSize: 14, fontWeight: 700, color: '#0F172A' }}>
+                Action Required: Exceptions Queue ({exceptionStudents.length})
+              </h2>
+            </div>
+            <Link to="/university/records-import" style={{ fontSize: 12, color: '#2563EB', fontWeight: 600 }}>
+              Registrar Sync →
+            </Link>
           </div>
-          <p style={{ margin: '0 0 16px', fontSize: 13, color: '#6B7280' }}>
-            {students.filter(s => s.profileStatus !== 'Verified').length} students have pending profile section verifications required for company recruitment eligibility.
+          <p style={{ margin: '0 0 14px', fontSize: 12, color: '#64748B' }}>
+            The automated rule engine has auto-verified matching profiles. Only students with registry discrepancies (CGPA/backlogs mismatch) require manual officer action.
           </p>
 
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-            {students.filter(s => s.profileStatus !== 'Verified').slice(0, 4).map(st => (
-              <div
-                key={st.id}
-                style={{
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'center',
-                  padding: '8px 12px',
-                  border: '1px solid #E5E7EB',
-                  borderRadius: 6,
-                  background: '#F9FAFB',
-                }}
-              >
-                <div>
-                  <Link to={`/university/students/${st.id}`} style={{ fontWeight: 600, fontSize: 13, color: '#111827', textDecoration: 'none' }}>
-                    {st.name}
-                  </Link>
-                  <div style={{ fontSize: 11, color: '#6B7280' }}>{st.regNo} • {st.branch} • CGPA {st.cgpa}</div>
-                </div>
-                <Link
-                  to={`/university/students/${st.id}`}
+          {exceptionStudents.length === 0 ? (
+            <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#F0FDF4', border: '1px solid #BBF7D0', borderRadius: 6, padding: 16, color: '#15803D', fontSize: 13, fontWeight: 600 }}>
+              ✓ All records synchronized — Zero active discrepancies in registry
+            </div>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8, flex: 1 }}>
+              {exceptionStudents.slice(0, 4).map(st => (
+                <div
+                  key={st.id}
                   style={{
-                    padding: '4px 10px',
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    padding: '10px 12px',
+                    border: '1px solid #FECACA',
                     borderRadius: 6,
-                    border: '1px solid #D1D5DB',
-                    background: '#fff',
-                    color: '#2563EB',
-                    fontSize: 12,
-                    fontWeight: 500,
-                    textDecoration: 'none',
+                    background: '#FEF2F2',
                   }}
                 >
-                  Verify
-                </Link>
-              </div>
-            ))}
-          </div>
+                  <div>
+                    <Link to={`/university/students/${st.id}`} style={{ fontWeight: 700, fontSize: 13, color: '#991B1B', textDecoration: 'none' }}>
+                      {st.name}
+                    </Link>
+                    <div style={{ fontSize: 11, color: '#B91C1C', marginTop: 2 }}>
+                      {st.regNo} • {st.branch} • Discrepancy flagged against registrar records
+                    </div>
+                  </div>
+                  <Link
+                    to={`/university/students/${st.id}`}
+                    style={{
+                      padding: '4px 10px',
+                      borderRadius: 6,
+                      border: '1px solid #DC2626',
+                      background: '#DC2626',
+                      color: '#fff',
+                      fontSize: 11,
+                      fontWeight: 700,
+                      textDecoration: 'none',
+                    }}
+                  >
+                    Resolve Diff
+                  </Link>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       </div>
 

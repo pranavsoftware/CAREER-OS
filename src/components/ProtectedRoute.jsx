@@ -8,6 +8,7 @@ const ROLE_DASHBOARDS = {
   student: '/student/dashboard',
   university: '/university/dashboard',
   company: '/company/dashboard',
+  aspirant: '/aspirant/dashboard',
 };
 
 /**

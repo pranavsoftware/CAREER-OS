@@ -85,9 +85,41 @@ export async function GET() {
         ) t) AS sent_mails,
 
         (SELECT COALESCE(json_agg(t), '[]'::json) FROM (
-          SELECT id, meeting_id AS "meetingId", job_id AS "jobId", company, role, student_id AS "studentId", student_name AS "studentName", student_email AS "studentEmail", student_branch AS "studentBranch", CAST(student_cgpa AS FLOAT) AS "studentCgpa", COALESCE(students, '[]'::jsonb) AS students, COALESCE(join_requests, '[]'::jsonb) AS "joinRequests", date, time, duration, type, status, notes, recruiter_name AS "recruiterName", evaluation, created_at AS "createdAt"
+          SELECT id, meeting_id AS "meetingId", job_id AS "jobId", company, role, student_id AS "studentId", student_name AS "studentName", student_email AS "studentEmail", student_branch AS "studentBranch", CAST(student_cgpa AS FLOAT) AS "studentCgpa", COALESCE(students, '[]'::jsonb) AS students, COALESCE(join_requests, '[]'::jsonb) AS "joinRequests", date, time, duration, type, status, notes, recruiter_name AS "recruiterName", evaluation, COALESCE(meeting_provider, 'careeros') AS "meetingProvider", meeting_url AS "meetingUrl", created_at AS "createdAt"
           FROM interviews ORDER BY created_at DESC
-        ) t) AS interviews
+        ) t) AS interviews,
+
+        (SELECT COALESCE(json_agg(t), '[]'::json) FROM (
+          SELECT id, job_id AS "jobId", student_id AS "studentId", rank, CAST(match_score AS FLOAT) AS "matchScore", score_breakdown AS "scoreBreakdown", status, shortlisted_by AS "shortlistedBy", emailed_at AS "emailedAt", created_at AS "createdAt"
+          FROM job_shortlists ORDER BY rank ASC, match_score DESC
+        ) t) AS job_shortlists,
+
+        (SELECT COALESCE(json_agg(t), '[]'::json) FROM (
+          SELECT id, university_id AS "universityId", reg_no AS "regNo", name, branch, batch, CAST(cgpa AS FLOAT) AS cgpa, backlogs, dob, imported_at AS "importedAt"
+          FROM university_records ORDER BY reg_no ASC
+        ) t) AS university_records,
+
+        (SELECT COALESCE(json_agg(t), '[]'::json) FROM (
+          SELECT section, auto_enabled AS "autoEnabled"
+          FROM verification_settings
+        ) t) AS verification_settings,
+
+        (SELECT COALESCE(json_agg(t), '[]'::json) FROM (
+          SELECT material_id AS "materialId", student_id AS "studentId", enrolled_at AS "enrolledAt", completed
+          FROM material_enrollments
+        ) t) AS material_enrollments,
+
+        (SELECT COALESCE(json_agg(t), '[]'::json) FROM (
+          SELECT material_id AS "materialId", student_id AS "studentId", stars, review, created_at AS "createdAt"
+          FROM material_ratings
+        ) t) AS material_ratings,
+
+        (SELECT COALESCE(json_agg(t), '[]'::json) FROM (
+          SELECT id, interview_id AS "interviewId", student_id AS "studentId", reason_code AS "reasonCode",
+                 reason_details AS "reasonDetails", proposed_date AS "proposedDate", proposed_time AS "proposedTime",
+                 status, recruiter_note AS "recruiterNote", decided_at AS "decidedAt", created_at AS "createdAt"
+          FROM reschedule_requests ORDER BY created_at DESC
+        ) t) AS reschedule_requests
     `);
 
     const data = res.rows[0] || {};
@@ -138,7 +170,16 @@ export async function GET() {
       testAttempts: data.test_attempts || [],
       resumeVersions,
       roadmapProgress,
-      interviews: data.interviews || []
+      interviews: data.interviews || [],
+      jobShortlists: data.job_shortlists || [],
+      universityRecords: data.university_records || [],
+      verificationSettings: (data.verification_settings || []).reduce((acc, curr) => {
+        acc[curr.section] = curr.autoEnabled;
+        return acc;
+      }, { personalInfo: true, education: true, skills: true, projects: true, experience: true }),
+      materialEnrollments: (data.material_enrollments || []).map(e => ({ ...e, enrolled: true })),
+      materialRatings: data.material_ratings || [],
+      rescheduleRequests: data.reschedule_requests || [],
     }, {
       headers: {
         'Cache-Control': 'public, s-maxage=10, stale-while-revalidate=60'

@@ -76,11 +76,39 @@ export default function CompanyInterviews() {
   const [evaluatingInterview, setEvaluatingInterview] = useState(null);
   const [inlineMsg, setInlineMsg] = useState(null);
 
+  // Phase 2: Reschedule requests state & meeting provider
+  const [rescheduleReqs, setRescheduleReqs] = useState([]);
+  const [selectedRescheduleReq, setSelectedRescheduleReq] = useState(null);
+  const [rescheduleActionData, setRescheduleActionData] = useState({
+    recruiterNote: '',
+    newDate: '',
+    newTime: '11:00',
+  });
+  const [rescheduleActionLoading, setRescheduleActionLoading] = useState(false);
+
+  const fetchRescheduleReqs = async () => {
+    try {
+      const res = await fetch('/api/interviews/reschedule');
+      if (res.ok) {
+        const data = await res.json();
+        setRescheduleReqs(data.requests || []);
+      }
+    } catch (_) {}
+  };
+
+  useEffect(() => {
+    fetchRescheduleReqs();
+    const iv = setInterval(fetchRescheduleReqs, 4000);
+    return () => clearInterval(iv);
+  }, []);
+
   // New Interview Form State
   const [formData, setFormData] = useState(() => ({
     studentId: '',
     jobId: jobs[0]?.id || '',
     type: 'Technical & Coding Round',
+    meetingProvider: 'careeros',
+    meetingUrl: '',
     date: new Date().toISOString().split('T')[0],
     time: '15:30',
     duration: 45,
@@ -114,6 +142,64 @@ export default function CompanyInterviews() {
 
   function handleRemoveStudent(studentId) {
     setSelectedStudents(prev => prev.filter(s => s.id !== studentId));
+  }
+
+  // Phase 2.2: Handle Recruiter Reschedule Review Actions (Approve, Decline, Propose)
+  async function handleRescheduleAction(action) {
+    if (!selectedRescheduleReq) return;
+    setRescheduleActionLoading(true);
+    try {
+      const body = { action };
+      if (action === 'approve') {
+        body.newDate = selectedRescheduleReq.proposedDate || selectedRescheduleReq.proposed_date;
+        body.newTime = selectedRescheduleReq.proposedTime || selectedRescheduleReq.proposed_time;
+      } else if (action === 'decline') {
+        body.recruiterNote = rescheduleActionData.recruiterNote || 'Declined due to scheduling constraints.';
+      } else if (action === 'propose') {
+        if (!rescheduleActionData.newDate || !rescheduleActionData.newTime) {
+          alert('Please select both a date and a time to propose.');
+          setRescheduleActionLoading(false);
+          return;
+        }
+        body.newDate = rescheduleActionData.newDate;
+        body.newTime = rescheduleActionData.newTime;
+      }
+
+      const res = await fetch(`/api/interviews/reschedule/${selectedRescheduleReq.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+      const d = await res.json();
+      if (!res.ok) throw new Error(d.error || 'Failed to update reschedule request');
+
+      if (action === 'approve') {
+        const intId = selectedRescheduleReq.interviewId || selectedRescheduleReq.interview_id;
+        const targetInt = companyInterviews.find(i => i.id === intId || i.meetingId === intId);
+        if (targetInt) {
+          dispatch({
+            type: 'UPDATE_INTERVIEW',
+            payload: {
+              id: targetInt.id,
+              date: body.newDate,
+              time: body.newTime,
+              status: 'Scheduled',
+            },
+          });
+        }
+      }
+
+      fetchRescheduleReqs();
+      setSelectedRescheduleReq(null);
+      setInlineMsg({
+        type: 'success',
+        text: `Reschedule request successfully ${action === 'approve' ? 'approved (interview updated)' : action === 'decline' ? 'declined' : 'counter-proposed'}! Candidate notified.`,
+      });
+    } catch (err) {
+      alert(err.message);
+    } finally {
+      setRescheduleActionLoading(false);
+    }
   }
 
   // Evaluation Form State for marking a call completed
@@ -242,6 +328,33 @@ export default function CompanyInterviews() {
       return;
     }
 
+    // Phase 2.3: Validate External Meeting URL if not built-in careeros
+    const provider = formData.meetingProvider || 'careeros';
+    const rawUrl = (formData.meetingUrl || '').trim();
+
+    if (provider !== 'careeros') {
+      if (!rawUrl) {
+        setInlineMsg({ type: 'error', text: 'Please enter the meeting link for the selected provider.' });
+        return;
+      }
+      if (provider === 'teams' && !rawUrl.includes('teams.microsoft.com')) {
+        setInlineMsg({ type: 'error', text: 'Microsoft Teams link must contain "teams.microsoft.com"' });
+        return;
+      }
+      if (provider === 'google_meet' && !rawUrl.includes('meet.google.com')) {
+        setInlineMsg({ type: 'error', text: 'Google Meet link must contain "meet.google.com"' });
+        return;
+      }
+      if (provider === 'zoom' && !rawUrl.includes('zoom.us')) {
+        setInlineMsg({ type: 'error', text: 'Zoom link must contain "zoom.us"' });
+        return;
+      }
+      if (provider === 'custom' && !rawUrl.startsWith('https://')) {
+        setInlineMsg({ type: 'error', text: 'Custom meeting link must start with "https://"' });
+        return;
+      }
+    }
+
     const targetJob = jobs.find(j => j.id === formData.jobId);
     const candidateNames = selectedStudents.map(c => c.name).join(', ');
     const candidateEmails = selectedStudents.map(c => c.email).join(', ');
@@ -280,6 +393,8 @@ export default function CompanyInterviews() {
       notes: formData.notes,
       recruiterName: user?.name || 'Talent Acquisition Team',
       evaluation: null,
+      meetingProvider: provider,
+      meetingUrl: provider === 'careeros' ? null : rawUrl,
       createdAt: new Date().toISOString(),
     };
 
@@ -880,6 +995,35 @@ export default function CompanyInterviews() {
                         </div>
                       )}
 
+                      {/* Reschedule Request Notice (Phase 2.2) */}
+                      {(() => {
+                        const req = rescheduleReqs.find(r => (r.interviewId === item.id || r.interview_id === item.id) && r.status === 'Pending');
+                        if (!req) return null;
+                        return (
+                          <div style={{ background: '#FFFBEB', border: '1px solid #FCD34D', borderRadius: 8, padding: '10px 14px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 10 }}>
+                            <div>
+                              <div style={{ fontSize: 13, fontWeight: 700, color: '#B45309', display: 'flex', alignItems: 'center', gap: 6 }}>
+                                <AlertCircle size={15} color="#D97706" />
+                                <span>Candidate Requested Reschedule</span>
+                              </div>
+                              <div style={{ fontSize: 12, color: '#92400E', marginTop: 2 }}>
+                                Proposed Slot: <strong>{req.proposedDate || req.proposed_date}</strong> at <strong>{req.proposedTime || req.proposed_time}</strong> • Reason: <em>{req.reasonCode || req.reason_code}</em>
+                              </div>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setSelectedRescheduleReq(req);
+                                setRescheduleActionData({ recruiterNote: '', newDate: req.proposedDate || req.proposed_date, newTime: req.proposedTime || req.proposed_time });
+                              }}
+                              style={{ padding: '6px 14px', background: '#D97706', color: '#fff', border: 'none', borderRadius: 6, fontSize: 12, fontWeight: 700, cursor: 'pointer' }}
+                            >
+                              Review Request →
+                            </button>
+                          </div>
+                        );
+                      })()}
+
                       {/* Action Bar */}
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12, paddingTop: 10, borderTop: '1px solid #F3F4F6' }}>
                         
@@ -949,25 +1093,50 @@ export default function CompanyInterviews() {
                             <span>Complete & Grade Call</span>
                           </button>
 
-                          <Link
-                            to={`/interview-room/${item.meetingId}`}
-                            style={{
-                              display: 'inline-flex',
-                              alignItems: 'center',
-                              gap: 8,
-                              padding: '8px 20px',
-                              borderRadius: 6,
-                              background: isLive ? '#2563EB' : '#1E293B',
-                              color: '#fff',
-                              fontSize: 13,
-                              fontWeight: 700,
-                              textDecoration: 'none',
-                              boxShadow: isLive ? '0 4px 12px rgba(37,99,235,0.3)' : 'none',
-                            }}
-                          >
-                            <Video size={16} />
-                            <span>{isLive ? 'Join Live Video Room Now' : 'Enter Meeting Room'}</span>
-                          </Link>
+                          {item.meetingProvider && item.meetingProvider !== 'careeros' && item.meetingUrl ? (
+                            <a
+                              href={item.meetingUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              style={{
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: 8,
+                                padding: '8px 20px',
+                                borderRadius: 6,
+                                background: isLive ? '#2563EB' : item.meetingProvider === 'teams' ? '#4F46E5' : '#1E293B',
+                                color: '#fff',
+                                fontSize: 13,
+                                fontWeight: 700,
+                                textDecoration: 'none',
+                                boxShadow: isLive ? '0 4px 12px rgba(37,99,235,0.3)' : 'none',
+                              }}
+                            >
+                              <Video size={15} />
+                              <span>Launch {item.meetingProvider === 'teams' ? 'Teams' : item.meetingProvider === 'google_meet' ? 'Google Meet' : item.meetingProvider === 'zoom' ? 'Zoom' : 'Room'}</span>
+                              <ExternalLink size={13} />
+                            </a>
+                          ) : (
+                            <Link
+                              to={`/interview-room/${item.meetingId || item.id}`}
+                              style={{
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: 8,
+                                padding: '8px 20px',
+                                borderRadius: 6,
+                                background: isLive ? '#2563EB' : '#1E293B',
+                                color: '#fff',
+                                fontSize: 13,
+                                fontWeight: 700,
+                                textDecoration: 'none',
+                                boxShadow: isLive ? '0 4px 12px rgba(37,99,235,0.3)' : 'none',
+                              }}
+                            >
+                              <Video size={15} />
+                              <span>Start / Enter Video Call</span>
+                            </Link>
+                          )}
                         </div>
 
                       </div>
@@ -1548,6 +1717,40 @@ export default function CompanyInterviews() {
                 </FormField>
               </div>
 
+              {/* Meeting Platform & Provider Selector (Phase 2.3) */}
+              <div style={{ display: 'grid', gridTemplateColumns: formData.meetingProvider && formData.meetingProvider !== 'careeros' ? '1fr 2fr' : '1fr', gap: 14, marginBottom: 16 }}>
+                <FormField label="Meeting Platform / Provider" required>
+                  <select
+                    value={formData.meetingProvider || 'careeros'}
+                    onChange={e => setFormData({ ...formData, meetingProvider: e.target.value })}
+                    style={{ width: '100%', padding: '9px 12px', borderRadius: 6, border: '1px solid #D1D5DB', fontSize: 13, background: '#fff' }}
+                  >
+                    <option value="careeros">CareerOS Built-in WebRTC (Recommended)</option>
+                    <option value="teams">Microsoft Teams</option>
+                    <option value="google_meet">Google Meet</option>
+                    <option value="zoom">Zoom Video</option>
+                    <option value="custom">Custom Meeting Provider</option>
+                  </select>
+                </FormField>
+
+                {formData.meetingProvider && formData.meetingProvider !== 'careeros' && (
+                  <FormField label={`External ${formData.meetingProvider === 'teams' ? 'Teams' : formData.meetingProvider === 'google_meet' ? 'Google Meet' : formData.meetingProvider === 'zoom' ? 'Zoom' : 'Custom'} Link *`} required>
+                    <input
+                      type="url"
+                      required
+                      placeholder={
+                        formData.meetingProvider === 'teams' ? 'https://teams.microsoft.com/l/meetup-join/...' :
+                        formData.meetingProvider === 'google_meet' ? 'https://meet.google.com/abc-defg-hij' :
+                        formData.meetingProvider === 'zoom' ? 'https://zoom.us/j/1234567890' : 'https://...'
+                      }
+                      value={formData.meetingUrl || ''}
+                      onChange={e => setFormData({ ...formData, meetingUrl: e.target.value })}
+                      style={{ width: '100%', padding: '9px 12px', borderRadius: 6, border: '1px solid #D1D5DB', fontSize: 13 }}
+                    />
+                  </FormField>
+                )}
+              </div>
+
               {/* Date, Time, Duration */}
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12, marginBottom: 16 }}>
                 <FormField label="Interview Date" required>
@@ -1879,6 +2082,118 @@ export default function CompanyInterviews() {
               </div>
 
             </form>
+          </Modal>
+        )}
+
+        {/* Phase 2.2: Recruiter Reschedule Review Modal */}
+        {selectedRescheduleReq && (
+          <Modal
+            isOpen={Boolean(selectedRescheduleReq)}
+            title="Review Candidate Reschedule Request"
+            onClose={() => !rescheduleActionLoading && setSelectedRescheduleReq(null)}
+          >
+            <div style={{ padding: '4px 0' }}>
+              <div style={{ background: '#F8FAFC', border: '1px solid #E2E8F0', borderRadius: 8, padding: 14, marginBottom: 16 }}>
+                <div style={{ fontSize: 13, color: '#64748B' }}>
+                  Candidate ID: <strong>{selectedRescheduleReq.studentId || selectedRescheduleReq.student_id}</strong>
+                </div>
+                <div style={{ fontSize: 14, fontWeight: 700, color: '#1E293B', marginTop: 4 }}>
+                  Reason Category: <span style={{ textTransform: 'capitalize' }}>{(selectedRescheduleReq.reasonCode || selectedRescheduleReq.reason_code || '').replace('_', ' ')}</span>
+                </div>
+                <div style={{ fontSize: 13, color: '#334155', marginTop: 6, fontStyle: 'italic', background: '#fff', padding: '8px 12px', borderRadius: 6, border: '1px solid #E2E8F0' }}>
+                  "{selectedRescheduleReq.reasonDetails || selectedRescheduleReq.reason_details || 'No additional note provided'}"
+                </div>
+                <div style={{ fontSize: 13, color: '#0369A1', fontWeight: 600, marginTop: 8 }}>
+                  Candidate Proposed Slot: {selectedRescheduleReq.proposedDate || selectedRescheduleReq.proposed_date} at {selectedRescheduleReq.proposedTime || selectedRescheduleReq.proposed_time}
+                </div>
+              </div>
+
+              {/* Action 1: Counter-proposal slot inputs */}
+              <div style={{ border: '1px solid #E2E8F0', borderRadius: 8, padding: 14, marginBottom: 14 }}>
+                <div style={{ fontSize: 13, fontWeight: 700, color: '#374151', marginBottom: 8 }}>
+                  Option A: Counter-Propose Another Slot
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+                  <div>
+                    <label style={{ display: 'block', fontSize: 11, color: '#64748B', marginBottom: 3 }}>Alternate Date</label>
+                    <input
+                      type="date"
+                      value={rescheduleActionData.newDate}
+                      onChange={e => setRescheduleActionData({ ...rescheduleActionData, newDate: e.target.value })}
+                      style={{ width: '100%', padding: '7px 10px', borderRadius: 6, border: '1px solid #D1D5DB', fontSize: 13 }}
+                    />
+                  </div>
+                  <div>
+                    <label style={{ display: 'block', fontSize: 11, color: '#64748B', marginBottom: 3 }}>Alternate Time</label>
+                    <input
+                      type="time"
+                      value={rescheduleActionData.newTime}
+                      onChange={e => setRescheduleActionData({ ...rescheduleActionData, newTime: e.target.value })}
+                      style={{ width: '100%', padding: '7px 10px', borderRadius: 6, border: '1px solid #D1D5DB', fontSize: 13 }}
+                    />
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  disabled={rescheduleActionLoading}
+                  onClick={() => handleRescheduleAction('propose')}
+                  style={{ marginTop: 10, padding: '6px 14px', background: '#4F46E5', color: '#fff', border: 'none', borderRadius: 6, fontSize: 12, fontWeight: 600, cursor: 'pointer' }}
+                >
+                  Propose Alternate Slot
+                </button>
+              </div>
+
+              {/* Action 2: Decline with note */}
+              <div style={{ border: '1px solid #FEE2E2', background: '#FFF5F5', borderRadius: 8, padding: 14, marginBottom: 16 }}>
+                <div style={{ fontSize: 13, fontWeight: 700, color: '#991B1B', marginBottom: 6 }}>
+                  Option B: Decline Reschedule Request
+                </div>
+                <input
+                  type="text"
+                  placeholder="Reason note for candidate (e.g. Hiring drive concludes today)..."
+                  value={rescheduleActionData.recruiterNote}
+                  onChange={e => setRescheduleActionData({ ...rescheduleActionData, recruiterNote: e.target.value })}
+                  style={{ width: '100%', padding: '7px 10px', borderRadius: 6, border: '1px solid #FECACA', fontSize: 13, marginBottom: 8 }}
+                />
+                <button
+                  type="button"
+                  disabled={rescheduleActionLoading}
+                  onClick={() => handleRescheduleAction('decline')}
+                  style={{ padding: '6px 14px', background: '#DC2626', color: '#fff', border: 'none', borderRadius: 6, fontSize: 12, fontWeight: 600, cursor: 'pointer' }}
+                >
+                  Decline Request
+                </button>
+              </div>
+
+              {/* Action 3: Accept Candidate Proposed Slot */}
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: 10, borderTop: '1px solid #E5E7EB' }}>
+                <button
+                  type="button"
+                  disabled={rescheduleActionLoading}
+                  onClick={() => setSelectedRescheduleReq(null)}
+                  style={{ padding: '8px 16px', borderRadius: 6, border: '1px solid #D1D5DB', background: '#fff', fontSize: 13, cursor: 'pointer' }}
+                >
+                  Close
+                </button>
+                <button
+                  type="button"
+                  disabled={rescheduleActionLoading}
+                  onClick={() => handleRescheduleAction('approve')}
+                  style={{
+                    padding: '8px 22px',
+                    borderRadius: 6,
+                    border: 'none',
+                    background: '#059669',
+                    color: '#fff',
+                    fontSize: 13,
+                    fontWeight: 700,
+                    cursor: rescheduleActionLoading ? 'not-allowed' : 'pointer',
+                  }}
+                >
+                  {rescheduleActionLoading ? 'Updating...' : `✓ Approve Candidate Slot (${selectedRescheduleReq.proposedDate || selectedRescheduleReq.proposed_date})`}
+                </button>
+              </div>
+            </div>
           </Modal>
         )}
 

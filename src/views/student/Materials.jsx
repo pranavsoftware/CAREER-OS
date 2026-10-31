@@ -18,7 +18,10 @@ import {
   ChevronLeft,
   CheckCircle2,
   Lock,
-  Layers
+  Layers,
+  Trophy,
+  Star,
+  Users,
 } from 'lucide-react';
 
 const CATEGORIES = [
@@ -41,16 +44,113 @@ const FORMATS = [
   { value: 'link', label: 'Reference Links', icon: Link2 },
 ];
 
+const BRANCH_OPTIONS = ['All', 'CSE', 'IT', 'ECE', 'EEE', 'Mechanical'];
+
 export default function StudentMaterials() {
-  const { state } = useData();
+  const { state, dispatch } = useData();
   const materials = state.materials || [];
   const currentStudent = state.students[0];
+  const materialEnrollments = state.materialEnrollments || [];
+  const materialRatings = state.materialRatings || [];
 
   const [search, setSearch] = useState('');
   const [selectedCat, setSelectedCat] = useState('All');
   const [selectedFormat, setSelectedFormat] = useState('All');
   const [readingMaterial, setReadingMaterial] = useState(null);
   const [activePlaylistItemIndex, setActivePlaylistItemIndex] = useState(0);
+
+  // Tab state: 'materials' | 'top'
+  const [activeTab, setActiveTab] = useState('materials');
+
+  // Per-card rating UI state: { [materialId]: { pendingStars, reviewText, open } }
+  const [ratingUI, setRatingUI] = useState({});
+
+  // Top Courses state
+  const [topCat, setTopCat] = useState('');
+  const [topBranch, setTopBranch] = useState('');
+  const [topCourses, setTopCourses] = useState([]);
+  const [topLoading, setTopLoading] = useState(false);
+  const [topError, setTopError] = useState(null);
+
+  // Fetch top courses
+  useEffect(() => {
+    if (activeTab !== 'top') return;
+    setTopLoading(true);
+    setTopError(null);
+    const params = new URLSearchParams();
+    if (topCat) params.set('category', topCat);
+    if (topBranch) params.set('branch', topBranch);
+    fetch(`/api/materials/top?${params.toString()}`)
+      .then(r => {
+        if (!r.ok) throw new Error(`HTTP ${r.status}`);
+        return r.json();
+      })
+      .then(data => {
+        setTopCourses(Array.isArray(data) ? data : (data.courses || data.data || []));
+        setTopLoading(false);
+      })
+      .catch(err => {
+        setTopError(err.message || 'Failed to load top courses.');
+        setTopLoading(false);
+      });
+  }, [activeTab, topCat, topBranch]);
+
+  // Helpers
+  function getEnrollment(materialId) {
+    return materialEnrollments.find(
+      e => e.materialId === materialId && e.studentId === currentStudent?.id
+    );
+  }
+
+  function getRating(materialId) {
+    return materialRatings.find(
+      r => r.materialId === materialId && r.studentId === currentStudent?.id
+    );
+  }
+
+  function getAvgRating(materialId) {
+    const ratings = materialRatings.filter(r => r.materialId === materialId);
+    if (!ratings.length) return null;
+    const avg = ratings.reduce((s, r) => s + (r.stars || 0), 0) / ratings.length;
+    return { avg: avg.toFixed(1), count: ratings.length };
+  }
+
+  function handleEnroll(materialId) {
+    if (!currentStudent) return;
+    dispatch({ type: 'ENROLL_MATERIAL', payload: { materialId, studentId: currentStudent.id } });
+  }
+
+  function handleComplete(materialId) {
+    if (!currentStudent) return;
+    dispatch({ type: 'COMPLETE_MATERIAL', payload: { materialId, studentId: currentStudent.id, completed: true } });
+  }
+
+  function handleRatingStarClick(materialId, stars) {
+    setRatingUI(prev => ({
+      ...prev,
+      [materialId]: {
+        ...(prev[materialId] || {}),
+        pendingStars: stars,
+        open: true,
+        reviewText: (prev[materialId]?.reviewText) || '',
+      },
+    }));
+  }
+
+  function handleSubmitRating(materialId) {
+    const ui = ratingUI[materialId];
+    if (!ui || !ui.pendingStars) return;
+    dispatch({
+      type: 'RATE_MATERIAL',
+      payload: {
+        materialId,
+        studentId: currentStudent?.id,
+        stars: ui.pendingStars,
+        review: (ui.reviewText || '').slice(0, 300),
+      },
+    });
+    setRatingUI(prev => ({ ...prev, [materialId]: { ...prev[materialId], open: false } }));
+  }
 
   // Dynamic Content & Tag Detection (Accurate tags based on real content uploaded)
   function getMaterialBadge(m) {
@@ -72,7 +172,7 @@ export default function StudentMaterials() {
         return (
           <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '3px 8px', borderRadius: 4, fontSize: 12, fontWeight: 700, background: '#EFF6FF', color: '#1D4ED8' }}>
             <Video size={13} color="#2563EB" />
-            <span>Video & Notes Playlist ({playlist.length})</span>
+            <span>Video &amp; Notes Playlist ({playlist.length})</span>
           </span>
         );
       }
@@ -244,7 +344,7 @@ export default function StudentMaterials() {
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 12 }}>
           <div>
             <h1 style={{ margin: '0 0 6px', fontSize: 22, fontWeight: 800 }}>
-              Assigned Learning Materials & Video Playlists
+              Assigned Learning Materials &amp; Video Playlists
             </h1>
             <p style={{ margin: 0, fontSize: 13, opacity: 0.9, maxWidth: 650, lineHeight: 1.5 }}>
               Access university-assigned video lectures, syllabus modules, proper PDF notes, and faculty-recommended problem sets assigned to your department.
@@ -256,243 +356,628 @@ export default function StudentMaterials() {
         </div>
       </div>
 
-      {/* Filter and Search Controls */}
-      <div style={{ background: '#fff', border: '1px solid #E5E7EB', borderRadius: 8, padding: 16, marginBottom: 20 }}>
-        {/* Search Input */}
-        <div style={{ marginBottom: 14 }}>
-          <input
-            type="text"
-            placeholder="Search assigned materials by title, playlist topic, or keywords..."
-            value={search}
-            onChange={e => setSearch(e.target.value)}
-            style={{ width: '100%', padding: '9px 14px', borderRadius: 6, border: '1px solid #D1D5DB', fontSize: 14 }}
-          />
-        </div>
-
-        {/* Categories Pills */}
-        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 12 }}>
-          {CATEGORIES.map(cat => {
-            const isSelected = selectedCat === cat;
-            return (
-              <button
-                key={cat}
-                onClick={() => setSelectedCat(cat)}
-                style={{
-                  padding: '5px 12px',
-                  borderRadius: 20,
-                  border: `1px solid ${isSelected ? '#2563EB' : '#E5E7EB'}`,
-                  background: isSelected ? '#EFF6FF' : '#fff',
-                  color: isSelected ? '#2563EB' : '#4B5563',
-                  fontSize: 12,
-                  fontWeight: 500,
-                  cursor: 'pointer',
-                }}
-              >
-                {cat}
-              </button>
-            );
-          })}
-        </div>
-
-        {/* Format Selectors */}
-        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-          {FORMATS.map(fmt => {
-            const Icon = fmt.icon;
-            const isSelected = selectedFormat === fmt.value;
-            return (
-              <button
-                key={fmt.value}
-                onClick={() => setSelectedFormat(fmt.value)}
-                style={{
-                  padding: '5px 12px',
-                  borderRadius: 6,
-                  border: `1px solid ${isSelected ? '#2563EB' : '#E5E7EB'}`,
-                  background: isSelected ? '#2563EB' : '#fff',
-                  color: isSelected ? '#fff' : '#374151',
-                  fontSize: 12,
-                  fontWeight: 500,
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 6,
-                }}
-              >
-                <Icon size={13} />
-                <span>{fmt.label}</span>
-              </button>
-            );
-          })}
-        </div>
+      {/* Tab Switcher */}
+      <div style={{ display: 'flex', gap: 0, marginBottom: 20, border: '1px solid #E5E7EB', borderRadius: 8, overflow: 'hidden', width: 'fit-content' }}>
+        <button
+          onClick={() => setActiveTab('materials')}
+          style={{
+            padding: '9px 22px',
+            border: 'none',
+            background: activeTab === 'materials' ? '#2563EB' : '#fff',
+            color: activeTab === 'materials' ? '#fff' : '#374151',
+            fontSize: 13,
+            fontWeight: 600,
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            gap: 6,
+          }}
+        >
+          <BookOpen size={14} />
+          My Materials
+        </button>
+        <button
+          onClick={() => setActiveTab('top')}
+          style={{
+            padding: '9px 22px',
+            border: 'none',
+            borderLeft: '1px solid #E5E7EB',
+            background: activeTab === 'top' ? '#2563EB' : '#fff',
+            color: activeTab === 'top' ? '#fff' : '#374151',
+            fontSize: 13,
+            fontWeight: 600,
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            gap: 6,
+          }}
+        >
+          <Trophy size={14} />
+          Top Courses
+        </button>
       </div>
 
-      {/* Materials Grid */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(360px, 1fr))', gap: 18 }}>
-        {filtered.map(m => {
-          const playlistCount = Array.isArray(m.playlist) ? m.playlist.length : 0;
-          return (
+      {/* ============ TAB: MY MATERIALS ============ */}
+      {activeTab === 'materials' && (
+        <>
+          {/* Filter and Search Controls */}
+          <div style={{ background: '#fff', border: '1px solid #E5E7EB', borderRadius: 8, padding: 16, marginBottom: 20 }}>
+            {/* Search Input */}
+            <div style={{ marginBottom: 14 }}>
+              <input
+                type="text"
+                placeholder="Search assigned materials by title, playlist topic, or keywords..."
+                value={search}
+                onChange={e => setSearch(e.target.value)}
+                style={{ width: '100%', padding: '9px 14px', borderRadius: 6, border: '1px solid #D1D5DB', fontSize: 14 }}
+              />
+            </div>
+
+            {/* Categories Pills */}
+            <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 12 }}>
+              {CATEGORIES.map(cat => {
+                const isSelected = selectedCat === cat;
+                return (
+                  <button
+                    key={cat}
+                    onClick={() => setSelectedCat(cat)}
+                    style={{
+                      padding: '5px 12px',
+                      borderRadius: 20,
+                      border: `1px solid ${isSelected ? '#2563EB' : '#E5E7EB'}`,
+                      background: isSelected ? '#EFF6FF' : '#fff',
+                      color: isSelected ? '#2563EB' : '#4B5563',
+                      fontSize: 12,
+                      fontWeight: 500,
+                      cursor: 'pointer',
+                    }}
+                  >
+                    {cat}
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* Format Selectors */}
+            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+              {FORMATS.map(fmt => {
+                const Icon = fmt.icon;
+                const isSelected = selectedFormat === fmt.value;
+                return (
+                  <button
+                    key={fmt.value}
+                    onClick={() => setSelectedFormat(fmt.value)}
+                    style={{
+                      padding: '5px 12px',
+                      borderRadius: 6,
+                      border: `1px solid ${isSelected ? '#2563EB' : '#E5E7EB'}`,
+                      background: isSelected ? '#2563EB' : '#fff',
+                      color: isSelected ? '#fff' : '#374151',
+                      fontSize: 12,
+                      fontWeight: 500,
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 6,
+                    }}
+                  >
+                    <Icon size={13} />
+                    <span>{fmt.label}</span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Materials Grid */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(360px, 1fr))', gap: 18 }}>
+            {filtered.map(m => {
+              const playlistCount = Array.isArray(m.playlist) ? m.playlist.length : 0;
+              const enrollment = getEnrollment(m.id);
+              const isEnrolled = Boolean(enrollment?.enrolled);
+              const isCompleted = Boolean(enrollment?.completed);
+              const myRating = getRating(m.id);
+              const avgInfo = getAvgRating(m.id);
+              const ui = ratingUI[m.id] || {};
+              const displayStars = ui.pendingStars || myRating?.stars || 0;
+
+              return (
+                <div
+                  key={m.id}
+                  style={{
+                    background: '#fff',
+                    border: '1px solid #E5E7EB',
+                    borderRadius: 8,
+                    padding: 16,
+                    display: 'flex',
+                    flexDirection: 'column',
+                    justifyContent: 'space-between',
+                    boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
+                    transition: 'transform 0.15s ease, box-shadow 0.15s ease',
+                  }}
+                >
+                  <div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+                      <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                        {getMaterialBadge(m)}
+                      </div>
+                      <Badge variant="info">{m.category}</Badge>
+                    </div>
+
+                    <h3 style={{ margin: '0 0 6px', fontSize: 16, fontWeight: 700, color: '#111827', lineHeight: 1.35 }}>
+                      {m.title}
+                    </h3>
+
+                    {m.description && (
+                      <p style={{ margin: '0 0 10px', fontSize: 13, color: '#4B5563', lineHeight: 1.45 }}>
+                        {m.description}
+                      </p>
+                    )}
+
+                    {/* Playlist breakdown preview */}
+                    {playlistCount > 0 && (
+                      <div style={{ background: '#F8FAFC', border: '1px solid #E2E8F0', borderRadius: 6, padding: '8px 10px', marginBottom: 12 }}>
+                        <div style={{ fontSize: 11, fontWeight: 700, color: '#475569', textTransform: 'uppercase', marginBottom: 6, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                          <span>Playlist Contents:</span>
+                          <span style={{ color: '#6366F1' }}>{playlistCount} Items</span>
+                        </div>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                          {m.playlist.slice(0, 3).map((item, idx) => (
+                            <div
+                              key={item.id || idx}
+                              onClick={() => handleOpenMaterial(m, idx)}
+                              style={{
+                                fontSize: 12,
+                                color: '#2563EB',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: 6,
+                                cursor: 'pointer',
+                                textDecoration: 'none',
+                              }}
+                            >
+                              <span style={{ fontSize: 10, fontWeight: 700, color: '#94A3B8' }}>#{idx + 1}</span>
+                              {item.type === 'video' ? <Video size={12} color="#DC2626" /> : <FileText size={12} color="#D97706" />}
+                              <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{item.title}</span>
+                            </div>
+                          ))}
+                          {playlistCount > 3 && (
+                            <div style={{ fontSize: 11, color: '#6366F1', fontWeight: 600 }}>
+                              +{playlistCount - 3} more items in playlist...
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )}
+
+                    {m.notesContent && !playlistCount && (
+                      <div
+                        style={{
+                          background: '#F9FAFB',
+                          border: '1px solid #F3F4F6',
+                          borderRadius: 6,
+                          padding: '8px 10px',
+                          fontSize: 12,
+                          color: '#374151',
+                          maxHeight: 65,
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                          whiteSpace: 'pre-line',
+                          marginBottom: 12,
+                          fontFamily: 'monospace',
+                        }}
+                      >
+                        {m.notesContent}
+                      </div>
+                    )}
+                  </div>
+
+                  <div>
+                    {/* Open / Watch button row */}
+                    <div style={{ borderTop: '1px solid #F3F4F6', paddingTop: 10, marginTop: 10, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <span style={{ fontSize: 11, color: '#9CA3AF' }}>By {m.uploadedBy}</span>
+                      <div style={{ display: 'flex', gap: 6 }}>
+                        <button
+                          onClick={() => handleOpenMaterial(m, 0)}
+                          style={{
+                            padding: '6px 14px',
+                            borderRadius: 6,
+                            border: 'none',
+                            background: '#2563EB',
+                            color: '#fff',
+                            fontSize: 13,
+                            fontWeight: 600,
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: 6,
+                            boxShadow: '0 1px 3px rgba(37,99,235,0.2)',
+                          }}
+                        >
+                          {playlistCount > 0 ? (
+                            <>
+                              <Play size={13} />
+                              <span>Open Playlist ({playlistCount})</span>
+                            </>
+                          ) : m.materialType === 'video' ? (
+                            <>
+                              <Play size={13} />
+                              <span>Watch Video</span>
+                            </>
+                          ) : m.materialType === 'pdf' ? (
+                            <>
+                              <FileText size={13} />
+                              <span>View PDF Document</span>
+                            </>
+                          ) : (
+                            <>
+                              <BookOpen size={13} />
+                              <span>Open Study Notes</span>
+                            </>
+                          )}
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* ── Enrol / Progress section ── */}
+                    <div style={{ borderTop: '1px solid #E5E7EB', paddingTop: 10, marginTop: 10 }}>
+                      {!isEnrolled ? (
+                        <button
+                          onClick={() => handleEnroll(m.id)}
+                          style={{
+                            padding: '5px 14px',
+                            borderRadius: 6,
+                            border: 'none',
+                            background: '#10B981',
+                            color: '#fff',
+                            fontSize: 12,
+                            fontWeight: 600,
+                            cursor: 'pointer',
+                          }}
+                        >
+                          Enrol in Course
+                        </button>
+                      ) : (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                          <span
+                            style={{
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: 4,
+                              padding: '3px 10px',
+                              borderRadius: 20,
+                              background: '#DCFCE7',
+                              color: '#15803D',
+                              fontSize: 12,
+                              fontWeight: 600,
+                            }}
+                          >
+                            <CheckCircle2 size={12} /> ✓ Enrolled
+                          </span>
+                          {!isCompleted ? (
+                            <button
+                              onClick={() => handleComplete(m.id)}
+                              style={{
+                                padding: '3px 12px',
+                                borderRadius: 20,
+                                border: '1px solid #6366F1',
+                                background: '#EEF2FF',
+                                color: '#4F46E5',
+                                fontSize: 12,
+                                fontWeight: 600,
+                                cursor: 'pointer',
+                              }}
+                            >
+                              Mark Complete
+                            </button>
+                          ) : (
+                            <span
+                              style={{
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: 4,
+                                padding: '3px 10px',
+                                borderRadius: 20,
+                                background: '#EEF2FF',
+                                color: '#4F46E5',
+                                fontSize: 12,
+                                fontWeight: 600,
+                              }}
+                            >
+                              <CheckCircle2 size={12} /> ✓ Completed
+                            </span>
+                          )}
+                        </div>
+                      )}
+                    </div>
+
+                    {/* ── Star Rating widget (only if enrolled) ── */}
+                    {isEnrolled && (
+                      <div style={{ borderTop: '1px solid #E5E7EB', paddingTop: 10, marginTop: 10 }}>
+                        {/* Avg rating read-only */}
+                        {avgInfo && (
+                          <div style={{ fontSize: 12, color: '#6B7280', marginBottom: 6 }}>
+                            ⭐ {avgInfo.avg} / {avgInfo.count} rating{avgInfo.count !== 1 ? 's' : ''}
+                          </div>
+                        )}
+
+                        {/* Clickable stars */}
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 2, marginBottom: 4 }}>
+                          {[1, 2, 3, 4, 5].map(s => (
+                            <span
+                              key={s}
+                              onClick={() => handleRatingStarClick(m.id, s)}
+                              style={{
+                                fontSize: 20,
+                                cursor: 'pointer',
+                                color: s <= displayStars ? '#F59E0B' : '#D1D5DB',
+                                lineHeight: 1,
+                                userSelect: 'none',
+                              }}
+                            >
+                              ★
+                            </span>
+                          ))}
+                          <span style={{ fontSize: 11, color: '#9CA3AF', marginLeft: 4 }}>
+                            {myRating ? 'Your rating' : 'Rate this'}
+                          </span>
+                        </div>
+
+                        {/* Inline review textarea */}
+                        {ui.open && (
+                          <div style={{ marginTop: 6 }}>
+                            <textarea
+                              maxLength={300}
+                              rows={2}
+                              placeholder="Write a short review (optional, max 300 chars)..."
+                              value={ui.reviewText || ''}
+                              onChange={e =>
+                                setRatingUI(prev => ({
+                                  ...prev,
+                                  [m.id]: { ...prev[m.id], reviewText: e.target.value },
+                                }))
+                              }
+                              style={{
+                                width: '100%',
+                                padding: '6px 8px',
+                                borderRadius: 6,
+                                border: '1px solid #D1D5DB',
+                                fontSize: 12,
+                                resize: 'none',
+                                marginBottom: 6,
+                              }}
+                            />
+                            <div style={{ display: 'flex', gap: 6 }}>
+                              <button
+                                onClick={() => handleSubmitRating(m.id)}
+                                style={{
+                                  padding: '4px 12px',
+                                  borderRadius: 6,
+                                  border: 'none',
+                                  background: '#F59E0B',
+                                  color: '#fff',
+                                  fontSize: 12,
+                                  fontWeight: 600,
+                                  cursor: 'pointer',
+                                }}
+                              >
+                                Submit Rating
+                              </button>
+                              <button
+                                onClick={() =>
+                                  setRatingUI(prev => ({ ...prev, [m.id]: { ...prev[m.id], open: false } }))
+                                }
+                                style={{
+                                  padding: '4px 10px',
+                                  borderRadius: 6,
+                                  border: '1px solid #D1D5DB',
+                                  background: '#fff',
+                                  fontSize: 12,
+                                  cursor: 'pointer',
+                                }}
+                              >
+                                Cancel
+                              </button>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+
+            {filtered.length === 0 && (
+              <div
+                style={{
+                  gridColumn: '1 / -1',
+                  background: '#fff',
+                  border: '1px solid #E5E7EB',
+                  borderRadius: 8,
+                  padding: 40,
+                  textAlign: 'center',
+                  color: '#6B7280',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                }}
+              >
+                <BookOpen size={36} color="#9CA3AF" style={{ marginBottom: 8 }} />
+                <div style={{ fontSize: 15, fontWeight: 600, color: '#374151' }}>No materials currently assigned to your branch</div>
+                <div style={{ fontSize: 13, color: '#9CA3AF', marginTop: 4 }}>
+                  Your university training and placement cell will publish specific video lectures and study sheets here.
+                </div>
+              </div>
+            )}
+          </div>
+        </>
+      )}
+
+      {/* ============ TAB: TOP COURSES ============ */}
+      {activeTab === 'top' && (
+        <div>
+          {/* Filters row */}
+          <div style={{ display: 'flex', gap: 12, marginBottom: 18, flexWrap: 'wrap', alignItems: 'center' }}>
+            <select
+              value={topCat}
+              onChange={e => setTopCat(e.target.value)}
+              style={{ padding: '7px 12px', borderRadius: 6, border: '1px solid #D1D5DB', fontSize: 13, background: '#fff' }}
+            >
+              <option value="">All Categories</option>
+              {CATEGORIES.filter(c => c !== 'All').map(c => (
+                <option key={c} value={c}>{c}</option>
+              ))}
+            </select>
+            <select
+              value={topBranch}
+              onChange={e => setTopBranch(e.target.value)}
+              style={{ padding: '7px 12px', borderRadius: 6, border: '1px solid #D1D5DB', fontSize: 13, background: '#fff' }}
+            >
+              {BRANCH_OPTIONS.map(b => (
+                <option key={b} value={b === 'All' ? '' : b}>{b}</option>
+              ))}
+            </select>
+          </div>
+
+          {topLoading && (
+            <div style={{ textAlign: 'center', padding: 40, color: '#6B7280', fontSize: 14 }}>
+              Loading top courses...
+            </div>
+          )}
+
+          {topError && !topLoading && (
+            <div style={{ padding: '12px 16px', background: '#FEF2F2', border: '1px solid #FECACA', borderRadius: 8, color: '#B91C1C', fontSize: 13 }}>
+              Error: {topError}
+            </div>
+          )}
+
+          {!topLoading && !topError && topCourses.length === 0 && (
             <div
-              key={m.id}
               style={{
                 background: '#fff',
                 border: '1px solid #E5E7EB',
                 borderRadius: 8,
-                padding: 16,
-                display: 'flex',
-                flexDirection: 'column',
-                justifyContent: 'space-between',
-                boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
-                transition: 'transform 0.15s ease, box-shadow 0.15s ease',
+                padding: 40,
+                textAlign: 'center',
+                color: '#6B7280',
               }}
             >
-              <div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
-                  <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
-                    {getMaterialBadge(m)}
-                  </div>
-                  <Badge variant="info">{m.category}</Badge>
-                </div>
+              <Trophy size={36} color="#D1D5DB" style={{ marginBottom: 8 }} />
+              <div style={{ fontSize: 15, fontWeight: 600, color: '#374151' }}>No courses ranked yet.</div>
+              <div style={{ fontSize: 13, color: '#9CA3AF', marginTop: 4 }}>
+                Enrol in courses and leave ratings to build the leaderboard.
+              </div>
+            </div>
+          )}
 
-                <h3 style={{ margin: '0 0 6px', fontSize: 16, fontWeight: 700, color: '#111827', lineHeight: 1.35 }}>
-                  {m.title}
-                </h3>
+          {!topLoading && !topError && topCourses.length > 0 && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+              {topCourses.map((course, idx) => {
+                const rank = idx + 1;
+                const isFirst = rank === 1;
+                const avgStars = typeof course.avgStars === 'number' ? course.avgStars.toFixed(1) : (course.avgRating || course.avg_stars || '—');
+                const enrollCount = course.enrollCount ?? course.enroll_count ?? course.totalEnrolled ?? '—';
+                const completionRate = course.completionRate ?? course.completion_rate ?? null;
+                const score = course.score ?? null;
 
-                {m.description && (
-                  <p style={{ margin: '0 0 10px', fontSize: 13, color: '#4B5563', lineHeight: 1.45 }}>
-                    {m.description}
-                  </p>
-                )}
-
-                {/* Playlist breakdown preview */}
-                {playlistCount > 0 && (
-                  <div style={{ background: '#F8FAFC', border: '1px solid #E2E8F0', borderRadius: 6, padding: '8px 10px', marginBottom: 12 }}>
-                    <div style={{ fontSize: 11, fontWeight: 700, color: '#475569', textTransform: 'uppercase', marginBottom: 6, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                      <span>Playlist Contents:</span>
-                      <span style={{ color: '#6366F1' }}>{playlistCount} Items</span>
-                    </div>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                      {m.playlist.slice(0, 3).map((item, idx) => (
-                        <div
-                          key={item.id || idx}
-                          onClick={() => handleOpenMaterial(m, idx)}
-                          style={{
-                            fontSize: 12,
-                            color: '#2563EB',
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: 6,
-                            cursor: 'pointer',
-                            textDecoration: 'none',
-                          }}
-                        >
-                          <span style={{ fontSize: 10, fontWeight: 700, color: '#94A3B8' }}>#{idx + 1}</span>
-                          {item.type === 'video' ? <Video size={12} color="#DC2626" /> : <FileText size={12} color="#D97706" />}
-                          <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{item.title}</span>
-                        </div>
-                      ))}
-                      {playlistCount > 3 && (
-                        <div style={{ fontSize: 11, color: '#6366F1', fontWeight: 600 }}>
-                          +{playlistCount - 3} more items in playlist...
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                )}
-
-                {m.notesContent && !playlistCount && (
+                return (
                   <div
+                    key={course.id || course.materialId || idx}
                     style={{
-                      background: '#F9FAFB',
-                      border: '1px solid #F3F4F6',
-                      borderRadius: 6,
-                      padding: '8px 10px',
-                      fontSize: 12,
-                      color: '#374151',
-                      maxHeight: 65,
-                      overflow: 'hidden',
-                      textOverflow: 'ellipsis',
-                      whiteSpace: 'pre-line',
-                      marginBottom: 12,
-                      fontFamily: 'monospace',
+                      background: isFirst ? 'linear-gradient(135deg, #FFFBEB 0%, #FEF3C7 100%)' : '#fff',
+                      border: `1px solid ${isFirst ? '#FCD34D' : '#E5E7EB'}`,
+                      borderRadius: 8,
+                      padding: '14px 18px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 16,
+                      boxShadow: isFirst ? '0 2px 8px rgba(245,158,11,0.12)' : '0 1px 3px rgba(0,0,0,0.04)',
                     }}
                   >
-                    {m.notesContent}
-                  </div>
-                )}
-              </div>
-
-              <div>
-                <div style={{ borderTop: '1px solid #F3F4F6', paddingTop: 10, marginTop: 10, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <span style={{ fontSize: 11, color: '#9CA3AF' }}>By {m.uploadedBy}</span>
-                  <div style={{ display: 'flex', gap: 6 }}>
-                    <button
-                      onClick={() => handleOpenMaterial(m, 0)}
+                    {/* Rank badge */}
+                    <div
                       style={{
-                        padding: '6px 14px',
-                        borderRadius: 6,
-                        border: 'none',
-                        background: '#2563EB',
-                        color: '#fff',
-                        fontSize: 13,
-                        fontWeight: 600,
-                        cursor: 'pointer',
+                        width: 36,
+                        height: 36,
+                        borderRadius: '50%',
+                        background: isFirst ? '#F59E0B' : rank === 2 ? '#9CA3AF' : rank === 3 ? '#B45309' : '#E5E7EB',
+                        color: rank <= 3 ? '#fff' : '#374151',
                         display: 'flex',
                         alignItems: 'center',
-                        gap: 6,
-                        boxShadow: '0 1px 3px rgba(37,99,235,0.2)',
+                        justifyContent: 'center',
+                        fontSize: 14,
+                        fontWeight: 800,
+                        flexShrink: 0,
                       }}
                     >
-                      {playlistCount > 0 ? (
-                        <>
-                          <Play size={13} />
-                          <span>Open Playlist ({playlistCount})</span>
-                        </>
-                      ) : m.materialType === 'video' ? (
-                        <>
-                          <Play size={13} />
-                          <span>Watch Video</span>
-                        </>
-                      ) : m.materialType === 'pdf' ? (
-                        <>
-                          <FileText size={13} />
-                          <span>View PDF Document</span>
-                        </>
-                      ) : (
-                        <>
-                          <BookOpen size={13} />
-                          <span>Open Study Notes</span>
-                        </>
-                      )}
-                    </button>
-                  </div>
-                </div>
-              </div>
-            </div>
-          );
-        })}
+                      {isFirst ? '🏆' : rank}
+                    </div>
 
-        {filtered.length === 0 && (
-          <div
-            style={{
-              gridColumn: '1 / -1',
-              background: '#fff',
-              border: '1px solid #E5E7EB',
-              borderRadius: 8,
-              padding: 40,
-              textAlign: 'center',
-              color: '#6B7280',
-              display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'center',
-            }}
-          >
-            <BookOpen size={36} color="#9CA3AF" style={{ marginBottom: 8 }} />
-            <div style={{ fontSize: 15, fontWeight: 600, color: '#374151' }}>No materials currently assigned to your branch</div>
-            <div style={{ fontSize: 13, color: '#9CA3AF', marginTop: 4 }}>
-              Your university training and placement cell will publish specific video lectures and study sheets here.
+                    {/* Course info */}
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontSize: 15, fontWeight: 700, color: '#111827', marginBottom: 2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                        {course.title}
+                      </div>
+                      <div style={{ fontSize: 12, color: '#6B7280' }}>
+                        {course.category && <span style={{ marginRight: 10 }}>{course.category}</span>}
+                        {course.targetBranch && course.targetBranch !== 'All' && <span>Branch: {course.targetBranch}</span>}
+                      </div>
+
+                      {/* Score bar */}
+                      {score !== null && (
+                        <div style={{ marginTop: 6 }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: '#6B7280', marginBottom: 2 }}>
+                            <span>Score</span>
+                            <span style={{ fontWeight: 600 }}>{typeof score === 'number' ? score.toFixed(1) : score}</span>
+                          </div>
+                          <div style={{ height: 5, background: '#E5E7EB', borderRadius: 4, overflow: 'hidden' }}>
+                            <div
+                              style={{
+                                width: `${Math.min(100, (parseFloat(score) / 10) * 100)}%`,
+                                height: '100%',
+                                background: isFirst ? '#F59E0B' : '#2563EB',
+                                borderRadius: 4,
+                              }}
+                            />
+                          </div>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Stats */}
+                    <div style={{ display: 'flex', gap: 18, flexShrink: 0 }}>
+                      <div style={{ textAlign: 'center' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 3, fontSize: 14, fontWeight: 700, color: '#F59E0B' }}>
+                          <Star size={13} fill="#F59E0B" color="#F59E0B" />
+                          {avgStars}
+                        </div>
+                        <div style={{ fontSize: 10, color: '#9CA3AF' }}>Avg Stars</div>
+                      </div>
+                      <div style={{ textAlign: 'center' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 3, fontSize: 14, fontWeight: 700, color: '#2563EB' }}>
+                          <Users size={13} color="#2563EB" />
+                          {enrollCount}
+                        </div>
+                        <div style={{ fontSize: 10, color: '#9CA3AF' }}>Enrolled</div>
+                      </div>
+                      {completionRate !== null && (
+                        <div style={{ textAlign: 'center' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 3, fontSize: 14, fontWeight: 700, color: '#10B981' }}>
+                            <CheckCircle2 size={13} color="#10B981" />
+                            {typeof completionRate === 'number' ? `${Math.round(completionRate * 100)}%` : completionRate}
+                          </div>
+                          <div style={{ fontSize: 10, color: '#9CA3AF' }}>Completion</div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
             </div>
-          </div>
-        )}
-      </div>
+          )}
+        </div>
+      )}
 
       {/* Interactive Material & Playlist Theater Modal */}
       {readingMaterial && (

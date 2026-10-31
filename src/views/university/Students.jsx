@@ -337,7 +337,7 @@ export default function UniversityStudents() {
 
       {/* Filters Bar */}
       <div style={{ background: '#fff', border: '1px solid #E5E7EB', borderRadius: 6, padding: 16, marginBottom: 16 }}>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 12 }}>
+        <div className="grid-filters-responsive">
           {/* Search */}
           <div>
             <label style={{ fontSize: 12, color: '#6B7280', display: 'block', marginBottom: 4 }}>Search Name/Reg No:</label>

@@ -20,7 +20,7 @@ const COLUMNS = PIPELINE_STAGES.map(s => ({ id: s, title: s }));
 export default function CompanyPipeline() {
   const { user } = useAuth();
   const { state, dispatch } = useData();
-  const { students, jobs, applications, pipeline } = state;
+  const { students, jobs, applications, pipeline, jobShortlists = [] } = state;
 
   const myCompany = user?.company || 'Infosys';
   const myJobs = jobs.filter(j => j.company === myCompany);
@@ -52,6 +52,11 @@ export default function CompanyPipeline() {
   // Get job pipeline map: studentId -> stage
   const jobPipeline = pipeline[selectedJob.id] || {};
 
+  // CDC Shortlisted candidates sent to this job
+  const cdcShortlistedIds = (jobShortlists || [])
+    .filter(s => s.jobId === selectedJob.id && s.status === 'Sent to Company')
+    .map(s => s.studentId);
+
   // Build candidate cards for this job
   // 1. Applications for this company / job
   const jobApps = applications.filter(a => a.company === myCompany);
@@ -60,6 +65,7 @@ export default function CompanyPipeline() {
   const candidateIds = new Set([
     ...jobApps.map(a => a.studentId),
     ...Object.keys(jobPipeline),
+    ...cdcShortlistedIds,
     ...students.map(s => s.id),
   ]);
 
@@ -75,16 +81,20 @@ export default function CompanyPipeline() {
     // Determine current stage
     let stage = jobPipeline[stId];
     if (!stage) {
-      // derive from application if exists
-      const app = jobApps.find(a => a.studentId === stId);
-      if (app) {
-        if (app.status === 'Offer') stage = 'Offer Sent';
-        else if (app.status === 'Interview') stage = 'Interview Scheduled';
-        else if (app.status === 'Rejected') stage = 'Rejected';
-        else stage = 'Shortlisted';
+      if (cdcShortlistedIds.includes(stId)) {
+        stage = 'Shortlisted';
       } else {
-        // default distribution for demo
-        stage = stId === 's1' ? 'Shortlisted' : stId === 's2' ? 'Interview Scheduled' : stId === 's3' ? 'Selected' : 'Shortlisted';
+        // derive from application if exists
+        const app = jobApps.find(a => a.studentId === stId);
+        if (app) {
+          if (app.status === 'Offer') stage = 'Offer Sent';
+          else if (app.status === 'Interview') stage = 'Interview Scheduled';
+          else if (app.status === 'Rejected') stage = 'Rejected';
+          else stage = 'Shortlisted';
+        } else {
+          // default distribution for demo
+          stage = stId === 's1' ? 'Shortlisted' : stId === 's2' ? 'Interview Scheduled' : stId === 's3' ? 'Selected' : 'Shortlisted';
+        }
       }
     }
 
@@ -97,6 +107,7 @@ export default function CompanyPipeline() {
         branch: student.branch,
         cgpa: student.cgpa,
         skills: student.skills || [],
+        isCdcShortlisted: cdcShortlistedIds.includes(stId),
       });
     }
   });
@@ -168,6 +179,15 @@ export default function CompanyPipeline() {
         {scheduleInfo && (
           <div style={{ background: '#F0F9FF', border: '1px solid #BAE6FD', borderRadius: 4, padding: '4px 8px', fontSize: 11, color: '#0369A1', marginBottom: 6 }}>
             <strong>Interview:</strong> {scheduleInfo.date} {scheduleInfo.time} ({scheduleInfo.mode})
+          </div>
+        )}
+
+        {/* CDC Shortlist Badge */}
+        {card.isCdcShortlisted && (
+          <div style={{ marginBottom: 6 }}>
+            <span style={{ fontSize: 10, fontWeight: 700, background: '#ECFDF5', color: '#059669', border: '1px solid #A7F3D0', padding: '1px 6px', borderRadius: 4 }}>
+              ✓ CDC Verified Shortlist
+            </span>
           </div>
         )}
 

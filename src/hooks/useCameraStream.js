@@ -62,12 +62,21 @@ export function useCameraStream({ enabled, onEvent }) {
             audio: audioConstraints,
           });
         } catch (initialErr) {
-          // Fallback to minimal constraints for strict mobile devices
-          console.warn('Adaptive constraints fallback:', initialErr?.message);
-          stream = await navigator.mediaDevices.getUserMedia({
-            video: { facingMode: 'user' },
-            audio: true,
-          });
+          // Fallback 1: user-facing camera with relaxed constraints
+          console.warn('Initial adaptive camera constraints failed, trying facingMode user:', initialErr?.message);
+          try {
+            stream = await navigator.mediaDevices.getUserMedia({
+              video: { facingMode: 'user' },
+              audio: true,
+            });
+          } catch (secondaryErr) {
+            // Fallback 2: minimal boolean constraints for strict iOS Safari
+            console.warn('FacingMode fallback failed, trying boolean constraints:', secondaryErr?.message);
+            stream = await navigator.mediaDevices.getUserMedia({
+              video: true,
+              audio: true,
+            });
+          }
         }
 
         if (cancelled) {
@@ -125,9 +134,21 @@ export function useCameraStream({ enabled, onEvent }) {
   }, [enabled]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Attach once both the stream and the <video> element exist.
+  // Sets iOS WebKit required inline video attributes and triggers playback.
   useEffect(() => {
     if (status === 'live' && videoRef.current && streamRef.current) {
-      videoRef.current.srcObject = streamRef.current;
+      const v = videoRef.current;
+      v.srcObject = streamRef.current;
+      v.setAttribute('playsinline', 'true');
+      v.setAttribute('webkit-playsinline', 'true');
+      v.muted = true;
+      const playPromise = v.play();
+      if (playPromise !== undefined) {
+        playPromise.catch((err) => {
+          // Normal when autoplay policy requests user gesture
+          console.debug('Camera video play caught:', err?.message || err);
+        });
+      }
     }
   }, [status]);
 

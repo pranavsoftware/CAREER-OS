@@ -10,6 +10,9 @@ const studentNav = [
   { to: '/student/resume', label: 'Resume Builder' },
   { to: '/student/applications', label: 'Applications' },
   { to: '/student/certificates', label: 'Certificates' },
+  { to: '/student/materials', label: 'Courses & Materials', badge: 'New' },
+  { to: '/student/higher-education', label: 'Higher Education', badge: 'MS' },
+  { to: '/student/referrals', label: 'Referrals & Rewards', badge: 'Perks' },
   { to: '/student/skill-gap', label: 'Skill Gap' },
   { to: '/student/interview-prep', label: 'Interview Prep' },
 ];
@@ -19,6 +22,9 @@ const universityNav = [
   { to: '/university/students', label: 'Students' },
   { to: '/university/drives', label: 'Drives' },
   { to: '/university/mail-filter', label: 'Mail Filter' },
+  { to: '/university/records-import', label: 'Registrar Sync', badge: 'Auto' },
+  { to: '/university/referrals', label: 'Endorsements & Perks' },
+  { to: '/university/admissions', label: 'Admissions Desk', badge: '12th' },
 ];
 
 const companyNav = [
@@ -27,12 +33,21 @@ const companyNav = [
   { to: '/company/jobs', label: 'Jobs' },
   { to: '/company/candidates', label: 'Candidates' },
   { to: '/company/pipeline', label: 'Pipeline' },
+  { to: '/company/university-insights', label: 'University Insights', badge: 'Rank' },
+];
+
+const aspirantNav = [
+  { to: '/aspirant/dashboard', label: 'Aspirant Home' },
+  { to: '/aspirant/profile', label: 'Academic & Entrance' },
+  { to: '/aspirant/explore', label: 'College Explorer', badge: 'Cutoffs' },
+  { to: '/aspirant/applications', label: 'My Applications', badge: 'Live' },
 ];
 
 const NAV_BY_ROLE = {
   student: studentNav,
   university: universityNav,
   company: companyNav,
+  aspirant: aspirantNav,
 };
 
 export default function Sidebar() {

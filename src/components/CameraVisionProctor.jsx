@@ -36,6 +36,22 @@ if (typeof window !== 'undefined' && !window.__tfLiteInfoFiltered) {
  * Configurable Proctoring Parameters
  * All thresholds represent deviations from candidate's calibrated baseline.
  */
+/**
+ * CHALLENGE_MODE Tradeoff Analysis:
+ *
+ * 1. 'both_hands' (Default):
+ *    - Pros: Familiar, clears keyboard/phone physically off desk, unambiguous dual-arm verification.
+ *    - Cons: Narrow camera FOV cutoffs, physically awkward on laptop stands, excludes candidates with arm injury or upper-limb motor differences.
+ *
+ * 2. 'one_hand_gesture' (Dynamic finger count 1-5 within 10s):
+ *    - Pros: High anti-spoofing security (random finger count prevents replay/photo bypass), fits comfortably in standard camera frame, accessible for single-limb mobility.
+ *    - Cons: Requires clean lighting for finger segmentation; slightly higher cognitive load under interview pressure.
+ *
+ * 3. 'blink_and_turn' (Random head-turn Left/Right with centered gaze):
+ *    - Pros: Maximum accessibility (zero hand/arm requirement), utilizes robust 468-point facial mesh without extra hand landmarker overhead.
+ *    - Cons: Does not verify whether candidate's hands remain on a beneath-desk phone or device.
+ */
+
 export const PROCTORING_CONFIG = {
   DETECTION_INTERVAL_MS: 300,
   CALIBRATION_DURATION_MS: 3000,
@@ -45,6 +61,11 @@ export const PROCTORING_CONFIG = {
   FACE_ABSENCE_THRESHOLD_MS: 5000,  // > 5 seconds absence
   OCCLUSION_THRESHOLD_MS: 3000,     // > 3 seconds camera darkness
   OCCLUSION_LUMINANCE_THRESHOLD: 12,
+
+  // Strike 3 Challenge Config
+  CHALLENGE_MODE: 'both_hands', // 'both_hands' | 'one_hand_gesture' | 'blink_and_turn'
+  STABILITY_HOLD_DURATION_MS: 1000, // Hand/gesture landmarks must remain stable for >= 1s
+  MAX_CHALLENGE_ATTEMPTS: 2, // Accessibility fallback threshold (flags for manual review, never auto-fails)
 
   // Thresholds during verbal conversational rounds
   VERBAL: {
@@ -61,6 +82,30 @@ export const PROCTORING_CONFIG = {
 };
 
 /**
+ * Helper to count extended fingers from 21 MediaPipe hand landmarks.
+ */
+function countExtendedFingers(landmarks) {
+  if (!landmarks || landmarks.length < 21) return 0;
+  let count = 0;
+
+  // Thumb: tip (4) vs IP joint (3) X-distance from wrist (0)
+  const isRightHand = landmarks[17].x < landmarks[5].x;
+  if (isRightHand) {
+    if (landmarks[4].x < landmarks[3].x) count += 1;
+  } else {
+    if (landmarks[4].x > landmarks[3].x) count += 1;
+  }
+
+  // Fingers: Tip Y must be above PIP joint Y (smaller Y in screen space)
+  if (landmarks[8].y < landmarks[6].y) count += 1;   // Index
+  if (landmarks[12].y < landmarks[10].y) count += 1; // Middle
+  if (landmarks[16].y < landmarks[14].y) count += 1; // Ring
+  if (landmarks[20].y < landmarks[18].y) count += 1; // Pinky
+
+  return count;
+}
+
+/**
  * CameraVisionProctor
  * Enterprise MediaPipe FaceLandmarker proctoring component.
  * - Calibrates against candidate baseline (looking at screen is NEVER flagged).
@@ -74,6 +119,7 @@ export default function CameraVisionProctor({
   isActive = true,
   roundType = 'verbal', // 'verbal' | 'coding'
   isHandsUpActive = false,
+  challengeConfig = {},
   onMalpracticeAlert,
   onAuditLog,
   onGazeStateChange,
@@ -95,6 +141,9 @@ export default function CameraVisionProctor({
   const [currentStrikes, setCurrentStrikes] = useState(0);
   const [faceBbox, setFaceBbox] = useState({ x: 30, y: 16, w: 40, h: 56 });
   const [handsDetectedCount, setHandsDetectedCount] = useState(2);
+
+  // Challenge hold stability tracker (1.0s continuous hold to prevent false positives)
+  const gestureHoldStartRef = useRef(0);
 
   // Calibration baseline
   const baselineRef = useRef({
@@ -320,59 +369,6 @@ export default function CameraVisionProctor({
         absenceDurationRef.current = 0;
       }
 
-      // 2b. Hand Detection: In voice rounds both hands must be visible; in coding rounds hands can be down
-      if (roundType === 'verbal' || isHandsUpActive) {
-        const handLandmarker = handLandmarkerRef.current;
-        if (handLandmarker && video && video.readyState >= 2) {
-          try {
-            const handResult = handLandmarker.detectForVideo(video, now);
-            const handCount = handResult?.landmarks?.length || 0;
-            setHandsDetectedCount(handCount);
-            if (isHandsUpActive) {
-              onHandsCheckTick?.({
-                bothHandsVisible: handCount >= 2,
-                handCount,
-                unverifiedTimerOnly: false,
-              });
-            }
-          } catch (_) {
-            if (isHandsUpActive) {
-              onHandsCheckTick?.({
-                bothHandsVisible: true,
-                handCount: 0,
-                unverifiedTimerOnly: true,
-              });
-            }
-          }
-        }
-      }
-
-      // Extract Facial Bounding Box from Landmarks
-      const landmarks = result.faceLandmarks[0];
-      let minX = 1, minY = 1, maxX = 0, maxY = 0;
-      for (let i = 0; i < landmarks.length; i += 4) {
-        const p = landmarks[i];
-        if (p.x < minX) minX = p.x;
-        if (p.x > maxX) maxX = p.x;
-        if (p.y < minY) minY = p.y;
-        if (p.y > maxY) maxY = p.y;
-      }
-      setFaceBbox({
-        x: Math.max(5, Math.min(65, (1 - maxX) * 100)), // mirror X for mirrored video
-        y: Math.max(5, Math.min(65, minY * 100)),
-        w: Math.max(20, Math.min(60, (maxX - minX) * 100)),
-        h: Math.max(25, Math.min(70, (maxY - minY) * 100)),
-      });
-
-      // Extract eye downward blendshapes
-      let currentEyeDown = 0.05;
-      if (result.faceBlendshapes && result.faceBlendshapes.length > 0) {
-        const cats = result.faceBlendshapes[0].categories;
-        const downLeft = cats.find(c => c.categoryName === 'eyeLookDownLeft')?.score || 0;
-        const downRight = cats.find(c => c.categoryName === 'eyeLookDownRight')?.score || 0;
-        currentEyeDown = (downLeft + downRight) / 2;
-      }
-
       // Extract Head Pitch and Yaw
       let currentPitch = 0.0;
       let currentYaw = 0.0;
@@ -389,6 +385,91 @@ export default function CameraVisionProctor({
         const vertRatio = (nose.y - forehead.y) / Math.max(0.001, chin.y - forehead.y);
         currentPitch = vertRatio - 0.5;
         currentYaw = (nose.x - forehead.x);
+      }
+
+      // =========================================================================
+      // 2b. Strike 3 Verification Challenge Evaluation (Multi-Mode + 1s Hold)
+      // =========================================================================
+      if (isHandsUpActive) {
+        const mode = challengeConfig.mode || PROCTORING_CONFIG.CHALLENGE_MODE;
+        let isConditionMet = false;
+        let extendedFingers = 0;
+        let handCount = 0;
+
+        if (mode === 'blink_and_turn') {
+          const targetTurn = challengeConfig.targetTurn || 'right';
+          const dyaw = currentYaw - (baselineRef.current.yaw || 0);
+          if (targetTurn === 'left') {
+            isConditionMet = dyaw < -0.28;
+          } else {
+            isConditionMet = dyaw > 0.28;
+          }
+        } else {
+          // Hand-based verification: 'both_hands' or 'one_hand_gesture'
+          const handLandmarker = handLandmarkerRef.current;
+          if (handLandmarker && video && video.readyState >= 2) {
+            try {
+              const handResult = handLandmarker.detectForVideo(video, now);
+              handCount = handResult?.landmarks?.length || 0;
+              setHandsDetectedCount(handCount);
+
+              if (mode === 'both_hands') {
+                isConditionMet = handCount >= 2;
+              } else if (mode === 'one_hand_gesture') {
+                const targetFingers = challengeConfig.targetFingers || 3;
+                if (handCount >= 1) {
+                  extendedFingers = countExtendedFingers(handResult.landmarks[0]);
+                  isConditionMet = extendedFingers === targetFingers;
+                }
+              }
+            } catch (_) {
+              isConditionMet = false;
+            }
+          }
+        }
+
+        // Reduce false positives: Require landmark detection to hold steadily for >= 1.0 second
+        if (isConditionMet) {
+          if (!gestureHoldStartRef.current) {
+            gestureHoldStartRef.current = now;
+          }
+          const holdMs = now - gestureHoldStartRef.current;
+          const isStable = holdMs >= PROCTORING_CONFIG.STABILITY_HOLD_DURATION_MS;
+
+          onHandsCheckTick?.({
+            challengeMet: isStable,
+            bothHandsVisible: isStable, // backwards compatibility
+            isStable,
+            holdProgress: Math.min(100, Math.round((holdMs / PROCTORING_CONFIG.STABILITY_HOLD_DURATION_MS) * 100)),
+            handCount,
+            extendedFingers,
+            targetFingers: challengeConfig.targetFingers || 3,
+            mode,
+            unverifiedTimerOnly: false,
+          });
+        } else {
+          gestureHoldStartRef.current = 0;
+          onHandsCheckTick?.({
+            challengeMet: false,
+            bothHandsVisible: false,
+            isStable: false,
+            holdProgress: 0,
+            handCount,
+            extendedFingers,
+            targetFingers: challengeConfig.targetFingers || 3,
+            mode,
+            unverifiedTimerOnly: false,
+          });
+        }
+      } else if (roundType === 'verbal') {
+        // Normal monitoring of hand count during verbal questions
+        const handLandmarker = handLandmarkerRef.current;
+        if (handLandmarker && video && video.readyState >= 2) {
+          try {
+            const handResult = handLandmarker.detectForVideo(video, now);
+            setHandsDetectedCount(handResult?.landmarks?.length || 0);
+          } catch (_) {}
+        }
       }
 
       // ==========================================

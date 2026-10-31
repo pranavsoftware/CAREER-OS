@@ -6,31 +6,90 @@ export async function GET(request) {
     const { searchParams } = new URL(request.url);
     const branch = searchParams.get('branch');
     const search = searchParams.get('search');
+    const certTitle = searchParams.get('certTitle');
+    const certIssuer = searchParams.get('certIssuer');
+    const certSkill = searchParams.get('certSkill');
+    const certValidOnly = searchParams.get('certValidOnly') === 'true';
 
     let sql = `
       SELECT 
-        id, name, reg_no AS "regNo", email, branch, batch, 
-        CAST(cgpa AS FLOAT) AS cgpa, backlogs, phone, dob, gender, address,
-        profile_status AS "profileStatus", placement_status AS "placementStatus",
-        profile_completion AS "profileCompletion", github, linkedin,
-        verification_status AS "verificationStatus", education,
-        skills, projects, experience, resume_url AS "resumeUrl"
-      FROM students
+        s.id, s.name, s.reg_no AS "regNo", s.email, s.branch, s.batch, 
+        CAST(s.cgpa AS FLOAT) AS cgpa, s.backlogs, s.phone, s.dob, s.gender, s.address,
+        s.profile_status AS "profileStatus", s.placement_status AS "placementStatus",
+        s.profile_completion AS "profileCompletion", s.github, s.linkedin,
+        s.verification_status AS "verificationStatus", s.education,
+        s.skills, s.projects, s.experience, s.resume_url AS "resumeUrl",
+        COALESCE(
+          (
+            SELECT json_agg(
+              json_build_object(
+                'id', c.id,
+                'title', c.title,
+                'issuer', c.issuer,
+                'issueDate', c.issue_date,
+                'expiryDate', c.expiry_date,
+                'skills', c.skills,
+                'status', c.status,
+                'verified', c.verified,
+                'verificationScore', c.verification_score
+              )
+            )
+            FROM certificates c
+            WHERE c.student_id = s.id
+          ),
+          '[]'::json
+        ) AS certificates
+      FROM students s
       WHERE 1=1
     `;
     const params = [];
 
     if (branch && branch !== 'all') {
       params.push(branch);
-      sql += ` AND branch = $${params.length}`;
+      sql += ` AND s.branch = $${params.length}`;
     }
 
     if (search) {
       params.push(`%${search}%`);
-      sql += ` AND (name ILIKE $${params.length} OR reg_no ILIKE $${params.length} OR email ILIKE $${params.length})`;
+      sql += ` AND (s.name ILIKE $${params.length} OR s.reg_no ILIKE $${params.length} OR s.email ILIKE $${params.length})`;
     }
 
-    sql += ' ORDER BY id ASC';
+    // Certificate filters (Phase 1.2)
+    if (certTitle || certIssuer || certSkill || certValidOnly) {
+      let certConditions = ['c.student_id = s.id', 'c.verified = true'];
+
+      if (certValidOnly) {
+        certConditions.push("(c.status = 'Valid' AND (c.expiry_date IS NULL OR c.expiry_date >= TO_CHAR(CURRENT_DATE, 'YYYY-MM-DD')))");
+      }
+
+      if (certTitle) {
+        params.push(`%${certTitle}%`);
+        certConditions.push(`c.title ILIKE $${params.length}`);
+      }
+
+      if (certIssuer) {
+        const issuers = certIssuer.split(',').map(i => i.trim()).filter(Boolean);
+        if (issuers.length > 0) {
+          params.push(issuers);
+          certConditions.push(`c.issuer = ANY($${params.length}::text[])`);
+        }
+      }
+
+      if (certSkill) {
+        const skills = certSkill.split(',').map(sk => sk.trim().toLowerCase()).filter(Boolean);
+        if (skills.length > 0) {
+          params.push(skills);
+          certConditions.push(`EXISTS (
+            SELECT 1 FROM jsonb_array_elements_text(c.skills) elem 
+            WHERE LOWER(elem) = ANY($${params.length}::text[])
+          )`);
+        }
+      }
+
+      sql += ` AND EXISTS (SELECT 1 FROM certificates c WHERE ${certConditions.join(' AND ')})`;
+    }
+
+    sql += ' ORDER BY s.id ASC';
 
     const res = await query(sql, params);
     return NextResponse.json({ students: res.rows });

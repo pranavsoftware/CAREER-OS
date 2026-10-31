@@ -40,8 +40,9 @@ export default function Modal({ isOpen = true, onClose, title, children, width =
           borderRadius: 8,
           width: '100%',
           maxWidth: typeof width === 'number' ? `${width}px` : width,
-          maxHeight: '92vh',
+          maxHeight: 'min(92vh, 92dvh)',
           overflowY: 'auto',
+          WebkitOverflowScrolling: 'touch',
           boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.2), 0 10px 10px -5px rgba(0, 0, 0, 0.04)',
         }}
       >

@@ -127,6 +127,14 @@ export default function StudentAiInterview() {
   const [handsDetectedCount, setHandsDetectedCount] = useState(0);
   const [isUnverifiedTimerFallback, setIsUnverifiedTimerFallback] = useState(false);
   const [handsUpReasonType, setHandsUpReasonType] = useState('generic');
+  
+  // Phase 1.4: Enhanced Proctoring Challenge Config & Accessibility
+  const [challengeMode, setChallengeMode] = useState('both_hands'); // 'both_hands' | 'one_hand_gesture' | 'blink_and_turn'
+  const [targetFingers, setTargetFingers] = useState(3);
+  const [targetTurn, setTargetTurn] = useState('right');
+  const [challengeHoldProgress, setChallengeHoldProgress] = useState(0);
+  const [challengeFailures, setChallengeFailures] = useState(0);
+  const [isAccessibilityReviewFlagged, setIsAccessibilityReviewFlagged] = useState(false);
   const shouldDiscardRecordingRef = useRef(false);
   const isRecordingRef = useRef(false);
   const verbalInputModeRef = useRef(verbalInputMode);
@@ -413,7 +421,7 @@ export default function StudentAiInterview() {
     setIsRecording(false);
   }
 
-  // Trigger Workspace Hands-Up Verification Challenge
+  // Trigger Workspace Verification Challenge
   function triggerCheatingIntervention(reason = 'Workspace check required', reasonType = 'generic') {
     if (isHandsUpChallengeActive) return;
 
@@ -423,12 +431,45 @@ export default function StudentAiInterview() {
     setMalpracticeCount(prev => prev + 1);
     setLastViolationReason(reason);
     setHandsUpReasonType(reasonType);
+
+    // Accessibility fallback: After 2 failed attempts, flag for manual review instead of auto-failing
+    if (challengeFailures >= 2) {
+      setIsAccessibilityReviewFlagged(true);
+      setProctoringAuditLog(prev => [
+        ...prev,
+        {
+          id: Date.now() + Math.random(),
+          timestamp: new Date().toISOString(),
+          type: 'accessibility_fallback_activated',
+          reason: 'Proctoring flagged session for manual placement officer audit after repeated challenge attempts. Candidate score is protected.',
+          severity: 'info',
+        },
+      ]);
+      speakSentence('Your session is flagged for placement officer review. Resuming interview now without score deduction.', 'listening', () => {
+        const activeQ = selectedRole.questions[currentQuestionIndex] || selectedRole.questions[0];
+        if (activeQ.type === 'verbal' && verbalInputModeRef.current === 'voice') {
+          startListeningAuto();
+        }
+      });
+      return;
+    }
+
+    // Configure randomized challenge parameters
+    const randomFingers = Math.floor(Math.random() * 4) + 1; // 1 to 4 fingers
+    const randomTurn = Math.random() > 0.5 ? 'left' : 'right';
+    setTargetFingers(randomFingers);
+    setTargetTurn(randomTurn);
+    setChallengeHoldProgress(0);
+
     setProctoringAuditLog(prev => [
       ...prev,
       {
         id: Date.now() + Math.random(),
         timestamp: new Date().toISOString(),
-        type: 'hands_up_challenge',
+        type: 'challenge_triggered',
+        challengeMode,
+        targetFingers: challengeMode === 'one_hand_gesture' ? randomFingers : undefined,
+        targetTurn: challengeMode === 'blink_and_turn' ? randomTurn : undefined,
         reason,
         reasonType,
         severity: 'high',
@@ -448,15 +489,27 @@ export default function StudentAiInterview() {
     setIsHandsUpChallengeActive(false);
     setHrAvatarState('speaking');
 
+    if (!bothHandsVisible && !isUnverifiedTimerFallback) {
+      setChallengeFailures(prev => {
+        const next = prev + 1;
+        if (next >= 2) {
+          setIsAccessibilityReviewFlagged(true);
+        }
+        return next;
+      });
+    }
+
     setProctoringAuditLog(prev => [
       ...prev,
       {
         id: Date.now() + Math.random(),
         timestamp: new Date().toISOString(),
-        type: 'hands_up_complete',
-        reason: 'Workspace integrity verification completed.',
+        type: 'challenge_complete',
+        challengeMode,
+        reason: 'Workspace integrity verification step completed.',
         severity: 'info',
         unverified_timer_only: isUnverifiedTimerFallback,
+        accessibility_flagged: challengeFailures >= 1,
       },
     ]);
 
@@ -491,6 +544,9 @@ export default function StudentAiInterview() {
       const AudioContextClass = typeof window !== 'undefined' && (window.AudioContext || window.webkitAudioContext);
       if (!AudioContextClass) return;
       const ctx = new AudioContextClass();
+      if (ctx.state === 'suspended') {
+        ctx.resume().catch(() => {});
+      }
       silenceAudioCtxRef.current = ctx;
       const source = ctx.createMediaStreamSource(stream);
       const analyser = ctx.createAnalyser();
@@ -548,7 +604,12 @@ export default function StudentAiInterview() {
     setIsTranscribing(true);
     try {
       const formData = new FormData();
-      formData.append('file', audioBlob, 'candidate_speech.webm');
+      const ext = (audioBlob.type && audioBlob.type.includes('mp4'))
+        ? 'mp4'
+        : (audioBlob.type && audioBlob.type.includes('aac'))
+        ? 'aac'
+        : 'webm';
+      formData.append('file', audioBlob, `candidate_speech.${ext}`);
       const activeQ = selectedRole.questions[currentQuestionIndex] || selectedRole.questions[0];
       if (activeQ?.requiredKeywords) {
         formData.append('initial_prompt', activeQ.requiredKeywords.join(', '));
@@ -679,14 +740,31 @@ export default function StudentAiInterview() {
         }
       }
 
-      // 2. High-fidelity audio recording for fallback / backup
+      // 2. High-fidelity audio recording with cross-browser iOS / Android / Desktop compatibility
       audioChunksRef.current = [];
       const micStream = new MediaStream([audioTracks[0]]);
-      const mimeType = MediaRecorder.isTypeSupported('audio/webm;codecs=opus')
-        ? 'audio/webm;codecs=opus'
-        : 'audio/webm';
 
-      const recorder = new MediaRecorder(micStream, { mimeType });
+      let mimeType = '';
+      if (typeof MediaRecorder !== 'undefined' && MediaRecorder.isTypeSupported) {
+        if (MediaRecorder.isTypeSupported('audio/webm;codecs=opus')) {
+          mimeType = 'audio/webm;codecs=opus';
+        } else if (MediaRecorder.isTypeSupported('audio/webm')) {
+          mimeType = 'audio/webm';
+        } else if (MediaRecorder.isTypeSupported('audio/mp4')) {
+          // Native container for iOS Mobile Safari
+          mimeType = 'audio/mp4';
+        } else if (MediaRecorder.isTypeSupported('audio/aac')) {
+          mimeType = 'audio/aac';
+        }
+      }
+
+      let recorder;
+      try {
+        recorder = mimeType ? new MediaRecorder(micStream, { mimeType }) : new MediaRecorder(micStream);
+      } catch (recErr) {
+        console.warn('Initial MediaRecorder instantiation failed, trying without explicit mimeType:', recErr);
+        recorder = new MediaRecorder(micStream);
+      }
 
       recorder.ondataavailable = (e) => {
         if (e.data && e.data.size > 0) {
@@ -709,8 +787,9 @@ export default function StudentAiInterview() {
           return;
         }
 
-        const audioBlob = new Blob(audioChunksRef.current, { type: mimeType });
-        if (audioBlob.size > 1200) {
+        const actualMime = recorder.mimeType || mimeType || (audioChunksRef.current[0]?.type) || 'audio/webm';
+        const audioBlob = new Blob(audioChunksRef.current, { type: actualMime });
+        if (audioBlob.size > 800) {
           lastRecordedAudioBlobRef.current = audioBlob;
           await transcribeAudioBlob(audioBlob);
         }
@@ -1188,7 +1267,7 @@ export default function StudentAiInterview() {
 
               {/* Proctoring & Hardware Readiness Checklist */}
               <div style={{ background: '#fff', border: '1px solid #E5E7EB', borderRadius: 8, padding: 22, marginBottom: 20 }}>
-                <div style={{ display: 'grid', gridTemplateColumns: 'minmax(280px, 1fr) 1.5fr', gap: 24, alignItems: 'center' }}>
+                <div className="grid-split-responsive-2" style={{ gap: 24, alignItems: 'center' }}>
                   {/* Left: HR Preview Card */}
                   <div style={{ textAlign: 'center', borderRight: '1px solid #F1F5F9', paddingRight: 20 }}>
                     <div
@@ -1438,12 +1517,18 @@ export default function StudentAiInterview() {
                     isActive={sessionState === 'interviewing' || sessionState === 'feedback_step'}
                     roundType={activeQuestion?.type || 'verbal'}
                     isHandsUpActive={isHandsUpChallengeActive}
+                    challengeConfig={{
+                      mode: challengeMode,
+                      targetFingers,
+                      targetTurn,
+                    }}
                     onMalpracticeAlert={(reason, reasonType) => triggerCheatingIntervention(reason, reasonType)}
                     onAuditLog={entry => setProctoringAuditLog(prev => [...prev, { id: Date.now() + Math.random(), ...entry }])}
                     onGazeStateChange={status => setLiveGazeStatus(status)}
-                    onHandsCheckTick={({ bothHandsVisible: bothVis, handCount, unverifiedTimerOnly }) => {
+                    onHandsCheckTick={({ bothHandsVisible: bothVis, handCount, extendedFingers, holdProgress, isStable, unverifiedTimerOnly }) => {
                       setBothHandsVisible(bothVis);
                       setHandsDetectedCount(handCount);
+                      setChallengeHoldProgress(holdProgress || 0);
                       setIsUnverifiedTimerFallback(unverifiedTimerOnly);
                     }}
                   />
@@ -1468,16 +1553,21 @@ export default function StudentAiInterview() {
                   >
                     <Eye size={11} />
                     <span>{malpracticeCount > 0 ? `${malpracticeCount} Alerts` : 'Focus Monitored'}</span>
+                    {isAccessibilityReviewFlagged && (
+                      <span style={{ background: '#F59E0B', color: '#111827', padding: '1px 4px', borderRadius: 3, fontSize: 9 }}>
+                        Review Flagged
+                      </span>
+                    )}
                   </div>
 
-                  {/* Hands-Up Verification Overlay */}
+                  {/* Multi-Mode Challenge Verification Overlay */}
                   {isHandsUpChallengeActive && (
                     <div
                       style={{
                         position: 'absolute',
                         inset: 0,
-                        background: 'rgba(15, 23, 42, 0.88)',
-                        backdropFilter: 'blur(4px)',
+                        background: 'rgba(15, 23, 42, 0.92)',
+                        backdropFilter: 'blur(5px)',
                         display: 'flex',
                         flexDirection: 'column',
                         alignItems: 'center',
@@ -1504,22 +1594,47 @@ export default function StudentAiInterview() {
                         <ShieldAlert size={22} color="#F59E0B" />
                       </div>
                       <div style={{ fontSize: 13, fontWeight: 800, color: '#FCD34D', marginBottom: 2 }}>
-                        WORKSPACE VERIFICATION REQUIRED
+                        WORKSPACE VERIFICATION CHALLENGE
                       </div>
+
+                      {/* Mode-Specific Challenge Instruction */}
                       <div style={{ fontSize: 11, color: '#E2E8F0', maxWidth: 220, lineHeight: 1.35, marginBottom: 6 }}>
-                        Place both hands in front of the camera to verify workspace integrity.
+                        {challengeMode === 'both_hands' && 'Hold both hands steady in camera view for 1 second.'}
+                        {challengeMode === 'one_hand_gesture' && `Show ${targetFingers} fingers with one hand and hold steady for 1 second.`}
+                        {challengeMode === 'blink_and_turn' && `Turn head slightly to the ${targetTurn.toUpperCase()} and hold for 1 second.`}
                       </div>
+
                       <div style={{ fontSize: 22, fontWeight: 900, color: bothHandsVisible || isUnverifiedTimerFallback ? '#10B981' : '#F59E0B' }}>
                         {handsUpTimer}s
                       </div>
+
+                      {/* Hold Stability Indicator */}
                       <div style={{ fontSize: 10, color: bothHandsVisible ? '#86EFAC' : '#FCA5A5', marginTop: 2, fontWeight: 600 }}>
                         {bothHandsVisible
-                          ? 'Both hands detected. Verifying workspace...'
-                          : isUnverifiedTimerFallback
-                          ? 'Hand detector unready — countdown active'
-                          : 'Hold BOTH hands visible (' + handsDetectedCount + '/2 detected)'}
+                          ? '✓ Position verified! Counting down...'
+                          : challengeHoldProgress > 0
+                          ? `Holding steady: ${challengeHoldProgress}%`
+                          : challengeMode === 'both_hands'
+                          ? `Hold BOTH hands visible (${handsDetectedCount}/2 detected)`
+                          : challengeMode === 'one_hand_gesture'
+                          ? `Hold ${targetFingers} fingers in frame`
+                          : `Turn head to ${targetTurn}`}
                       </div>
-                      <div style={{ width: 110, height: 4, background: 'rgba(255,255,255,0.2)', borderRadius: 2, marginTop: 6, overflow: 'hidden' }}>
+
+                      {/* 1s Hold Stability Mini-bar */}
+                      <div style={{ width: 120, height: 4, background: 'rgba(255,255,255,0.2)', borderRadius: 2, marginTop: 4, overflow: 'hidden' }}>
+                        <div
+                          style={{
+                            width: `${challengeHoldProgress}%`,
+                            height: '100%',
+                            background: '#38BDF8',
+                            transition: 'width 0.2s ease',
+                          }}
+                        />
+                      </div>
+
+                      {/* Overall 10s Timer Progress Bar */}
+                      <div style={{ width: 120, height: 4, background: 'rgba(255,255,255,0.2)', borderRadius: 2, marginTop: 4, overflow: 'hidden' }}>
                         <div
                           style={{
                             width: ((10 - handsUpTimer) / 10) * 100 + '%',
@@ -1528,6 +1643,11 @@ export default function StudentAiInterview() {
                             transition: 'width 1s linear',
                           }}
                         />
+                      </div>
+
+                      {/* Accessibility Note */}
+                      <div style={{ fontSize: 9, color: '#94A3B8', marginTop: 8, maxWidth: 200, lineHeight: 1.2 }}>
+                        Accessibility Guarantee: Unverified sessions are flagged for manual officer audit and never penalize candidate scores.
                       </div>
                     </div>
                   )}

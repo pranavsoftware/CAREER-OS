@@ -24,6 +24,7 @@ export const viewport = {
   width: 'device-width',
   initialScale: 1,
   maximumScale: 5,
+  viewportFit: 'cover',
   themeColor: '#4F46E5',
 };
 
@@ -32,6 +33,9 @@ export default function RootLayout({ children }) {
     <html lang="en">
       <head>
         <link rel="manifest" href="/manifest.json" />
+
+        {/* Viewport & Safe-Area for iPhone */}
+        <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
 
         {/* iOS Safari PWA — required for proper routing & full-screen */}
         <meta name="mobile-web-app-capable" content="yes" />

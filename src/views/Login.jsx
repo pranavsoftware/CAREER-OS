@@ -6,6 +6,7 @@ const ROLE_DASHBOARDS = {
   student: '/student/dashboard',
   university: '/university/dashboard',
   company: '/company/dashboard',
+  aspirant: '/aspirant/dashboard',
 };
 
 export default function Login() {
@@ -58,21 +59,25 @@ export default function Login() {
   return (
     <div
       style={{
-        minHeight: '100vh',
+        minHeight: '100dvh',
         background: '#F8F9FA',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        padding: 16,
+        padding: '16px 12px',
+        boxSizing: 'border-box',
       }}
     >
       <div
         style={{
-          width: 380,
+          width: '100%',
+          maxWidth: 400,
           background: '#fff',
           border: '1px solid #E5E7EB',
-          borderRadius: 6,
-          padding: 32,
+          borderRadius: 8,
+          padding: '28px 20px',
+          boxSizing: 'border-box',
+          boxShadow: '0 4px 16px rgba(0,0,0,0.06)',
         }}
       >
         {/* Back Link */}
@@ -206,6 +211,14 @@ export default function Login() {
             >
               <span><strong>Company:</strong> Company Demo</span>
               <span style={{ fontSize: 11, color: '#A855F7' }}>Sign In →</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => handleQuickLogin('aspirant@demo.com', 'demo')}
+              style={{ padding: '8px 12px', background: '#FFFBEB', border: '1px solid #FDE68A', borderRadius: 6, fontSize: 12, color: '#B45309', cursor: 'pointer', textAlign: 'left', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}
+            >
+              <span><strong>Aspirant (12th Pass):</strong> Demo Aspirant</span>
+              <span style={{ fontSize: 11, color: '#D97706' }}>Sign In →</span>
             </button>
           </div>
         </div>

@@ -71,7 +71,7 @@ export default function CompanyDashboard() {
   return (
     <Layout title={`${myCompany} Recruitment Dashboard`}>
       {/* Stat cards */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16, marginBottom: 24 }}>
+      <div className="grid-stats-responsive-4">
         <StatCard label="Active Job Postings" value={openJobs.length} sub={`${myJobs.length} total roles`} />
         <StatCard label="Total Applicants" value={totalApplicants} sub="Across active postings" />
         <StatCard label="In Interview / Shortlist" value={shortlistedCount} sub="Under active review" />
@@ -79,7 +79,7 @@ export default function CompanyDashboard() {
       </div>
 
       {/* Grid: Hiring Funnel & Quick Action */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 24, alignItems: 'stretch' }}>
+      <div className="grid-split-responsive-2" style={{ alignItems: 'stretch' }}>
         {/* Hiring Funnel Bar Chart */}
         <div style={{ background: '#fff', border: '1px solid #E5E7EB', borderRadius: 6, padding: 16, display: 'flex', flexDirection: 'column' }}>
           <h2 style={{ margin: '0 0 12px', fontSize: 14, fontWeight: 600, color: '#111827' }}>

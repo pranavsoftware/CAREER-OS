@@ -3,13 +3,15 @@
 import { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import Layout from '../../components/Layout';
+import Modal from '../../components/Modal';
 import { useData } from '../../context/DataContext';
 import { useAuth } from '../../context/AuthContext';
 import { getCallTimeStatus } from '../../utils/callTimer';
 import {
   Video, Calendar, Clock, CheckCircle2,
   Copy, Check, Camera, Sparkles, ShieldCheck,
-  Lock, Unlock, Radio, User, Users, AlertCircle, Info, RefreshCw
+  Lock, Unlock, Radio, User, Users, AlertCircle, Info, RefreshCw,
+  ExternalLink, RotateCcw
 } from 'lucide-react';
 
 export default function StudentInterviews() {
@@ -34,6 +36,91 @@ export default function StudentInterviews() {
   const [forceUnlockAll, setForceUnlockAll] = useState(false);
   const [currentTime, setCurrentTime] = useState(new Date());
   const [isRefreshing, setIsRefreshing] = useState(false);
+
+  // Reschedule Request State (Phase 2.2)
+  const [rescheduleModal, setRescheduleModal] = useState(null);
+  const [rescheduleRequests, setRescheduleRequests] = useState([]);
+  const [rrForm, setRrForm] = useState({
+    reasonCode: 'medical',
+    reasonDetails: '',
+    proposedDate: '',
+    proposedTime: '10:00',
+  });
+  const [rrLoading, setRrLoading] = useState(false);
+  const [rrError, setRrError] = useState('');
+  const [rrSuccess, setRrSuccess] = useState('');
+
+  const fetchRescheduleRequests = async () => {
+    if (!currentStudent?.id) return;
+    try {
+      const res = await fetch(`/api/interviews/reschedule?studentId=${currentStudent.id}`);
+      if (res.ok) {
+        const d = await res.json();
+        setRescheduleRequests(d.requests || []);
+      }
+    } catch (_) {}
+  };
+
+  useEffect(() => {
+    fetchRescheduleRequests();
+  }, [currentStudent?.id]);
+
+  const handleOpenReschedule = (interview) => {
+    setRescheduleModal(interview);
+    setRrError('');
+    setRrSuccess('');
+    // Suggest a future date tomorrow by default
+    const tomorrow = new Date();
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    setRrForm({
+      reasonCode: 'medical',
+      reasonDetails: '',
+      proposedDate: tomorrow.toISOString().split('T')[0],
+      proposedTime: interview.time || '10:00',
+    });
+  };
+
+  const handleSubmitReschedule = async (e) => {
+    e.preventDefault();
+    setRrError('');
+    setRrSuccess('');
+
+    if (rrForm.reasonCode === 'other' && (!rrForm.reasonDetails || rrForm.reasonDetails.length < 20)) {
+      setRrError('For reason "Other", please provide at least 20 characters of detail explaining the conflict.');
+      return;
+    }
+
+    setRrLoading(true);
+    try {
+      const res = await fetch('/api/interviews/reschedule', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          interviewId: rescheduleModal.id,
+          studentId: currentStudent.id,
+          reasonCode: rrForm.reasonCode,
+          reasonDetails: rrForm.reasonDetails,
+          proposedDate: rrForm.proposedDate,
+          proposedTime: rrForm.proposedTime,
+        }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || 'Failed to submit reschedule request');
+      }
+
+      setRrSuccess('Reschedule request successfully submitted! Placement cell and company notified.');
+      fetchRescheduleRequests();
+      setTimeout(() => {
+        setRescheduleModal(null);
+      }, 1400);
+    } catch (err) {
+      setRrError(err.message);
+    } finally {
+      setRrLoading(false);
+    }
+  };
 
   // Fast background polling & on-mount fetch for instant update when company schedules
   const refreshInterviews = async (showSpinner = false) => {
@@ -631,8 +718,45 @@ export default function StudentInterviews() {
                       </div>
                     )}
 
-                    {/* Right: Join Button or Meeting Completed Badge */}
-                    <div>
+                    {/* Right: Actions, Reschedule, Join Button or Meeting Completed Badge */}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+                      {/* Reschedule Button / Status (Phase 2.2) */}
+                      {!isCompleted && item.status !== 'Cancelled' && (
+                        (() => {
+                          const pendingReq = rescheduleRequests.find(r => (r.interviewId === item.id || r.interview_id === item.id) && r.status === 'Pending');
+                          if (pendingReq) {
+                            return (
+                              <span style={{ fontSize: 12, padding: '7px 12px', background: '#FFFBEB', border: '1px solid #FDE68A', color: '#B45309', borderRadius: 6, fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: 5 }}>
+                                <Clock size={13} />
+                                Reschedule Pending ({pendingReq.proposedDate || pendingReq.proposed_date})
+                              </span>
+                            );
+                          }
+                          return (
+                            <button
+                              type="button"
+                              onClick={() => handleOpenReschedule(item)}
+                              style={{
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: 6,
+                                padding: '8px 14px',
+                                borderRadius: 6,
+                                border: '1px solid #D1D5DB',
+                                background: '#fff',
+                                color: '#374151',
+                                fontSize: 12,
+                                fontWeight: 600,
+                                cursor: 'pointer'
+                              }}
+                            >
+                              <RotateCcw size={13} />
+                              Request Reschedule
+                            </button>
+                          );
+                        })()
+                      )}
+
                       {isCompleted ? (
                         <div
                           style={{
@@ -677,9 +801,33 @@ export default function StudentInterviews() {
                             Join Meeting (Disabled Until Scheduled Time)
                           </button>
                         </div>
+                      ) : item.meetingProvider && item.meetingProvider !== 'careeros' && item.meetingUrl ? (
+                        <a
+                          href={item.meetingUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          style={{
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: 8,
+                            padding: '10px 24px',
+                            borderRadius: 8,
+                            background: item.meetingProvider === 'teams' ? '#4F46E5' : item.meetingProvider === 'zoom' ? '#2563EB' : 'linear-gradient(135deg, #059669 0%, #10B981 100%)',
+                            color: '#fff',
+                            fontSize: 14,
+                            fontWeight: 700,
+                            textDecoration: 'none',
+                            boxShadow: '0 4px 16px rgba(16, 185, 129, 0.4)',
+                            transition: 'transform 0.15s ease',
+                          }}
+                        >
+                          <Video size={18} />
+                          Join {item.meetingProvider === 'teams' ? 'Microsoft Teams' : item.meetingProvider === 'google_meet' ? 'Google Meet' : item.meetingProvider === 'zoom' ? 'Zoom' : 'External'} Room
+                          <ExternalLink size={14} />
+                        </a>
                       ) : (
                         <Link
-                          to={`/interview-room/${item.meetingId}`}
+                          to={`/interview-room/${item.meetingId || item.id}`}
                           style={{
                             display: 'inline-flex',
                             alignItems: 'center',
@@ -696,7 +844,7 @@ export default function StudentInterviews() {
                           }}
                         >
                           <Video size={18} />
-                          Join Google Meet Room Now
+                          Join CareerOS Meet Room Now
                         </Link>
                       )}
                     </div>
@@ -706,6 +854,123 @@ export default function StudentInterviews() {
               );
             })}
           </div>
+        )}
+
+        {/* Phase 2.2: Reschedule Request Modal */}
+        {rescheduleModal && (
+          <Modal
+            isOpen={Boolean(rescheduleModal)}
+            title={`Request Interview Reschedule — ${rescheduleModal.company || 'Recruiter'}`}
+            onClose={() => !rrLoading && setRescheduleModal(null)}
+          >
+            <form onSubmit={handleSubmitReschedule}>
+              <div style={{ background: '#F8FAFC', border: '1px solid #E2E8F0', borderRadius: 8, padding: 14, marginBottom: 16 }}>
+                <div style={{ fontSize: 13, fontWeight: 600, color: '#1E293B' }}>{rescheduleModal.role} ({rescheduleModal.type})</div>
+                <div style={{ fontSize: 12, color: '#64748B', marginTop: 4 }}>
+                  Current Slot: <strong>{rescheduleModal.date}</strong> at <strong>{rescheduleModal.time}</strong>
+                </div>
+              </div>
+
+              {rrError && (
+                <div style={{ background: '#FEF2F2', border: '1px solid #FECACA', color: '#DC2626', padding: '10px 14px', borderRadius: 6, fontSize: 13, marginBottom: 14 }}>
+                  {rrError}
+                </div>
+              )}
+
+              {rrSuccess && (
+                <div style={{ background: '#ECFDF5', border: '1px solid #A7F3D0', color: '#059669', padding: '10px 14px', borderRadius: 6, fontSize: 13, marginBottom: 14 }}>
+                  {rrSuccess}
+                </div>
+              )}
+
+              <div style={{ marginBottom: 14 }}>
+                <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: '#374151', marginBottom: 5 }}>
+                  Reason for Reschedule *
+                </label>
+                <select
+                  required
+                  value={rrForm.reasonCode}
+                  onChange={e => setRrForm({ ...rrForm, reasonCode: e.target.value })}
+                  style={{ width: '100%', padding: '9px 12px', borderRadius: 6, border: '1px solid #D1D5DB', fontSize: 13 }}
+                >
+                  <option value="medical">Medical / Health Issue</option>
+                  <option value="family_emergency">Family Emergency</option>
+                  <option value="exam_clash">University Exam / Class Clash</option>
+                  <option value="technical_issue">Hardware / Internet Outage</option>
+                  <option value="travel">Unavoidable Academic Travel</option>
+                  <option value="other">Other Reason (Provide Details Below)</option>
+                </select>
+              </div>
+
+              <div style={{ marginBottom: 14 }}>
+                <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: '#374151', marginBottom: 5 }}>
+                  Detailed Reason {rrForm.reasonCode === 'other' ? '(Required, min 20 chars) *' : '(Optional)'}
+                </label>
+                <textarea
+                  rows={3}
+                  value={rrForm.reasonDetails}
+                  onChange={e => setRrForm({ ...rrForm, reasonDetails: e.target.value })}
+                  placeholder={rrForm.reasonCode === 'other' ? 'Please describe your constraint in at least 20 characters...' : 'Brief details for the recruiting team...'}
+                  style={{ width: '100%', padding: '9px 12px', borderRadius: 6, border: '1px solid #D1D5DB', fontSize: 13, resize: 'vertical' }}
+                />
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 18 }}>
+                <div>
+                  <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: '#374151', marginBottom: 5 }}>
+                    Proposed Future Date *
+                  </label>
+                  <input
+                    type="date"
+                    required
+                    value={rrForm.proposedDate}
+                    onChange={e => setRrForm({ ...rrForm, proposedDate: e.target.value })}
+                    style={{ width: '100%', padding: '9px 12px', borderRadius: 6, border: '1px solid #D1D5DB', fontSize: 13 }}
+                  />
+                </div>
+                <div>
+                  <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: '#374151', marginBottom: 5 }}>
+                    Proposed Start Time *
+                  </label>
+                  <input
+                    type="time"
+                    required
+                    value={rrForm.proposedTime}
+                    onChange={e => setRrForm({ ...rrForm, proposedTime: e.target.value })}
+                    style={{ width: '100%', padding: '9px 12px', borderRadius: 6, border: '1px solid #D1D5DB', fontSize: 13 }}
+                  />
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10 }}>
+                <button
+                  type="button"
+                  disabled={rrLoading}
+                  onClick={() => setRescheduleModal(null)}
+                  style={{ padding: '8px 16px', borderRadius: 6, border: '1px solid #D1D5DB', background: '#fff', fontSize: 13, cursor: 'pointer' }}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={rrLoading}
+                  style={{
+                    padding: '8px 20px',
+                    borderRadius: 6,
+                    border: 'none',
+                    background: '#2563EB',
+                    color: '#fff',
+                    fontSize: 13,
+                    fontWeight: 600,
+                    cursor: rrLoading ? 'not-allowed' : 'pointer',
+                    opacity: rrLoading ? 0.7 : 1,
+                  }}
+                >
+                  {rrLoading ? 'Submitting...' : 'Send Reschedule Request'}
+                </button>
+              </div>
+            </form>
+          </Modal>
         )}
 
       </div>

@@ -22,6 +22,9 @@ import StudentPortfolio from './views/student/Portfolio';
 import StudentMail from './views/student/Mail';
 import StudentInterviews from './views/student/Interviews';
 import InterviewRoom from './views/InterviewRoom';
+import StudentMaterials from './views/student/Materials';
+import HigherEducation from './views/student/HigherEducation';
+import StudentReferrals from './views/student/Referrals';
 
 // University Pages
 import UniversityDashboard from './views/university/Dashboard';
@@ -30,6 +33,8 @@ import UniversityStudentDetail from './views/university/StudentDetail';
 import UniversityDrives from './views/university/Drives';
 import UniversityDriveDetail from './views/university/DriveDetail';
 import UniversityMailFilter from './views/university/MailFilter';
+import UniversityRecordsImport from './views/university/RecordsImport';
+import UniversityReferrals from './views/university/Referrals';
 
 // Company Pages
 import CompanyDashboard from './views/company/Dashboard';
@@ -38,6 +43,14 @@ import CompanyCandidates from './views/company/Candidates';
 import CompanyCandidateDetail from './views/company/CandidateDetail';
 import CompanyPipeline from './views/company/Pipeline';
 import CompanyInterviews from './views/company/Interviews';
+import UniversityInsights from './views/company/UniversityInsights';
+
+// Aspirant Pages (Phase 4)
+import AspirantDashboard from './views/aspirant/Dashboard';
+import AspirantProfile from './views/aspirant/Profile';
+import CollegeExplorer from './views/aspirant/Explore';
+import AspirantApplications from './views/aspirant/Applications';
+import UniversityAdmissions from './views/university/Admissions';
 
 function RootRedirect() {
   const { isAuthenticated, user } = useAuth();
@@ -45,6 +58,7 @@ function RootRedirect() {
   if (user?.role === 'student') return <Navigate to="/student/dashboard" replace />;
   if (user?.role === 'university') return <Navigate to="/university/dashboard" replace />;
   if (user?.role === 'company') return <Navigate to="/company/dashboard" replace />;
+  if (user?.role === 'aspirant') return <Navigate to="/aspirant/dashboard" replace />;
   return <Navigate to="/login" replace />;
 }
 
@@ -157,6 +171,33 @@ export default function App() {
               }
             />
 
+            <Route
+              path="/student/materials"
+              element={
+                <ProtectedRoute allowedRole="student">
+                  <StudentMaterials />
+                </ProtectedRoute>
+              }
+            />
+
+            <Route
+              path="/student/higher-education"
+              element={
+                <ProtectedRoute allowedRole="student">
+                  <HigherEducation />
+                </ProtectedRoute>
+              }
+            />
+
+            <Route
+              path="/student/referrals"
+              element={
+                <ProtectedRoute allowedRole="student">
+                  <StudentReferrals />
+                </ProtectedRoute>
+              }
+            />
+
             {/* University Protected Routes */}
             <Route
               path="/university/dashboard"
@@ -203,6 +244,64 @@ export default function App() {
               element={
                 <ProtectedRoute allowedRole="university">
                   <UniversityMailFilter />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/university/records-import"
+              element={
+                <ProtectedRoute allowedRole="university">
+                  <UniversityRecordsImport />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/university/referrals"
+              element={
+                <ProtectedRoute allowedRole="university">
+                  <UniversityReferrals />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/university/admissions"
+              element={
+                <ProtectedRoute allowedRole="university">
+                  <UniversityAdmissions />
+                </ProtectedRoute>
+              }
+            />
+
+            {/* Aspirant Protected Routes (Phase 4) */}
+            <Route
+              path="/aspirant/dashboard"
+              element={
+                <ProtectedRoute allowedRole="aspirant">
+                  <AspirantDashboard />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/aspirant/profile"
+              element={
+                <ProtectedRoute allowedRole="aspirant">
+                  <AspirantProfile />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/aspirant/explore"
+              element={
+                <ProtectedRoute allowedRole="aspirant">
+                  <CollegeExplorer />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/aspirant/applications"
+              element={
+                <ProtectedRoute allowedRole="aspirant">
+                  <AspirantApplications />
                 </ProtectedRoute>
               }
             />
@@ -261,6 +360,14 @@ export default function App() {
               element={
                 <ProtectedRoute allowedRole="company">
                   <CompanyInterviews />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/company/university-insights"
+              element={
+                <ProtectedRoute allowedRole="company">
+                  <UniversityInsights />
                 </ProtectedRoute>
               }
             />

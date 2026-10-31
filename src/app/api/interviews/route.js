@@ -35,6 +35,8 @@ export async function GET() {
         notes, 
         recruiter_name AS "recruiterName", 
         evaluation, 
+        COALESCE(meeting_provider, 'careeros') AS "meetingProvider",
+        meeting_url AS "meetingUrl",
         created_at AS "createdAt"
       FROM interviews
       ORDER BY created_at DESC
@@ -74,8 +76,9 @@ export async function POST(req) {
       INSERT INTO interviews (
         id, meeting_id, job_id, company, role,
         student_id, student_name, student_email, student_branch, student_cgpa,
-        students, date, time, duration, type, status, notes, recruiter_name, evaluation
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19)
+        students, date, time, duration, type, status, notes, recruiter_name, evaluation,
+        meeting_provider, meeting_url
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21)
       ON CONFLICT (id) DO UPDATE SET
         meeting_id = EXCLUDED.meeting_id,
         students = EXCLUDED.students,
@@ -83,7 +86,9 @@ export async function POST(req) {
         student_email = EXCLUDED.student_email,
         status = EXCLUDED.status,
         notes = EXCLUDED.notes,
-        evaluation = EXCLUDED.evaluation
+        evaluation = EXCLUDED.evaluation,
+        meeting_provider = EXCLUDED.meeting_provider,
+        meeting_url = EXCLUDED.meeting_url
     `, [
       id,
       meetingId,
@@ -104,6 +109,8 @@ export async function POST(req) {
       data.notes || null,
       data.recruiterName || 'Campus Talent Lead',
       data.evaluation ? JSON.stringify(data.evaluation) : null,
+      data.meetingProvider || 'careeros',
+      data.meetingUrl || null,
     ]);
 
     const createdInterview = {
@@ -141,7 +148,9 @@ export async function PUT(req) {
         evaluation = COALESCE($4, evaluation),
         date = COALESCE($5, date),
         time = COALESCE($6, time),
-        students = COALESCE($7, students)
+        students = COALESCE($7, students),
+        meeting_provider = COALESCE($8, meeting_provider),
+        meeting_url = COALESCE($9, meeting_url)
       WHERE id = $1 OR meeting_id = $1
     `, [
       data.id,
@@ -151,6 +160,8 @@ export async function PUT(req) {
       data.date || null,
       data.time || null,
       data.students ? JSON.stringify(data.students) : null,
+      data.meetingProvider || null,
+      data.meetingUrl !== undefined ? (data.meetingUrl || null) : null,
     ]);
 
     return NextResponse.json({ success: true }, { headers: NO_CACHE_HEADERS });

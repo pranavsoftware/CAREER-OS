@@ -251,14 +251,14 @@ export default function StudentDashboard() {
       )}
 
       {/* Stat cards */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16, marginBottom: 24 }}>
+      <div className="grid-stats-responsive-4">
         <StatCard label="Profile Completion" value={`${student.profileCompletion}%`} sub={student.profileStatus} />
         <StatCard label="Applications" value={myApplications.length} sub={`${myApplications.filter(a => a.status === 'Offer').length} offer(s)`} />
         <StatCard label="Resume ATS Score" value={latestAts !== null ? `${latestAts}/100` : 'N/A'} sub="Latest version" />
         <StatCard label="Certificates" value={myCerts.length} sub={`${myCerts.filter(c => c.status === 'Valid').length} valid`} />
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 320px', gap: 16, marginBottom: 24 }}>
+      <div className="grid-main-sidebar-responsive">
         {/* Upcoming drives */}
         <div style={{ background: '#fff', border: '1px solid #E5E7EB', borderRadius: 6, padding: 16 }}>
           <h2 style={{ margin: '0 0 16px', fontSize: 15, fontWeight: 600, color: '#111827' }}>Upcoming Drives</h2>

@@ -29,4 +29,13 @@ export const users = [
     displayRole: 'Campus Talent Acquisition Lead',
     avatar: 'CD',
   },
+  {
+    id: 'user_aspirant',
+    name: 'Demo Aspirant',
+    email: 'aspirant@demo.com',
+    password: 'demo',
+    role: 'aspirant',
+    displayRole: 'Class 12th Pass-Out • CBSE PCM',
+    avatar: 'DA',
+  },
 ];
