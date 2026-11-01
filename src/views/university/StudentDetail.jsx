@@ -386,15 +386,72 @@ export default function UniversityStudentDetail() {
                 )}
 
                 {sec.id === 'experience' && (
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                     {(student.experience || []).length === 0 ? (
                       <span style={{ color: '#9CA3AF' }}>No formal internship records added.</span>
                     ) : (
-                      student.experience.map((e, i) => (
-                        <div key={i} style={{ background: '#fff', padding: 8, borderRadius: 4, border: '1px solid #E5E7EB' }}>
-                          <strong>{e.role}</strong> at {e.company} ({e.duration}): {e.description}
-                        </div>
-                      ))
+                      student.experience.map((e, i) => {
+                        const docs = e.documents || {};
+                        return (
+                          <div key={i} style={{ background: '#fff', padding: 12, borderRadius: 6, border: '1px solid #E5E7EB' }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 6, marginBottom: 4 }}>
+                              <div>
+                                <strong style={{ fontSize: 14, color: '#111827' }}>{e.role}</strong> at <strong style={{ color: '#2563EB' }}>{e.company}</strong>
+                                <span style={{ marginLeft: 8, fontSize: 12, color: '#6B7280' }}>({e.duration || `${e.startDate || ''} - ${e.endDate || 'Present'}`})</span>
+                              </div>
+                              <div style={{ display: 'flex', gap: 4 }}>
+                                {e.type && <span style={{ padding: '2px 6px', borderRadius: 4, background: '#EFF6FF', color: '#1E40AF', fontSize: 10, fontWeight: 600 }}>{e.type}</span>}
+                                {e.stipend && <span style={{ padding: '2px 6px', borderRadius: 4, background: '#ECFDF5', color: '#065F46', fontSize: 10, fontWeight: 600 }}>{e.stipend}</span>}
+                              </div>
+                            </div>
+
+                            {(e.supervisorName || e.supervisorEmail || e.hrContact) && (
+                              <div style={{ fontSize: 11, color: '#4B5563', background: '#F9FAFB', padding: '6px 8px', borderRadius: 4, margin: '6px 0', display: 'flex', flexWrap: 'wrap', gap: 12 }}>
+                                {e.supervisorName && <span>Supervisor: <strong>{e.supervisorName}</strong></span>}
+                                {e.supervisorEmail && <span>Email: <a href={`mailto:${e.supervisorEmail}`} style={{ color: '#2563EB' }}>{e.supervisorEmail}</a></span>}
+                                {e.hrContact && <span>HR Contact: <strong>{e.hrContact}</strong></span>}
+                              </div>
+                            )}
+
+                            {(e.projectDetails || e.description) && (
+                              <div style={{ fontSize: 12, color: '#374151', margin: '4px 0' }}>
+                                <strong>Work Details: </strong>{e.projectDetails || e.description}
+                              </div>
+                            )}
+
+                            {Object.values(docs).some(Boolean) && (
+                              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 6, paddingTop: 6, borderTop: '1px dashed #E5E7EB' }}>
+                                <span style={{ fontSize: 11, fontWeight: 600, color: '#6B7280' }}>Verified Docs:</span>
+                                {docs.offerLetter && (
+                                  <a href={docs.offerLetter.url} target="_blank" rel="noreferrer" style={{ fontSize: 11, color: '#2563EB', textDecoration: 'none' }}>
+                                    📄 Offer Letter
+                                  </a>
+                                )}
+                                {docs.completionCert && (
+                                  <a href={docs.completionCert.url} target="_blank" rel="noreferrer" style={{ fontSize: 11, color: '#2563EB', textDecoration: 'none' }}>
+                                    🎓 Completion Cert
+                                  </a>
+                                )}
+                                {docs.experienceLetter && (
+                                  <a href={docs.experienceLetter.url} target="_blank" rel="noreferrer" style={{ fontSize: 11, color: '#2563EB', textDecoration: 'none' }}>
+                                    💼 Experience Letter
+                                  </a>
+                                )}
+                                {docs.projectReport && (
+                                  <a href={docs.projectReport.url} target="_blank" rel="noreferrer" style={{ fontSize: 11, color: '#2563EB', textDecoration: 'none' }}>
+                                    📊 Project Report
+                                  </a>
+                                )}
+                                {docs.hrEmailProof && (
+                                  <a href={docs.hrEmailProof.url} target="_blank" rel="noreferrer" style={{ fontSize: 11, color: '#2563EB', textDecoration: 'none' }}>
+                                    ✉️ HR/Supervisor Email
+                                  </a>
+                                )}
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })
                     )}
                   </div>
                 )}

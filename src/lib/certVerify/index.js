@@ -479,3 +479,4 @@ export async function syncStudentSkillsFromCertificates(studentId) {
     studentId,
   ]);
 }
+

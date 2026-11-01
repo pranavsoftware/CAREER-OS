@@ -6,7 +6,31 @@ import FormField from '../../components/FormField';
 import { useData } from '../../context/DataContext';
 import { useAuth } from '../../context/AuthContext';
 import { initialStudents } from '../../data/students';
-import { Star, ExternalLink, RefreshCw, FolderGit2, Search, Plus, Check, ChevronDown, Sparkles, X } from 'lucide-react';
+import {
+  Star,
+  ExternalLink,
+  RefreshCw,
+  FolderGit2,
+  Search,
+  Plus,
+  Check,
+  ChevronDown,
+  Sparkles,
+  X,
+  Briefcase,
+  Building,
+  Globe,
+  Calendar,
+  DollarSign,
+  UserCheck,
+  Mail,
+  FileCheck,
+  UploadCloud,
+  FileText,
+  CheckCircle2,
+  Paperclip,
+  Trash2
+} from 'lucide-react';
 import GithubIcon from '../../components/GithubIcon';
 
 const SKILL_CATALOG = [
@@ -102,7 +126,32 @@ export default function StudentProfile() {
   const [addingProject, setAddingProject] = useState(false);
   const [newProject, setNewProject] = useState({ title: '', description: '', technologies: '', link: '', year: 2026 });
   const [addingExp, setAddingExp] = useState(false);
-  const [newExp, setNewExp] = useState({ company: '', role: '', duration: '', description: '', type: 'Internship' });
+  const emptyInternship = {
+    studentName: student?.name || '',
+    company: '',
+    companyWebsite: '',
+    role: '',
+    type: 'Hybrid', // 'Remote' | 'On-site' | 'Hybrid'
+    startDate: '',
+    endDate: '',
+    stipend: 'Paid', // 'Paid' | 'Unpaid'
+    stipendAmount: '',
+    supervisorName: '',
+    supervisorEmail: '',
+    hrContact: '',
+    skillsUsed: '',
+    projectDetails: '',
+    documents: {
+      offerLetter: null,
+      completionCert: null,
+      experienceLetter: null,
+      projectReport: null,
+      hrEmailProof: null,
+    },
+  };
+  const [newExp, setNewExp] = useState(emptyInternship);
+  const [uploadingDocKey, setUploadingDocKey] = useState(null);
+  const [docUploadError, setDocUploadError] = useState(null);
 
   // Quick GitHub Connect State in Profile
   const [showGithubModal, setShowGithubModal] = useState(false);
@@ -315,17 +364,103 @@ export default function StudentProfile() {
     }
   }
 
-  function addExperience() {
-    const exp = { ...newExp, id: `e${Date.now()}` };
-    const experience = [...(student.experience || []), exp];
-    dispatch({ type: 'UPDATE_STUDENT', payload: { id: student.id, experience } });
-    setNewExp({ company: '', role: '', duration: '', description: '', type: 'Internship' });
-    setAddingExp(false);
+  async function handleInternshipDocUpload(docKey, file) {
+    if (!file || !student?.id) return;
+    setUploadingDocKey(docKey);
+    setDocUploadError(null);
+
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('docType', docKey);
+
+      const res = await fetch(`/api/students/${student.id}/internship-docs`, {
+        method: 'POST',
+        body: formData,
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || 'Failed to upload document');
+      }
+
+      setNewExp(prev => ({
+        ...prev,
+        documents: {
+          ...(prev.documents || {}),
+          [docKey]: data.document,
+        },
+      }));
+    } catch (err) {
+      setDocUploadError(err.message || 'Error uploading document');
+    } finally {
+      setUploadingDocKey(null);
+    }
   }
 
-  function deleteExperience(id) {
+  function handleRemoveInternshipDoc(docKey) {
+    setNewExp(prev => ({
+      ...prev,
+      documents: {
+        ...(prev.documents || {}),
+        [docKey]: null,
+      },
+    }));
+  }
+
+  async function addExperience() {
+    if (!newExp.company?.trim() || !newExp.role?.trim()) {
+      setMessage({ type: 'error', text: 'Please fill in Company Name and Internship Role.' });
+      return;
+    }
+
+    const startStr = newExp.startDate ? new Date(newExp.startDate).toLocaleDateString('en-US', { month: 'short', year: 'numeric' }) : '';
+    const endStr = newExp.endDate ? new Date(newExp.endDate).toLocaleDateString('en-US', { month: 'short', year: 'numeric' }) : 'Present';
+    const duration = startStr ? `${startStr} - ${endStr}` : (newExp.duration || 'Internship');
+
+    const skillsList = typeof newExp.skillsUsed === 'string'
+      ? newExp.skillsUsed.split(',').map(s => s.trim()).filter(Boolean)
+      : (Array.isArray(newExp.skills) ? newExp.skills : []);
+
+    const exp = {
+      id: `exp_${Date.now()}`,
+      studentName: newExp.studentName?.trim() || student.name,
+      company: newExp.company.trim(),
+      companyWebsite: newExp.companyWebsite.trim(),
+      role: newExp.role.trim(),
+      type: newExp.type || 'Hybrid',
+      startDate: newExp.startDate || '',
+      endDate: newExp.endDate || '',
+      duration,
+      stipend: newExp.stipend || 'Paid',
+      stipendAmount: newExp.stipendAmount?.trim() || '',
+      supervisorName: newExp.supervisorName.trim(),
+      supervisorEmail: newExp.supervisorEmail.trim(),
+      hrContact: newExp.hrContact.trim(),
+      skills: skillsList,
+      skillsUsed: newExp.skillsUsed || skillsList.join(', '),
+      projectDetails: newExp.projectDetails.trim(),
+      description: newExp.projectDetails.trim() || `${newExp.role} at ${newExp.company}`,
+      documents: newExp.documents || {},
+      created_at: new Date().toISOString(),
+    };
+
+    const experience = [...(student.experience || []), exp];
+    dispatch({ type: 'UPDATE_STUDENT', payload: { id: student.id, experience } });
+    await persistStudentUpdate({ experience });
+    setNewExp({ ...emptyInternship, studentName: student?.name || '' });
+    setAddingExp(false);
+    setMessage({ type: 'success', text: `Internship at ${exp.company} saved successfully.` });
+    setTimeout(() => setMessage(null), 4000);
+  }
+
+  async function deleteExperience(id) {
+    if (!confirm('Are you sure you want to remove this internship record?')) return;
     const experience = (student.experience || []).filter(e => e.id !== id);
     dispatch({ type: 'UPDATE_STUDENT', payload: { id: student.id, experience } });
+    await persistStudentUpdate({ experience });
+    setMessage({ type: 'success', text: 'Internship record removed.' });
+    setTimeout(() => setMessage(null), 3000);
   }
 
   const sectionCard = (title, section, content, editContent) => (
@@ -1090,40 +1225,512 @@ export default function StudentProfile() {
         <div style={{ fontSize: 13, color: '#6B7280' }}>Manage projects from the view mode above.</div>
       )}
 
-      {/* Experience */}
-      {sectionCard('Experience / Internships', 'experience',
+      {/* Experience / Internships */}
+      {sectionCard('Internships & Professional Experience', 'experience',
         <div>
-          {(student.experience || []).map(e => (
-            <div key={e.id} style={{ borderBottom: '1px solid #F3F4F6', paddingBottom: 12, marginBottom: 12 }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                <div>
-                  <div style={{ fontWeight: 600, fontSize: 14, color: '#111827' }}>{e.role} - {e.company}</div>
-                  <div style={{ fontSize: 12, color: '#6B7280', margin: '2px 0' }}>{e.duration} | {e.type}</div>
-                  <div style={{ fontSize: 13, color: '#374151' }}>{e.description}</div>
-                </div>
-                <button onClick={() => deleteExperience(e.id)} style={{ border: 'none', background: 'none', cursor: 'pointer', color: '#9CA3AF', fontSize: 13 }}>Delete</button>
-              </div>
+          {(student.experience || []).length === 0 && !addingExp && (
+            <div style={{ padding: '24px 16px', textAlign: 'center', background: '#F8FAFC', borderRadius: 8, border: '1px dashed #CBD5E1', color: '#64748B', fontSize: 13, marginBottom: 14 }}>
+              <Briefcase size={28} color="#94A3B8" style={{ margin: '0 auto 8px' }} />
+              <div style={{ fontWeight: 600, color: '#334155', marginBottom: 2 }}>No internships added yet</div>
+              <div>Add your remote, on-site, or hybrid internships with official verification letters to stand out to recruiters.</div>
             </div>
-          ))}
+          )}
+
+          {/* List of existing internships */}
+          {(student.experience || []).map(e => {
+            const docs = e.documents || {};
+            const skills = Array.isArray(e.skills) && e.skills.length > 0
+              ? e.skills
+              : (e.skillsUsed ? e.skillsUsed.split(',').map(s => s.trim()).filter(Boolean) : []);
+
+            return (
+              <div key={e.id} style={{ background: '#FFFFFF', border: '1px solid #E2E8F0', borderRadius: 8, padding: 16, marginBottom: 14, boxShadow: '0 1px 2px rgba(0,0,0,0.03)' }}>
+                {/* Header row */}
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 10, borderBottom: '1px solid #F1F5F9', paddingBottom: 10, marginBottom: 10 }}>
+                  <div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                      <span style={{ fontWeight: 700, fontSize: 15, color: '#0F172A' }}>{e.role}</span>
+                      <span style={{ color: '#64748B' }}>at</span>
+                      <span style={{ fontWeight: 600, fontSize: 15, color: '#2563EB' }}>{e.company}</span>
+                      {e.companyWebsite && (
+                        <a
+                          href={e.companyWebsite.startsWith('http') ? e.companyWebsite : `https://${e.companyWebsite}`}
+                          target="_blank"
+                          rel="noreferrer"
+                          style={{ color: '#64748B', display: 'inline-flex', alignItems: 'center', gap: 3, fontSize: 12, textDecoration: 'none' }}
+                        >
+                          <Globe size={13} /> {e.companyWebsite.replace(/^https?:\/\/(www\.)?/, '').split('/')[0]}
+                        </a>
+                      )}
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 12, fontSize: 12, color: '#64748B', marginTop: 4, flexWrap: 'wrap' }}>
+                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                        <Calendar size={13} /> {e.duration || `${e.startDate || ''} - ${e.endDate || 'Present'}`}
+                      </span>
+                      {e.studentName && (
+                        <span>Student: <strong>{e.studentName}</strong></span>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Badges & Actions */}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+                    <span style={{ padding: '2px 8px', borderRadius: 9999, background: '#EFF6FF', color: '#1E40AF', border: '1px solid #BFDBFE', fontSize: 11, fontWeight: 600 }}>
+                      {e.type || 'Internship'}
+                    </span>
+                    <span style={{ padding: '2px 8px', borderRadius: 9999, background: e.stipend === 'Unpaid' ? '#F1F5F9' : '#ECFDF5', color: e.stipend === 'Unpaid' ? '#475569' : '#065F46', border: `1px solid ${e.stipend === 'Unpaid' ? '#E2E8F0' : '#A7F3D0'}`, fontSize: 11, fontWeight: 600 }}>
+                      {e.stipend || 'Paid'}{e.stipendAmount ? ` (${e.stipendAmount})` : ''}
+                    </span>
+                    <button
+                      onClick={() => deleteExperience(e.id)}
+                      title="Delete internship"
+                      style={{ border: 'none', background: 'none', cursor: 'pointer', color: '#DC2626', padding: '4px', display: 'inline-flex', alignItems: 'center' }}
+                    >
+                      <Trash2 size={15} />
+                    </button>
+                  </div>
+                </div>
+
+                {/* Supervisor & HR details */}
+                {(e.supervisorName || e.supervisorEmail || e.hrContact) && (
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 10, background: '#F8FAFC', borderRadius: 6, padding: '8px 12px', fontSize: 12, marginBottom: 10 }}>
+                    {e.supervisorName && (
+                      <div>
+                        <span style={{ color: '#64748B' }}>Supervisor: </span>
+                        <strong style={{ color: '#1E293B' }}>{e.supervisorName}</strong>
+                      </div>
+                    )}
+                    {e.supervisorEmail && (
+                      <div>
+                        <span style={{ color: '#64748B' }}>Supervisor Email: </span>
+                        <a href={`mailto:${e.supervisorEmail}`} style={{ color: '#2563EB', textDecoration: 'none' }}>{e.supervisorEmail}</a>
+                      </div>
+                    )}
+                    {e.hrContact && (
+                      <div>
+                        <span style={{ color: '#64748B' }}>HR Contact: </span>
+                        <span style={{ color: '#1E293B' }}>{e.hrContact}</span>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Project Details */}
+                {(e.projectDetails || e.description) && (
+                  <div style={{ fontSize: 13, color: '#334155', lineHeight: 1.5, marginBottom: 10 }}>
+                    <strong style={{ color: '#0F172A', display: 'block', marginBottom: 2, fontSize: 12 }}>Project & Work Details:</strong>
+                    {e.projectDetails || e.description}
+                  </div>
+                )}
+
+                {/* Skills used */}
+                {skills.length > 0 && (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap', marginBottom: 10 }}>
+                    <span style={{ fontSize: 11, fontWeight: 600, color: '#64748B' }}>Skills:</span>
+                    {skills.map(sk => (
+                      <span key={sk} style={{ fontSize: 11, padding: '2px 8px', borderRadius: 4, background: '#F1F5F9', color: '#334155', border: '1px solid #E2E8F0' }}>
+                        {sk}
+                      </span>
+                    ))}
+                  </div>
+                )}
+
+                {/* Uploaded Documents Showcase */}
+                <div style={{ marginTop: 8, paddingTop: 8, borderTop: '1px dashed #E2E8F0' }}>
+                  <div style={{ fontSize: 11, fontWeight: 700, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: 6 }}>
+                    Uploaded Documentation ({Object.values(docs).filter(Boolean).length}/5):
+                  </div>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                    {docs.offerLetter ? (
+                      <a href={docs.offerLetter.url} target="_blank" rel="noreferrer" style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '4px 9px', borderRadius: 6, background: '#F0FDF4', border: '1px solid #BBF7D0', color: '#166534', fontSize: 11, textDecoration: 'none', fontWeight: 500 }}>
+                        <CheckCircle2 size={13} color="#16A34A" /> Offer Letter
+                      </a>
+                    ) : (
+                      <span style={{ padding: '4px 8px', borderRadius: 6, background: '#F8FAFC', border: '1px solid #E2E8F0', color: '#94A3B8', fontSize: 11 }}>
+                        Offer Letter: Not uploaded
+                      </span>
+                    )}
+
+                    {docs.completionCert ? (
+                      <a href={docs.completionCert.url} target="_blank" rel="noreferrer" style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '4px 9px', borderRadius: 6, background: '#F0FDF4', border: '1px solid #BBF7D0', color: '#166534', fontSize: 11, textDecoration: 'none', fontWeight: 500 }}>
+                        <CheckCircle2 size={13} color="#16A34A" /> Completion Certificate
+                      </a>
+                    ) : (
+                      <span style={{ padding: '4px 8px', borderRadius: 6, background: '#F8FAFC', border: '1px solid #E2E8F0', color: '#94A3B8', fontSize: 11 }}>
+                        Completion Certificate: Not uploaded
+                      </span>
+                    )}
+
+                    {docs.experienceLetter ? (
+                      <a href={docs.experienceLetter.url} target="_blank" rel="noreferrer" style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '4px 9px', borderRadius: 6, background: '#F0FDF4', border: '1px solid #BBF7D0', color: '#166534', fontSize: 11, textDecoration: 'none', fontWeight: 500 }}>
+                        <CheckCircle2 size={13} color="#16A34A" /> Experience Letter
+                      </a>
+                    ) : (
+                      <span style={{ padding: '4px 8px', borderRadius: 6, background: '#F8FAFC', border: '1px solid #E2E8F0', color: '#94A3B8', fontSize: 11 }}>
+                        Experience Letter: Not uploaded
+                      </span>
+                    )}
+
+                    {docs.projectReport ? (
+                      <a href={docs.projectReport.url} target="_blank" rel="noreferrer" style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '4px 9px', borderRadius: 6, background: '#F0FDF4', border: '1px solid #BBF7D0', color: '#166534', fontSize: 11, textDecoration: 'none', fontWeight: 500 }}>
+                        <CheckCircle2 size={13} color="#16A34A" /> Project Report
+                      </a>
+                    ) : (
+                      <span style={{ padding: '4px 8px', borderRadius: 6, background: '#F8FAFC', border: '1px solid #E2E8F0', color: '#94A3B8', fontSize: 11 }}>
+                        Project Report: Not uploaded
+                      </span>
+                    )}
+
+                    {docs.hrEmailProof ? (
+                      <a href={docs.hrEmailProof.url} target="_blank" rel="noreferrer" style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '4px 9px', borderRadius: 6, background: '#F0FDF4', border: '1px solid #BBF7D0', color: '#166534', fontSize: 11, textDecoration: 'none', fontWeight: 500 }}>
+                        <CheckCircle2 size={13} color="#16A34A" /> Supervisor / HR Email Proof
+                      </a>
+                    ) : (
+                      <span style={{ padding: '4px 8px', borderRadius: 6, background: '#F8FAFC', border: '1px solid #E2E8F0', color: '#94A3B8', fontSize: 11 }}>
+                        HR / Supervisor Email Proof: Not uploaded
+                      </span>
+                    )}
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+
+          {/* Add Internship Button */}
           {!addingExp ? (
-            <button onClick={() => setAddingExp(true)} style={{ padding: '6px 14px', border: '1px solid #E5E7EB', borderRadius: 6, background: '#fff', color: '#2563EB', cursor: 'pointer', fontSize: 13 }}>
-              Add experience
+            <button
+              onClick={() => {
+                setNewExp({ ...emptyInternship, studentName: student?.name || '' });
+                setAddingExp(true);
+              }}
+              style={{
+                padding: '8px 16px',
+                border: '1px solid #2563EB',
+                borderRadius: 6,
+                background: '#EFF6FF',
+                color: '#2563EB',
+                cursor: 'pointer',
+                fontSize: 13,
+                fontWeight: 600,
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 6,
+              }}
+            >
+              <Plus size={15} /> Add Internship & Upload Documents
             </button>
           ) : (
-            <div style={{ border: '1px solid #E5E7EB', borderRadius: 6, padding: 16 }}>
-              <FormField label="Company" id="ecomp" value={newExp.company} onChange={v => setNewExp({ ...newExp, company: v })} />
-              <FormField label="Role" id="erole" value={newExp.role} onChange={v => setNewExp({ ...newExp, role: v })} />
-              <FormField label="Duration" id="edur" value={newExp.duration} placeholder="e.g. May 2025 - Jul 2025" onChange={v => setNewExp({ ...newExp, duration: v })} />
-              <FormField label="Type" id="etype" type="select" value={newExp.type} options={['Internship', 'Full-time', 'Part-time', 'Research']} onChange={v => setNewExp({ ...newExp, type: v })} />
-              <FormField label="Description" id="edesc" type="textarea" rows={2} value={newExp.description} onChange={v => setNewExp({ ...newExp, description: v })} />
-              <div style={{ display: 'flex', gap: 8 }}>
-                <button onClick={addExperience} style={{ padding: '6px 14px', border: 'none', borderRadius: 6, background: '#2563EB', color: '#fff', cursor: 'pointer', fontSize: 13 }}>Save</button>
-                <button onClick={() => setAddingExp(false)} style={{ padding: '6px 14px', border: '1px solid #E5E7EB', borderRadius: 6, background: '#fff', color: '#374151', cursor: 'pointer', fontSize: 13 }}>Cancel</button>
+            /* Add Internship Form Modal/Card */
+            <div style={{ border: '1px solid #CBD5E1', borderRadius: 8, padding: 20, background: '#FAFCFF', marginTop: 12 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16, borderBottom: '1px solid #E2E8F0', paddingBottom: 10 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <Briefcase size={20} color="#2563EB" />
+                  <h3 style={{ margin: 0, fontSize: 16, fontWeight: 700, color: '#0F172A' }}>
+                    Add Internship Details & Documentation
+                  </h3>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setAddingExp(false)}
+                  style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#64748B' }}
+                >
+                  <X size={18} />
+                </button>
+              </div>
+
+              {docUploadError && (
+                <div style={{ padding: '8px 12px', background: '#FEF2F2', border: '1px solid #FECACA', borderRadius: 6, color: '#991B1B', fontSize: 12, marginBottom: 14 }}>
+                  {docUploadError}
+                </div>
+              )}
+
+              {/* 1. Internship Information */}
+              <div style={{ marginBottom: 16 }}>
+                <div style={{ fontSize: 12, fontWeight: 700, color: '#475569', textTransform: 'uppercase', marginBottom: 8 }}>
+                  1. Company & Role Information
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 12 }}>
+                  <FormField
+                    label="Student Name"
+                    id="exp-st-name"
+                    value={newExp.studentName}
+                    placeholder="Full name"
+                    onChange={v => setNewExp({ ...newExp, studentName: v })}
+                  />
+
+                  <FormField
+                    label="Company Name *"
+                    id="exp-company"
+                    value={newExp.company}
+                    placeholder="e.g. Google, Microsoft, Infosys"
+                    onChange={v => setNewExp({ ...newExp, company: v })}
+                  />
+
+                  <FormField
+                    label="Company Website"
+                    id="exp-website"
+                    value={newExp.companyWebsite}
+                    placeholder="https://company.com"
+                    onChange={v => setNewExp({ ...newExp, companyWebsite: v })}
+                  />
+
+                  <FormField
+                    label="Internship Role *"
+                    id="exp-role"
+                    value={newExp.role}
+                    placeholder="e.g. Software Developer, AI Intern"
+                    onChange={v => setNewExp({ ...newExp, role: v })}
+                  />
+
+                  <FormField
+                    label="Internship Type"
+                    id="exp-type"
+                    type="select"
+                    value={newExp.type}
+                    options={['Remote', 'On-site', 'Hybrid']}
+                    onChange={v => setNewExp({ ...newExp, type: v })}
+                  />
+
+                  <FormField
+                    label="Stipend"
+                    id="exp-stipend"
+                    type="select"
+                    value={newExp.stipend}
+                    options={['Paid', 'Unpaid']}
+                    onChange={v => setNewExp({ ...newExp, stipend: v })}
+                  />
+
+                  {newExp.stipend === 'Paid' && (
+                    <FormField
+                      label="Stipend Amount (optional)"
+                      id="exp-stipend-amount"
+                      value={newExp.stipendAmount}
+                      placeholder="e.g. ₹25,000 / month"
+                      onChange={v => setNewExp({ ...newExp, stipendAmount: v })}
+                    />
+                  )}
+
+                  <FormField
+                    label="Start Date"
+                    id="exp-start"
+                    type="date"
+                    value={newExp.startDate}
+                    onChange={v => setNewExp({ ...newExp, startDate: v })}
+                  />
+
+                  <FormField
+                    label="End Date"
+                    id="exp-end"
+                    type="date"
+                    value={newExp.endDate}
+                    onChange={v => setNewExp({ ...newExp, endDate: v })}
+                  />
+                </div>
+              </div>
+
+              {/* 2. Supervisor & HR Contact */}
+              <div style={{ marginBottom: 16 }}>
+                <div style={{ fontSize: 12, fontWeight: 700, color: '#475569', textTransform: 'uppercase', marginBottom: 8 }}>
+                  2. Supervisor & HR Official Contacts
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 12 }}>
+                  <FormField
+                    label="Supervisor Name"
+                    id="exp-sup-name"
+                    value={newExp.supervisorName}
+                    placeholder="Reporting manager name"
+                    onChange={v => setNewExp({ ...newExp, supervisorName: v })}
+                  />
+
+                  <FormField
+                    label="Supervisor Email"
+                    id="exp-sup-email"
+                    type="email"
+                    value={newExp.supervisorEmail}
+                    placeholder="manager@company.com"
+                    onChange={v => setNewExp({ ...newExp, supervisorEmail: v })}
+                  />
+
+                  <FormField
+                    label="HR Contact"
+                    id="exp-hr-contact"
+                    value={newExp.hrContact}
+                    placeholder="HR email or official contact details"
+                    onChange={v => setNewExp({ ...newExp, hrContact: v })}
+                  />
+                </div>
+              </div>
+
+              {/* 3. Skills & Project Details */}
+              <div style={{ marginBottom: 16 }}>
+                <div style={{ fontSize: 12, fontWeight: 700, color: '#475569', textTransform: 'uppercase', marginBottom: 8 }}>
+                  3. Skills Used & Work Details
+                </div>
+                <FormField
+                  label="Skills Used (comma-separated)"
+                  id="exp-skills"
+                  value={newExp.skillsUsed}
+                  placeholder="e.g. React, Node.js, Python, PostgreSQL, Docker"
+                  onChange={v => setNewExp({ ...newExp, skillsUsed: v })}
+                />
+
+                <FormField
+                  label="Project Details"
+                  id="exp-project-details"
+                  type="textarea"
+                  rows={3}
+                  value={newExp.projectDetails}
+                  placeholder="Describe key responsibilities, features developed, and achievements during your internship..."
+                  onChange={v => setNewExp({ ...newExp, projectDetails: v })}
+                />
+              </div>
+
+              {/* 4. Document Uploads */}
+              <div style={{ marginBottom: 20 }}>
+                <div style={{ fontSize: 12, fontWeight: 700, color: '#475569', textTransform: 'uppercase', marginBottom: 8 }}>
+                  4. Upload Supporting Documents (PDF, PNG, JPG - Max 10 MB)
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: 12 }}>
+                  {[
+                    { key: 'offerLetter', label: 'Internship Offer Letter', desc: 'Appointment or offer letter on company letterhead' },
+                    { key: 'completionCert', label: 'Internship Completion Certificate', desc: 'Awarded upon internship completion' },
+                    { key: 'experienceLetter', label: 'Internship Experience Letter', desc: 'Formal experience certificate stating tenure' },
+                    { key: 'projectReport', label: 'Internship Project Report', desc: 'Summary documentation or project presentation' },
+                    { key: 'hrEmailProof', label: 'HR / Supervisor Official Email ID', desc: 'Screenshot or proof of official communication' },
+                  ].map(docItem => {
+                    const uploaded = newExp.documents?.[docItem.key];
+                    const isUploading = uploadingDocKey === docItem.key;
+
+                    return (
+                      <div
+                        key={docItem.key}
+                        style={{
+                          border: `1px solid ${uploaded ? '#BBF7D0' : '#E2E8F0'}`,
+                          borderRadius: 8,
+                          padding: 12,
+                          background: uploaded ? '#F0FDF4' : '#FFFFFF',
+                          display: 'flex',
+                          flexDirection: 'column',
+                          justifyContent: 'space-between',
+                          gap: 8,
+                        }}
+                      >
+                        <div>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                            <FileText size={16} color={uploaded ? '#16A34A' : '#64748B'} />
+                            <strong style={{ fontSize: 13, color: '#0F172A' }}>{docItem.label}</strong>
+                          </div>
+                          <div style={{ fontSize: 11, color: '#64748B', marginTop: 3 }}>
+                            {docItem.desc}
+                          </div>
+                        </div>
+
+                        {uploaded ? (
+                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingTop: 6, borderTop: '1px solid #DCFCE7' }}>
+                            <a
+                              href={uploaded.url}
+                              target="_blank"
+                              rel="noreferrer"
+                              style={{ fontSize: 11, color: '#166534', fontWeight: 600, textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 4 }}
+                            >
+                              <CheckCircle2 size={13} color="#16A34A" /> View Uploaded File
+                            </a>
+                            <button
+                              type="button"
+                              onClick={() => handleRemoveInternshipDoc(docItem.key)}
+                              style={{ background: 'none', border: 'none', color: '#DC2626', cursor: 'pointer', fontSize: 11, display: 'inline-flex', alignItems: 'center', gap: 3 }}
+                            >
+                              <X size={12} /> Remove
+                            </button>
+                          </div>
+                        ) : (
+                          <label
+                            style={{
+                              marginTop: 4,
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              gap: 6,
+                              padding: '6px 12px',
+                              borderRadius: 6,
+                              background: isUploading ? '#E2E8F0' : '#F1F5F9',
+                              border: '1px solid #CBD5E1',
+                              color: '#1E293B',
+                              fontSize: 12,
+                              fontWeight: 500,
+                              cursor: isUploading ? 'not-allowed' : 'pointer',
+                            }}
+                          >
+                            <input
+                              type="file"
+                              accept=".pdf,.png,.jpg,.jpeg,application/pdf,image/png,image/jpeg"
+                              disabled={isUploading}
+                              style={{ display: 'none' }}
+                              onChange={ev => {
+                                const f = ev.target.files?.[0];
+                                if (f) handleInternshipDocUpload(docItem.key, f);
+                              }}
+                            />
+                            {isUploading ? (
+                              <>
+                                <RefreshCw size={13} className="animate-spin" /> Uploading...
+                              </>
+                            ) : (
+                              <>
+                                <UploadCloud size={14} /> Upload {docItem.label.split(' ')[1] || 'Doc'}
+                              </>
+                            )}
+                          </label>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Form Buttons */}
+              <div style={{ display: 'flex', gap: 10, borderTop: '1px solid #E2E8F0', paddingTop: 14 }}>
+                <button
+                  type="button"
+                  onClick={addExperience}
+                  style={{
+                    padding: '8px 18px',
+                    borderRadius: 6,
+                    background: '#2563EB',
+                    color: '#fff',
+                    border: 'none',
+                    fontWeight: 600,
+                    fontSize: 13,
+                    cursor: 'pointer',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: 6,
+                  }}
+                >
+                  <Check size={15} /> Save Internship Record
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setAddingExp(false)}
+                  style={{
+                    padding: '8px 16px',
+                    borderRadius: 6,
+                    background: '#fff',
+                    color: '#374151',
+                    border: '1px solid #D1D5DB',
+                    fontSize: 13,
+                    cursor: 'pointer',
+                  }}
+                >
+                  Cancel
+                </button>
               </div>
             </div>
           )}
         </div>,
-        <div style={{ fontSize: 13, color: '#6B7280' }}>Manage experience from the view mode above.</div>
+        <div style={{ fontSize: 13, color: '#6B7280' }}>
+          Manage your verified internships and official supporting documents above.
+        </div>
       )}
 
       {/* Links */}

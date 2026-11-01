@@ -306,7 +306,12 @@ export default function CompanyCandidateDetail() {
               <div><strong>CGPA:</strong> {student.cgpa} / 10.0 (Backlogs: {student.backlogs})</div>
               {student.experience && student.experience.length > 0 && (
                 <div style={{ marginTop: 6 }}>
-                  <strong>Prior Experience:</strong> {student.experience[0].role} at {student.experience[0].company}
+                  <strong>Prior Experience:</strong> {student.experience[0].role} at {student.experience[0].company} ({student.experience[0].type || 'Internship'})
+                  {Object.values(student.experience[0].documents || {}).some(Boolean) && (
+                    <span style={{ marginLeft: 6, fontSize: 10, padding: '1px 6px', background: '#ECFDF5', color: '#065F46', borderRadius: 4, border: '1px solid #A7F3D0', fontWeight: 600 }}>
+                      Verified Documents Attached
+                    </span>
+                  )}
                 </div>
               )}
               <div style={{ marginTop: 8 }}>

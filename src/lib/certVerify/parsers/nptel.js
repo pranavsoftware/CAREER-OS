@@ -78,3 +78,4 @@ export function parse(htmlOrJson, url) {
 
   return { parsed: false, valid: false };
 }
+

@@ -186,3 +186,4 @@ export function compareCertificate({ student, form, issuerData, qrUrl, typedUrl 
     issuerData,
   };
 }
+

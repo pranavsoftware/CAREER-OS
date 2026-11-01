@@ -38,3 +38,4 @@ venv/
 ai-service/models/
 *.mp4
 ai-interview-fixes.jsx
+.private_uploads/
