@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { query } from '@/lib/db';
 import { verifyRole } from '@/lib/rbac';
+import { notifyShortlistSent, notifyCDCShortlistReady } from '@/lib/emailEvents';
 
 export async function POST(request, { params }) {
   try {
@@ -80,7 +81,7 @@ export async function POST(request, { params }) {
       ]);
     }
 
-    // 6. Log email dispatch into sent_mails
+    // 6. Log email dispatch into sent_mails and send live emails via Resend
     const sentMailId = `sm_sl_${Date.now()}`;
     await query(`
       INSERT INTO sent_mails (
@@ -95,6 +96,30 @@ export async function POST(request, { params }) {
       `Approved Candidates for ${job.company}`,
       approvedCandidates.length
     ]);
+
+    // Dispatch emails to students & recruiter
+    try {
+      for (const c of approvedCandidates) {
+        if (c.email) {
+          await notifyShortlistSent({
+            student: { id: c.student_id, name: c.name, email: c.email },
+            job: { id: jobId, title: job.title, company: job.company },
+          });
+        }
+      }
+
+      // Check if recruiter email exists
+      const recruiterRes = await query('SELECT email FROM users WHERE role = $1 LIMIT 1', ['company']);
+      if (recruiterRes.rows[0]?.email) {
+        await notifyCDCShortlistReady(
+          { id: jobId, title: job.title, company: job.company },
+          recruiterRes.rows[0].email,
+          approvedCandidates.length
+        );
+      }
+    } catch (e) {
+      console.warn('Shortlist live email error:', e.message);
+    }
 
     return NextResponse.json({
       success: true,

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import Layout from '../../components/Layout';
 import Badge, { getBadgeVariant } from '../../components/Badge';
@@ -103,6 +103,41 @@ export default function StudentProfile() {
   const [newProject, setNewProject] = useState({ title: '', description: '', technologies: '', link: '', year: 2026 });
   const [addingExp, setAddingExp] = useState(false);
   const [newExp, setNewExp] = useState({ company: '', role: '', duration: '', description: '', type: 'Internship' });
+
+  // Email Notification Preferences State
+  const [emailPrefs, setEmailPrefs] = useState({
+    drives: true,
+    reminders: true,
+    circulars: true,
+    marketing: true,
+  });
+  const [prefSaved, setPrefSaved] = useState(false);
+
+  useEffect(() => {
+    if (student?.email) {
+      fetch(`/api/email/preferences?email=${encodeURIComponent(student.email)}`)
+        .then(r => r.json())
+        .then(d => {
+          if (d.emailPreferences) setEmailPrefs(d.emailPreferences);
+        })
+        .catch(() => {});
+    }
+  }, [student?.email]);
+
+  async function handlePrefToggle(key, val) {
+    const next = { ...emailPrefs, [key]: val };
+    setEmailPrefs(next);
+    if (!student?.email) return;
+    try {
+      await fetch('/api/email/preferences', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: student.email, preferences: next }),
+      });
+      setPrefSaved(true);
+      setTimeout(() => setPrefSaved(false), 2500);
+    } catch (_) {}
+  }
 
   function startEdit(section) {
     setEditing(section);
@@ -817,6 +852,43 @@ export default function StudentProfile() {
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
           <FormField label="GitHub" id="github" value={student.github || ''} onChange={v => dispatch({ type: 'UPDATE_STUDENT', payload: { id: student.id, github: v } })} placeholder="https://github.com/username" />
           <FormField label="LinkedIn" id="linkedin" value={student.linkedin || ''} onChange={v => dispatch({ type: 'UPDATE_STUDENT', payload: { id: student.id, linkedin: v } })} placeholder="https://linkedin.com/in/username" />
+        </div>
+      </div>
+
+      {/* Email & Notification Preferences */}
+      <div style={{ background: '#fff', border: '1px solid #E5E7EB', borderRadius: 6, padding: 20, marginBottom: 16 }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+          <div>
+            <h2 style={{ margin: 0, fontSize: 15, fontWeight: 600, color: '#111827' }}>Email &amp; Notification Preferences</h2>
+            <p style={{ margin: '4px 0 0', fontSize: 12, color: '#6B7280' }}>
+              Control notifications delivered to <strong style={{ color: '#2563EB' }}>{student.email}</strong>. Critical account alerts and urgent interview changes are always delivered.
+            </p>
+          </div>
+          {prefSaved && (
+            <span style={{ fontSize: 12, color: '#16A34A', fontWeight: 600 }}>✓ Saved</span>
+          )}
+        </div>
+
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 14 }}>
+          {[
+            { key: 'drives', label: 'Campus Drives & Shortlists', desc: 'New drive announcements, application status, and CDC endorsements' },
+            { key: 'reminders', label: 'Interview Reminders', desc: '24h and 1h reminders with calendar .ics invites and room links' },
+            { key: 'circulars', label: 'Placement Notices & Materials', desc: 'Official placement directorate circulars and study materials' },
+            { key: 'marketing', label: 'Referrals & Placement Tips', desc: 'Peer referral earnings, wallet credits, and placement trends' },
+          ].map(item => (
+            <div key={item.key} style={{ border: '1px solid #E5E7EB', borderRadius: 6, padding: 14, background: '#F9FAFB' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+                <span style={{ fontSize: 13, fontWeight: 600, color: '#111827' }}>{item.label}</span>
+                <input
+                  type="checkbox"
+                  checked={emailPrefs[item.key] !== false}
+                  onChange={e => handlePrefToggle(item.key, e.target.checked)}
+                  style={{ width: 16, height: 16, accentColor: '#2563EB', cursor: 'pointer' }}
+                />
+              </div>
+              <p style={{ margin: 0, fontSize: 12, color: '#6B7280', lineHeight: 1.4 }}>{item.desc}</p>
+            </div>
+          ))}
         </div>
       </div>
     </Layout>

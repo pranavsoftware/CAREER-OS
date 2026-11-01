@@ -1,5 +1,10 @@
 import { NextResponse } from 'next/server';
 import { query } from '@/lib/db';
+import {
+  notifyProfileVerified,
+  notifyProfileVerificationFailed,
+  notifyProfileDiscrepancy,
+} from '@/lib/emailEvents';
 
 export async function GET(request, { params }) {
   try {
@@ -173,7 +178,28 @@ export async function PUT(request, { params }) {
       id
     ]);
 
-    return NextResponse.json({ student: res.rows[0] });
+    const updatedStudent = res.rows[0];
+
+    // Trigger verification notification emails
+    try {
+      if (finalProfileStatus === 'Verified' && current.profileStatus !== 'Verified') {
+        await notifyProfileVerified(updatedStudent);
+      } else if (finalProfileStatus !== 'Verified' && evalResult.auditLogs?.length > 0) {
+        const discrepancyLog = evalResult.auditLogs.find(l => l.decision === 'FLAGGED');
+        if (discrepancyLog) {
+          await notifyProfileDiscrepancy(
+            updatedStudent,
+            discrepancyLog.section,
+            discrepancyLog.reasons?.join(', ') || 'Registry mismatch',
+            'Submitted values'
+          );
+        }
+      }
+    } catch (e) {
+      console.warn('Verification email alert error:', e.message);
+    }
+
+    return NextResponse.json({ student: updatedStudent });
   } catch (error) {
     console.error('Student PUT ID error:', error);
     return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });

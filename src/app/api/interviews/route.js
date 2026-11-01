@@ -1,5 +1,12 @@
 import { NextResponse } from 'next/server';
 import { query } from '@/lib/db';
+import {
+  notifyInterviewScheduled,
+  notifyInterviewRescheduled,
+  notifyInterviewCancelled,
+  notifyInterviewFeedback,
+  notifyInterviewScoreSubmitted,
+} from '@/lib/emailEvents';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
@@ -126,6 +133,25 @@ export async function POST(req) {
       createdAt: new Date().toISOString(),
     };
 
+    // Trigger email notifications to candidates
+    try {
+      for (const st of studentsList) {
+        if (st.email) {
+          await notifyInterviewScheduled({
+            student: st,
+            companyName: data.company || 'Campus Partner',
+            round: data.type || 'Technical Round',
+            date: data.date,
+            time: data.time,
+            mode: data.meetingProvider || 'Online Video',
+            meetLink: data.meetingUrl || (meetingId ? `https://career-os.local/meet/${meetingId}` : null),
+          });
+        }
+      }
+    } catch (mailErr) {
+      console.warn('Failed to dispatch interview scheduled emails:', mailErr.message);
+    }
+
     return NextResponse.json({ success: true, interview: createdInterview }, { headers: NO_CACHE_HEADERS });
   } catch (error) {
     console.error('Error saving interview to database:', error);
@@ -139,6 +165,15 @@ export async function PUT(req) {
     if (!data.id) {
       return NextResponse.json({ error: 'Missing interview id' }, { status: 400, headers: NO_CACHE_HEADERS });
     }
+
+    // Fetch existing row for notification context
+    const prevRes = await query(`
+      SELECT id, company, role, type, date, time, student_id AS "studentId",
+             student_name AS "studentName", student_email AS "studentEmail", students
+      FROM interviews
+      WHERE id = $1 OR meeting_id = $1
+    `, [data.id]);
+    const prev = prevRes.rows[0] || {};
 
     await query(`
       UPDATE interviews
@@ -163,6 +198,46 @@ export async function PUT(req) {
       data.meetingProvider || null,
       data.meetingUrl !== undefined ? (data.meetingUrl || null) : null,
     ]);
+
+    // Send emails on status or timing updates
+    try {
+      const studentList = Array.isArray(data.students || prev.students)
+        ? (data.students || prev.students)
+        : [{ id: prev.studentId, name: prev.studentName, email: prev.studentEmail }];
+
+      for (const st of studentList) {
+        if (!st.email) continue;
+        if (data.status === 'Cancelled') {
+          await notifyInterviewCancelled({
+            student: st,
+            companyName: prev.company || data.company,
+            round: prev.type || data.type || 'Interview',
+            reason: data.notes || 'Recruiter rescheduling requirement',
+          });
+        } else if ((data.date && data.date !== prev.date) || (data.time && data.time !== prev.time)) {
+          await notifyInterviewRescheduled({
+            student: st,
+            companyName: prev.company || data.company,
+            round: prev.type || data.type || 'Interview',
+            newDate: data.date || prev.date,
+            newTime: data.time || prev.time,
+            reason: data.notes,
+            meetLink: data.meetingUrl,
+          });
+        }
+
+        if (data.evaluation && data.evaluation.overallScore) {
+          await notifyInterviewFeedback({
+            student: st,
+            companyName: prev.company,
+            round: prev.type || 'Technical Round',
+            overallScore: data.evaluation.overallScore,
+          });
+        }
+      }
+    } catch (e) {
+      console.warn('Failed to dispatch interview update emails:', e.message);
+    }
 
     return NextResponse.json({ success: true }, { headers: NO_CACHE_HEADERS });
   } catch (error) {

@@ -848,9 +848,31 @@ async function runMigrationAndSeed() {
     INSERT INTO users (id, name, email, password, role, display_role, avatar)
     VALUES ('user_aspirant', 'Demo Aspirant (Rahul Verma)', 'aspirant@demo.com', 'demo', 'aspirant', 'Class 12th Pass-Out • CBSE PCM', 'RV')
     ON CONFLICT (id) DO UPDATE SET name = EXCLUDED.name, role = EXCLUDED.role;
+
+    -- Phase 5 Email Logs and User Preferences
+    CREATE TABLE IF NOT EXISTS email_logs (
+      id TEXT PRIMARY KEY,
+      to_email TEXT NOT NULL,
+      subject TEXT NOT NULL,
+      event_type TEXT,
+      status TEXT DEFAULT 'queued',
+      error TEXT,
+      attempts INT DEFAULT 0,
+      provider_id TEXT,
+      meta JSONB DEFAULT '{}'::jsonb,
+      created_at TIMESTAMPTZ DEFAULT NOW(),
+      sent_at TIMESTAMPTZ
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_email_logs_status ON email_logs(status, created_at);
+    CREATE UNIQUE INDEX IF NOT EXISTS idx_email_logs_dedupe ON email_logs(event_type, to_email, (meta->>'dedupeKey')) WHERE meta->>'dedupeKey' IS NOT NULL;
+
+    ALTER TABLE users ADD COLUMN IF NOT EXISTS email_preferences JSONB
+      DEFAULT '{"drives":true,"reminders":true,"circulars":true,"marketing":true}'::jsonb;
   `);
 
   console.log('Seeded Phase 4 aspirant schemas & user.');
+  console.log('Seeded Phase 5 email notification schemas & tables.');
 
   console.log('Database migration and seeding completed successfully!');
 }

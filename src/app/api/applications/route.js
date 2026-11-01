@@ -1,5 +1,11 @@
 import { NextResponse } from 'next/server';
 import { query } from '@/lib/db';
+import {
+  notifyApplicationSubmitted,
+  notifyApplicationStatusChanged,
+  notifyOfferLetter,
+  notifyNewApplicationReceived,
+} from '@/lib/emailEvents';
 
 export async function GET(request) {
   try {
@@ -70,7 +76,30 @@ export async function POST(request) {
       await query('UPDATE jobs SET applicants_count = applicants_count + 1 WHERE id = $1', [a.jobId]);
     }
 
-    return NextResponse.json({ application: res.rows[0] });
+    const applicationRow = res.rows[0];
+
+    // Trigger emails asynchronously
+    try {
+      const studentRes = await query('SELECT id, name, email, cgpa FROM students WHERE id = $1', [a.studentId]);
+      const student = studentRes.rows[0];
+      if (student) {
+        await notifyApplicationSubmitted({
+          student,
+          job: { id: a.jobId || a.driveId, title: a.role, role: a.role, company: a.company },
+          application: applicationRow,
+        });
+
+        // Notify recruiter if company email is known
+        const companyUserRes = await query('SELECT email FROM users WHERE role = $1 AND company_id IS NOT NULL LIMIT 1', ['company']);
+        if (companyUserRes.rows[0]?.email) {
+          await notifyNewApplicationReceived(companyUserRes.rows[0].email, student, { id: a.jobId, title: a.role, role: a.role });
+        }
+      }
+    } catch (mailErr) {
+      console.warn('Failed to send application submitted emails:', mailErr.message);
+    }
+
+    return NextResponse.json({ application: applicationRow });
   } catch (error) {
     console.error('Applications POST API error:', error);
     return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
@@ -106,7 +135,34 @@ export async function PATCH(request) {
         status, notes, status_history AS "statusHistory"
     `, [status ?? null, notes ?? null, JSON.stringify(history), id]);
 
-    return NextResponse.json({ application: res.rows[0] });
+    const updatedRow = res.rows[0];
+
+    // Trigger status change email
+    try {
+      const studentRes = await query('SELECT id, name, email FROM students WHERE id = $1', [updatedRow.studentId]);
+      const student = studentRes.rows[0];
+      if (student) {
+        await notifyApplicationStatusChanged({
+          student,
+          job: { id: updatedRow.jobId || updatedRow.driveId, title: updatedRow.role, role: updatedRow.role, company: updatedRow.company },
+          newStatus: updatedRow.status,
+          remarks: notes,
+        });
+
+        if (updatedRow.status === 'Offer Released' || updatedRow.status === 'Placed') {
+          await notifyOfferLetter({
+            student,
+            companyName: updatedRow.company,
+            role: updatedRow.role,
+            ctc: updatedRow.ctc,
+          });
+        }
+      }
+    } catch (mailErr) {
+      console.warn('Failed to send status update email:', mailErr.message);
+    }
+
+    return NextResponse.json({ application: updatedRow });
   } catch (error) {
     console.error('Applications PATCH API error:', error);
     return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });

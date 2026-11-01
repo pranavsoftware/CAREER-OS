@@ -4,6 +4,24 @@
   "outputDirectory": ".next",
   "installCommand": "npm install",
   "regions": ["sin1"],
+  "crons": [
+    {
+      "path": "/api/cron/send-emails",
+      "schedule": "*/10 * * * *"
+    },
+    {
+      "path": "/api/cron/interview-reminders",
+      "schedule": "0 * * * *"
+    },
+    {
+      "path": "/api/cron/certificate-expiry",
+      "schedule": "0 0 * * *"
+    },
+    {
+      "path": "/api/cron/university-digest",
+      "schedule": "30 2 * * *"
+    }
+  ],
   "headers": [
     {
       "source": "/api/(.*)",

@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { query } from '@/lib/db';
+import { notifyNewCircular } from '@/lib/emailEvents';
 
 export async function GET() {
   try {
@@ -58,7 +59,23 @@ export async function POST(request) {
       m.linkedMailId || null
     ]);
 
-    return NextResponse.json({ success: true, sentMail: res.rows[0] });
+    const sentMailRow = res.rows[0];
+
+    // Dispatch circular notifications via email
+    try {
+      const studentsRes = await query('SELECT id, name, email FROM students LIMIT 200');
+      const students = studentsRes.rows || [];
+      await notifyNewCircular({
+        id,
+        title: m.subject,
+        priority: m.targetType === 'urgent' ? 'High' : 'Normal',
+        content: m.body,
+      }, students);
+    } catch (mailErr) {
+      console.warn('Sent-mails dispatch warning:', mailErr.message);
+    }
+
+    return NextResponse.json({ success: true, sentMail: sentMailRow });
   } catch (error) {
     console.error('Sent Mails POST API error:', error);
     return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });

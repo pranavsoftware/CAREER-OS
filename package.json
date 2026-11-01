@@ -11,6 +11,7 @@
     "build": "next build",
     "start": "next start -H 0.0.0.0",
     "db:seed": "node scripts/seed.mjs",
+    "email:test": "node scripts/test-emails.mjs",
     "lint": "oxlint",
     "copy:mediapipe": "node scripts/setup-mediapipe.mjs",
     "dev:vite": "vite",
@@ -30,6 +31,7 @@
     "react-dom": "^19.2.8",
     "react-router-dom": "^7.18.4",
     "recharts": "^3.10.1",
+    "resend": "^6.37.0",
     "tailwindcss": "^4.3.3",
     "three": "^0.186.1"
   },

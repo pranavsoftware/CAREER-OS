@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { query } from '@/lib/db';
+import { notifyCollegeApplicationStatusChanged } from '@/lib/emailEvents';
 
 export const dynamic = 'force-dynamic';
 
@@ -55,6 +56,25 @@ export async function POST(request) {
       VALUES ($1, $2, $3, $4, 'Applied', 'Application received by institutional admissions office.')
     `, [id, user, collegeId, course]);
 
+    // Send email notification to aspirant
+    try {
+      const [uRes, colRes] = await Promise.all([
+        query('SELECT name, email FROM users WHERE id = $1', [user]),
+        query('SELECT name FROM colleges WHERE id = $1', [collegeId]),
+      ]);
+      const aspirantUser = uRes.rows[0];
+      const college = colRes.rows[0];
+      if (aspirantUser?.email) {
+        await notifyCollegeApplicationStatusChanged(
+          { id, course, status: 'Applied' },
+          aspirantUser,
+          college
+        );
+      }
+    } catch (e) {
+      console.warn('Aspirant application email warning:', e.message);
+    }
+
     return NextResponse.json({ success: true, message: 'Application successfully submitted!' });
   } catch (error) {
     console.error('Aspirant applications POST error:', error);
@@ -62,3 +82,43 @@ export async function POST(request) {
   }
 }
 
+export async function PATCH(request) {
+  try {
+    const { id, status, remarks } = await request.json();
+    if (!id || !status) {
+      return NextResponse.json({ error: 'ID and status required' }, { status: 400 });
+    }
+
+    const res = await query(`
+      UPDATE college_applications
+      SET status = $1, remarks = COALESCE($2, remarks)
+      WHERE id = $3
+      RETURNING id, aspirant_id AS "aspirantId", college_id AS "collegeId", course, status, remarks
+    `, [status, remarks || null, id]);
+
+    if (res.rows.length === 0) {
+      return NextResponse.json({ error: 'Application not found' }, { status: 404 });
+    }
+
+    const appRow = res.rows[0];
+
+    try {
+      const [uRes, colRes] = await Promise.all([
+        query('SELECT name, email FROM users WHERE id = $1', [appRow.aspirantId]),
+        query('SELECT name FROM colleges WHERE id = $1', [appRow.collegeId]),
+      ]);
+      const aspirantUser = uRes.rows[0];
+      const college = colRes.rows[0];
+      if (aspirantUser?.email) {
+        await notifyCollegeApplicationStatusChanged(appRow, aspirantUser, college);
+      }
+    } catch (e) {
+      console.warn('Aspirant patch email warning:', e.message);
+    }
+
+    return NextResponse.json({ success: true, application: appRow });
+  } catch (error) {
+    console.error('Aspirant applications PATCH error:', error);
+    return NextResponse.json({ error: error.message || 'Internal Server Error' }, { status: 500 });
+  }
+}

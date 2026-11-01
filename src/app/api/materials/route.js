@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { query } from '@/lib/db';
+import { notifyNewStudyMaterial } from '@/lib/emailEvents';
 
 export async function GET(request) {
   try {
@@ -78,7 +79,22 @@ export async function POST(request) {
       JSON.stringify(m.playlist || [])
     ]);
 
-    return NextResponse.json({ success: true, material: res.rows[0] });
+    const createdMaterial = res.rows[0];
+
+    // Notify students of new study material
+    try {
+      const studentsRes = await query('SELECT id, name, email FROM students LIMIT 100');
+      const students = studentsRes.rows || [];
+      await notifyNewStudyMaterial({
+        id,
+        title: m.title,
+        subject: m.category || 'Placement Preparation',
+      }, students);
+    } catch (e) {
+      console.warn('Material email alert warning:', e.message);
+    }
+
+    return NextResponse.json({ success: true, material: createdMaterial });
   } catch (error) {
     console.error('Materials POST API error:', error);
     return NextResponse.json({ error: 'Internal Server Error', details: error.message }, { status: 500 });
