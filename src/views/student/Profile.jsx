@@ -524,7 +524,7 @@ export default function StudentProfile() {
                 gap: 6,
               }}
             >
-              ✓ Submit &amp; Unlock All Features
+              <Check size={14} /> Submit &amp; Unlock All Features
             </button>
           )}
         </div>
@@ -1771,7 +1771,9 @@ export default function StudentProfile() {
             </p>
           </div>
           {prefSaved && (
-            <span style={{ fontSize: 12, color: '#16A34A', fontWeight: 600 }}>✓ Saved</span>
+            <span style={{ fontSize: 12, color: '#16A34A', fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+              <Check size={13} color="#16A34A" /> Saved
+            </span>
           )}
         </div>
 

@@ -119,7 +119,7 @@ export async function GET(request) {
         id: u.id,
         name: u.name,
         city: u.city || 'Bangalore',
-        logo: u.logo || '🏛️',
+        logo: u.logo || null,
         score: finalScore,
         sampleSize: verifiedCount,
         totalStudents: totalCount,

@@ -19,6 +19,7 @@ import {
   ExternalLink,
   ChevronRight,
   Info,
+  Check,
 } from 'lucide-react';
 
 export default function UniversityInsights() {
@@ -130,7 +131,9 @@ export default function UniversityInsights() {
                 <div key={u.id} style={{ background: '#fff', border: '1px solid #E2E8F0', borderRadius: 10, padding: 16, boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                     <div>
-                      <span style={{ fontSize: 20 }}>{u.logo}</span>
+                      <div style={{ display: 'inline-flex', padding: 6, borderRadius: 8, background: '#EFF6FF', border: '1px solid #BFDBFE', marginBottom: 4 }}>
+                        <Building2 size={18} color="#2563EB" />
+                      </div>
                       <h4 style={{ fontSize: 15, fontWeight: 700, color: '#0F172A', margin: '4px 0 2px' }}>{u.name}</h4>
                       <div style={{ fontSize: 12, color: '#64748B' }}>{u.city} • {u.sampleSize} Verified Candidates</div>
                     </div>
@@ -141,8 +144,8 @@ export default function UniversityInsights() {
                   </div>
                   <div style={{ marginTop: 12, display: 'flex', flexWrap: 'wrap', gap: 6 }}>
                     {u.strengths?.map((s, idx) => (
-                      <span key={idx} style={{ fontSize: 11, padding: '2px 8px', background: '#F1F5F9', color: '#334155', borderRadius: 4, fontWeight: 500 }}>
-                        ✓ {s}
+                      <span key={idx} style={{ fontSize: 11, padding: '2px 8px', background: '#F1F5F9', color: '#334155', borderRadius: 4, fontWeight: 500, display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                        <Check size={11} color="#059669" /> {s}
                       </span>
                     ))}
                   </div>
@@ -250,7 +253,7 @@ export default function UniversityInsights() {
                           }}>
                             {u.rank}
                           </span>
-                          <span style={{ fontSize: 18 }}>{u.logo}</span>
+                          <span style={{ display: 'inline-flex', padding: 4, borderRadius: 6, background: '#EFF6FF', border: '1px solid #BFDBFE' }}><Building2 size={16} color="#2563EB" /></span>
                           <div>
                             <div style={{ fontWeight: 600, color: '#1E293B' }}>{u.name}</div>
                             {u.insufficientSample && (

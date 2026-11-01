@@ -1609,9 +1609,12 @@ export default function StudentAiInterview() {
                       </div>
 
                       {/* Hold Stability Indicator */}
-                      <div style={{ fontSize: 10, color: bothHandsVisible ? '#86EFAC' : '#FCA5A5', marginTop: 2, fontWeight: 600 }}>
+                      <div style={{ fontSize: 10, color: bothHandsVisible ? '#86EFAC' : '#FCA5A5', marginTop: 2, fontWeight: 600, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4 }}>
                         {bothHandsVisible
-                          ? '✓ Position verified! Counting down...'
+                          ? <>
+                              <CheckCircle2 size={11} color="#10B981" />
+                              <span>Position verified! Counting down...</span>
+                            </>
                           : challengeHoldProgress > 0
                           ? `Holding steady: ${challengeHoldProgress}%`
                           : challengeMode === 'both_hands'

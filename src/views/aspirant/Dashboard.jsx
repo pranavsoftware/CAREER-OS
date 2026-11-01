@@ -171,8 +171,8 @@ export default function AspirantDashboard() {
                         <h4 style={{ fontSize: 14, fontWeight: 700, color: '#0F172A', margin: '0 0 3px' }}>{col.name}</h4>
                         <div style={{ fontSize: 12, color: '#64748B' }}>{col.location} • {col.accreditation}</div>
                       </div>
-                      <span style={{ fontSize: 11, fontWeight: 700, padding: '2px 8px', borderRadius: 4, background: '#DCFCE7', color: '#15803D' }}>
-                        Eligible ✓
+                      <span style={{ fontSize: 11, fontWeight: 700, padding: '2px 8px', borderRadius: 4, background: '#DCFCE7', color: '#15803D', display: 'inline-flex', alignItems: 'center', gap: 3 }}>
+                        <CheckCircle2 size={12} color="#15803D" /> Eligible
                       </span>
                     </div>
 

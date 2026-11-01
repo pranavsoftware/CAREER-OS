@@ -19,6 +19,7 @@ import {
   ChevronDown,
   Layers,
   Send,
+  Check,
 } from 'lucide-react';
 
 export default function CollegeExplorer() {
@@ -311,9 +312,16 @@ export default function CollegeExplorer() {
                             fontWeight: 600,
                             color: isComparing ? '#4F46E5' : '#64748B',
                             cursor: 'pointer',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: 3,
                           }}
                         >
-                          {isComparing ? '✓ Comparing' : '+ Compare'}
+                          {isComparing ? (
+                            <>
+                              <Check size={11} color="#4F46E5" /> Comparing
+                            </>
+                          ) : '+ Compare'}
                         </button>
                         <button
                           type="button"
@@ -436,9 +444,14 @@ export default function CollegeExplorer() {
                         <span style={{
                           padding: '2px 8px', borderRadius: 4, fontSize: 11, fontWeight: 700,
                           background: c.eligible ? '#DCFCE7' : '#FEE2E2',
-                          color: c.eligible ? '#15803D' : '#DC2626'
+                          color: c.eligible ? '#15803D' : '#DC2626',
+                          display: 'inline-flex', alignItems: 'center', gap: 3
                         }}>
-                          {c.eligible ? 'Eligible ✓' : 'Cutoff Not Met'}
+                          {c.eligible ? (
+                            <>
+                              <Check size={11} color="#15803D" /> Eligible
+                            </>
+                          ) : 'Cutoff Not Met'}
                         </span>
                       </td>
                     ))}

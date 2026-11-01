@@ -2188,9 +2188,16 @@ export default function CompanyInterviews() {
                     fontSize: 13,
                     fontWeight: 700,
                     cursor: rescheduleActionLoading ? 'not-allowed' : 'pointer',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: 6,
                   }}
                 >
-                  {rescheduleActionLoading ? 'Updating...' : `✓ Approve Candidate Slot (${selectedRescheduleReq.proposedDate || selectedRescheduleReq.proposed_date})`}
+                  {rescheduleActionLoading ? 'Updating...' : (
+                    <>
+                      <Check size={14} /> Approve Candidate Slot ({selectedRescheduleReq.proposedDate || selectedRescheduleReq.proposed_date})
+                    </>
+                  )}
                 </button>
               </div>
             </div>

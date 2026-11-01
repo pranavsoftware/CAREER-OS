@@ -652,7 +652,7 @@ export default function StudentMaterials() {
                               fontWeight: 600,
                             }}
                           >
-                            <CheckCircle2 size={12} /> ✓ Enrolled
+                            <CheckCircle2 size={12} /> Enrolled
                           </span>
                           {!isCompleted ? (
                             <button
@@ -684,7 +684,7 @@ export default function StudentMaterials() {
                                 fontWeight: 600,
                               }}
                             >
-                              <CheckCircle2 size={12} /> ✓ Completed
+                              <CheckCircle2 size={12} /> Completed
                             </span>
                           )}
                         </div>
@@ -696,8 +696,8 @@ export default function StudentMaterials() {
                       <div style={{ borderTop: '1px solid #E5E7EB', paddingTop: 10, marginTop: 10 }}>
                         {/* Avg rating read-only */}
                         {avgInfo && (
-                          <div style={{ fontSize: 12, color: '#6B7280', marginBottom: 6 }}>
-                            ⭐ {avgInfo.avg} / {avgInfo.count} rating{avgInfo.count !== 1 ? 's' : ''}
+                          <div style={{ fontSize: 12, color: '#6B7280', marginBottom: 6, display: 'flex', alignItems: 'center', gap: 4 }}>
+                            <Star size={13} fill="#F59E0B" color="#F59E0B" /> {avgInfo.avg} / {avgInfo.count} rating{avgInfo.count !== 1 ? 's' : ''}
                           </div>
                         )}
 
@@ -708,14 +708,16 @@ export default function StudentMaterials() {
                               key={s}
                               onClick={() => handleRatingStarClick(m.id, s)}
                               style={{
-                                fontSize: 20,
                                 cursor: 'pointer',
-                                color: s <= displayStars ? '#F59E0B' : '#D1D5DB',
-                                lineHeight: 1,
-                                userSelect: 'none',
+                                display: 'inline-flex',
+                                alignItems: 'center',
                               }}
                             >
-                              ★
+                              <Star
+                                size={16}
+                                fill={s <= displayStars ? '#F59E0B' : 'transparent'}
+                                color={s <= displayStars ? '#F59E0B' : '#CBD5E1'}
+                              />
                             </span>
                           ))}
                           <span style={{ fontSize: 11, color: '#9CA3AF', marginLeft: 4 }}>

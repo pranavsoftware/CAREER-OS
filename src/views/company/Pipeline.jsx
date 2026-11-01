@@ -6,6 +6,7 @@ import FormField from '../../components/FormField';
 import Badge from '../../components/Badge';
 import { useData } from '../../context/DataContext';
 import { useAuth } from '../../context/AuthContext';
+import { Check } from 'lucide-react';
 
 const PIPELINE_STAGES = [
   'Shortlisted',
@@ -185,8 +186,8 @@ export default function CompanyPipeline() {
         {/* CDC Shortlist Badge */}
         {card.isCdcShortlisted && (
           <div style={{ marginBottom: 6 }}>
-            <span style={{ fontSize: 10, fontWeight: 700, background: '#ECFDF5', color: '#059669', border: '1px solid #A7F3D0', padding: '1px 6px', borderRadius: 4 }}>
-              ✓ CDC Verified Shortlist
+            <span style={{ fontSize: 10, fontWeight: 700, background: '#ECFDF5', color: '#059669', border: '1px solid #A7F3D0', padding: '1px 6px', borderRadius: 4, display: 'inline-flex', alignItems: 'center', gap: 3 }}>
+              <Check size={11} color="#059669" /> CDC Verified Shortlist
             </span>
           </div>
         )}

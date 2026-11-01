@@ -212,9 +212,9 @@ export default function UniversityReferrals() {
                               setEndorseModal(rec);
                               setCustomEndorsement(`Strongly endorsed by ${rec.facultyName} for excellence in engineering and technical delivery.`);
                             }}
-                            style={{ padding: '7px 14px', background: '#059669', color: '#fff', border: 'none', borderRadius: 6, fontSize: 12, fontWeight: 600, cursor: 'pointer' }}
+                            style={{ padding: '7px 14px', background: '#059669', color: '#fff', border: 'none', borderRadius: 6, fontSize: 12, fontWeight: 600, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 4 }}
                           >
-                            ✓ Endorse Badge
+                            <CheckCircle2 size={13} color="#fff" /> Endorse Badge
                           </button>
                           <button
                             type="button"

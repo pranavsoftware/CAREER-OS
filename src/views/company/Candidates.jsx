@@ -345,9 +345,12 @@ export default function CompanyCandidates() {
                         background: isSel ? '#EFF6FF' : '#fff',
                         color: isSel ? '#1D4ED8' : '#475569',
                         cursor: 'pointer',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: 3,
                       }}
                     >
-                      {isSel && '✓ '}
+                      {isSel && <Check size={11} />}
                       {iss}
                     </button>
                   );
@@ -378,9 +381,12 @@ export default function CompanyCandidates() {
                         background: isSel ? '#F0FDF4' : '#fff',
                         color: isSel ? '#15803D' : '#475569',
                         cursor: 'pointer',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: 3,
                       }}
                     >
-                      {isSel && '✓ '}
+                      {isSel && <Check size={11} />}
                       {sk}
                     </button>
                   );

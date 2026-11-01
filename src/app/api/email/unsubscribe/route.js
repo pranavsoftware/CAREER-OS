@@ -61,7 +61,15 @@ export async function GET(request) {
         </head>
         <body>
           <div class="card">
-            <div style="font-size: 40px; margin-bottom: 12px;">🔕</div>
+            <div style="margin-bottom: 16px; display: inline-flex; padding: 12px; background: #334155; border-radius: 50%;">
+              <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#94A3B8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M10.268 21a2 2 0 0 0 3.464 0"></path>
+                <path d="M13.916 4.678A5 5 0 0 0 7.4 9.2L7 14.5"></path>
+                <path d="M17 14.5l.4-5.3a5 5 0 0 0-1.8-3.9"></path>
+                <path d="M2 2l20 20"></path>
+                <path d="M4 17h16"></path>
+              </svg>
+            </div>
             <h2 style="margin: 0 0 12px; font-size: 20px;">Email Notifications Unsubscribed</h2>
             <p style="color: #94A3B8; font-size: 14px; line-height: 1.6; margin: 0 0 16px;">
               You have been unsubscribed from non-critical campus notifications for <strong style="color: #38BDF8;">${email}</strong>.

@@ -13,6 +13,7 @@ import StatCard from '../../components/StatCard';
 import Badge from '../../components/Badge';
 import DataTable from '../../components/DataTable';
 import { useData } from '../../context/DataContext';
+import { CheckCircle2 } from 'lucide-react';
 
 export default function UniversityDashboard() {
   const { state } = useData();
@@ -118,8 +119,8 @@ export default function UniversityDashboard() {
           </p>
 
           {exceptionStudents.length === 0 ? (
-            <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#F0FDF4', border: '1px solid #BBF7D0', borderRadius: 6, padding: 16, color: '#15803D', fontSize: 13, fontWeight: 600 }}>
-              ✓ All records synchronized - Zero active discrepancies in registry
+            <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, background: '#F0FDF4', border: '1px solid #BBF7D0', borderRadius: 6, padding: 16, color: '#15803D', fontSize: 13, fontWeight: 600 }}>
+              <CheckCircle2 size={16} color="#16A34A" /> All records synchronized - Zero active discrepancies in registry
             </div>
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8, flex: 1 }}>

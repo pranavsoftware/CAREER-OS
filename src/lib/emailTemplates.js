@@ -377,7 +377,7 @@ export function interviewFeedbackAvailable({ studentName, companyName, round, ov
 // 10. Offer letter released
 export function offerLetterReleased({ studentName, companyName, role, ctc, deadline, offerUrl, unsubToken }) {
   return {
-    subject: `🎉 Congratulations! Job Offer from ${companyName} (${ctc} LPA)`,
+    subject: `Congratulations! Job Offer from ${companyName} (${ctc} LPA)`,
     html: renderEmailLayout({
       title: 'Formal Placement Offer',
       heading: `Congratulations, ${studentName}!`,
@@ -400,7 +400,7 @@ export function offerLetterReleased({ studentName, companyName, role, ctc, deadl
 // 11. Profile verified
 export function profileVerified({ studentName, verifiedAt, profileUrl, unsubToken }) {
   return {
-    subject: '✓ Your University Placement Profile is Fully Verified',
+    subject: 'Your University Placement Profile is Fully Verified',
     html: renderEmailLayout({
       title: 'Profile Verification Complete',
       heading: 'Profile Verification Successful',
@@ -465,7 +465,7 @@ export function profileDiscrepancyFlagged({ studentName, section, registryValue,
 export function newCircular({ studentName, title, priority, summary, circularUrl, unsubToken }) {
   const isHigh = priority === 'High' || priority === 'Urgent';
   return {
-    subject: `[Placement Notice] ${isHigh ? '⚠️ URGENT: ' : ''}${title}`,
+    subject: `[Placement Notice] ${isHigh ? 'URGENT: ' : ''}${title}`,
     html: renderEmailLayout({
       title: 'Placement Cell Circular',
       heading: escapeHtml(title),
@@ -486,7 +486,7 @@ export function newCircular({ studentName, title, priority, summary, circularUrl
 // 15. Placement pass approved
 export function placementPassApproved({ studentName, validUntil, passUrl, unsubToken }) {
   return {
-    subject: '✓ Your Digital Placement Drive Hall Pass is Approved',
+    subject: 'Your Digital Placement Drive Hall Pass is Approved',
     html: renderEmailLayout({
       title: 'Digital Drive Pass Approved',
       heading: 'Campus Drive Hall Pass Ready',
@@ -575,7 +575,7 @@ export function referralCreated({ studentName, referralCode, referralBonus = '50
 // 19. Referral earned
 export function referralEarned({ studentName, referredName, rewardAmount, walletUrl, unsubToken }) {
   return {
-    subject: `🎉 Referral Reward Earned: ${rewardAmount} Credited`,
+    subject: `Referral Reward Earned: ${rewardAmount} Credited`,
     html: renderEmailLayout({
       title: 'Referral Reward Credited',
       heading: 'Referral Bonus Unlocked!',
@@ -942,7 +942,7 @@ export function certAutoVerified({ studentName, certTitle, issuer, skills = [] }
     </p>
     <div style="background-color: #F0FDF4; border: 1px solid #BBF7D0; border-radius: 8px; padding: 18px; margin: 16px 0 24px;">
       <h3 style="margin: 0 0 8px; font-size: 16px; color: #166534; font-weight: 700;">
-        ✓ Certificate Verified by Issuer
+        Certificate Verified by Issuer
       </h3>
       <p style="margin: 0; font-size: 13px; color: #15803D; line-height: 20px;">
         Your credential <strong>"${escapeHtml(certTitle)}"</strong> from <strong>${escapeHtml(issuer)}</strong> has been verified directly against issuer registries.
@@ -1012,7 +1012,7 @@ export function certApprovedByOfficer({ studentName, certTitle, issuer, remark }
     </p>
     <div style="background-color: #F0FDF4; border: 1px solid #BBF7D0; border-radius: 8px; padding: 18px; margin: 16px 0 24px;">
       <h3 style="margin: 0 0 8px; font-size: 16px; color: #166534; font-weight: 700;">
-        ✓ Certificate Approved by Placement Directorate
+        Certificate Approved by Placement Directorate
       </h3>
       <p style="margin: 0; font-size: 13px; color: #15803D; line-height: 20px;">
         Your university placement cell has approved <strong>"${escapeHtml(certTitle)}"</strong> (${escapeHtml(issuer)}).
@@ -1080,7 +1080,7 @@ export function certFlaggedAlert({ officerName = 'Placement Officer', studentNam
     </p>
     <div style="background-color: #FEF2F2; border: 1px solid #FECACA; border-radius: 8px; padding: 18px; margin: 16px 0 24px;">
       <h3 style="margin: 0 0 8px; font-size: 16px; color: #991B1B; font-weight: 700;">
-        ⚠️ Security Alert: Certificate Flagged for Discrepancy
+        Security Alert: Certificate Flagged for Discrepancy
       </h3>
       <p style="margin: 0 0 8px; font-size: 13px; color: #B91C1C; line-height: 20px;">
         A certificate uploaded by student <strong>${escapeHtml(studentName)}</strong> (${escapeHtml(regNo)}) was flagged during automated registry verification.
