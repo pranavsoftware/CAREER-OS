@@ -149,6 +149,8 @@ export async function PUT(request, { params }) {
         profile_completion = COALESCE($14, profile_completion),
         cgpa = COALESCE($15, cgpa),
         backlogs = COALESCE($16, backlogs),
+        dob = COALESCE($18, dob),
+        gender = COALESCE($19, gender),
         updated_at = NOW()
       WHERE id = $17
       RETURNING 
@@ -175,7 +177,9 @@ export async function PUT(request, { params }) {
       s.profileCompletion ?? null,
       s.cgpa ?? null,
       s.backlogs ?? null,
-      id
+      id,
+      s.dob ?? null,
+      s.gender ?? null,
     ]);
 
     const updatedStudent = res.rows[0];

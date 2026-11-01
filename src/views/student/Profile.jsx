@@ -851,7 +851,7 @@ export default function StudentProfile() {
             <div key={e.id} style={{ borderBottom: '1px solid #F3F4F6', paddingBottom: 12, marginBottom: 12 }}>
               <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                 <div>
-                  <div style={{ fontWeight: 600, fontSize: 14, color: '#111827' }}>{e.role} — {e.company}</div>
+                  <div style={{ fontWeight: 600, fontSize: 14, color: '#111827' }}>{e.role} - {e.company}</div>
                   <div style={{ fontSize: 12, color: '#6B7280', margin: '2px 0' }}>{e.duration} | {e.type}</div>
                   <div style={{ fontSize: 13, color: '#374151' }}>{e.description}</div>
                 </div>

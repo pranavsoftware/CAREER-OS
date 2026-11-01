@@ -113,7 +113,7 @@ export default function UniversityDashboard() {
 
           {exceptionStudents.length === 0 ? (
             <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#F0FDF4', border: '1px solid #BBF7D0', borderRadius: 6, padding: 16, color: '#15803D', fontSize: 13, fontWeight: 600 }}>
-              ✓ All records synchronized — Zero active discrepancies in registry
+              ✓ All records synchronized - Zero active discrepancies in registry
             </div>
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8, flex: 1 }}>
