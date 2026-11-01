@@ -147,7 +147,7 @@ export default function UniversityDriveDetail() {
   ];
 
   return (
-    <Layout title={`Drive Details: ${drive.company} — ${drive.role}`}>
+    <Layout title={`Drive Details: ${drive.company} - ${drive.role}`}>
       {/* Back button and status message */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
         <Link to="/university/drives" style={{ fontSize: 13, color: '#2563EB', textDecoration: 'none' }}>
@@ -165,7 +165,7 @@ export default function UniversityDriveDetail() {
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
           <div>
             <h1 style={{ margin: '0 0 4px', fontSize: 20, fontWeight: 700, color: '#111827' }}>
-              {drive.company} — {drive.role}
+              {drive.company} - {drive.role}
             </h1>
             <div style={{ fontSize: 13, color: '#4B5563', marginBottom: 8 }}>
               Package: <strong>{drive.ctc} LPA</strong> • Registration Deadline: <strong>{drive.deadline}</strong>
@@ -241,7 +241,7 @@ export default function UniversityDriveDetail() {
 
       {/* Edit Drive Modal */}
       {showEditModal && editingForm && (
-        <Modal isOpen={showEditModal} title={`Edit Placement Drive — ${editingForm.company}`} onClose={() => setShowEditModal(false)}>
+        <Modal isOpen={showEditModal} title={`Edit Placement Drive - ${editingForm.company}`} onClose={() => setShowEditModal(false)}>
           <form onSubmit={handleEditSubmit}>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
               <FormField label="Company Name" required>

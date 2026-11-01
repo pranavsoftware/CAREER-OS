@@ -4,7 +4,7 @@ import jpeg from 'jpeg-js';
 
 /**
  * Extracts QR code URL from an image buffer (PNG, JPG/JPEG) or PDF.
- * Never throws — always returns { found: boolean, url?: string, error?: string }
+ * Never throws - always returns { found: boolean, url?: string, error?: string }
  *
  * @param {Buffer} buffer - File buffer
  * @param {string} mimeType - 'image/png' | 'image/jpeg' | 'application/pdf'

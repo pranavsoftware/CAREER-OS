@@ -3,6 +3,7 @@ import Layout from '../../components/Layout';
 import Badge from '../../components/Badge';
 import Modal from '../../components/Modal';
 import { useData } from '../../context/DataContext';
+import { useAuth } from '../../context/AuthContext';
 import {
   Sparkles,
   Video,
@@ -47,9 +48,32 @@ const FORMATS = [
 const BRANCH_OPTIONS = ['All', 'CSE', 'IT', 'ECE', 'EEE', 'Mechanical'];
 
 export default function StudentMaterials() {
+  const { user } = useAuth();
   const { state, dispatch } = useData();
   const materials = state.materials || [];
-  const currentStudent = state.students[0];
+
+  // Dynamically resolve authenticated student
+  const currentStudent = (state.students || []).find(s => 
+    (user?.studentId && s.id === user.studentId) ||
+    (user?.email && s.email && s.email.toLowerCase() === user.email.toLowerCase())
+  ) || (state.students || []).find(s => s.id === 's_1793531317131') || (state.students || [])[0];
+
+  // Dynamically resolve student's branch (e.g. 'ECE', 'CSE', 'IT', etc.)
+  const rawBranch = currentStudent?.branch || (
+    user?.displayRole && (
+      user.displayRole.includes('ECE') ? 'ECE' :
+      user.displayRole.includes('CSE') ? 'CSE' :
+      user.displayRole.includes('IT') ? 'IT' :
+      user.displayRole.includes('EEE') ? 'EEE' :
+      user.displayRole.includes('MECH') ? 'MECH' :
+      user.displayRole.includes('CIVIL') ? 'CIVIL' :
+      user.displayRole.includes('AIML') ? 'AIML' :
+      user.displayRole.match(/(?:B\.Tech|Branch)\s+([A-Za-z]+)/i)?.[1]
+    )
+  ) || 'ECE';
+
+  const studentBranch = (rawBranch || 'ECE').trim().toUpperCase();
+
   const materialEnrollments = state.materialEnrollments || [];
   const materialRatings = state.materialRatings || [];
 
@@ -67,10 +91,17 @@ export default function StudentMaterials() {
 
   // Top Courses state
   const [topCat, setTopCat] = useState('');
-  const [topBranch, setTopBranch] = useState('');
+  const [topBranch, setTopBranch] = useState(studentBranch);
   const [topCourses, setTopCourses] = useState([]);
   const [topLoading, setTopLoading] = useState(false);
   const [topError, setTopError] = useState(null);
+
+  // Update topBranch if student branch loads
+  useEffect(() => {
+    if (studentBranch && !topBranch) {
+      setTopBranch(studentBranch);
+    }
+  }, [studentBranch]);
 
   // Fetch top courses
   useEffect(() => {
@@ -96,15 +127,17 @@ export default function StudentMaterials() {
   }, [activeTab, topCat, topBranch]);
 
   // Helpers
+  const activeStudentId = currentStudent?.id || user?.studentId || 's_1793531317131';
+
   function getEnrollment(materialId) {
     return materialEnrollments.find(
-      e => e.materialId === materialId && e.studentId === currentStudent?.id
+      e => e.materialId === materialId && (e.studentId === activeStudentId || e.student_id === activeStudentId)
     );
   }
 
   function getRating(materialId) {
     return materialRatings.find(
-      r => r.materialId === materialId && r.studentId === currentStudent?.id
+      r => r.materialId === materialId && (r.studentId === activeStudentId || r.student_id === activeStudentId)
     );
   }
 
@@ -116,13 +149,13 @@ export default function StudentMaterials() {
   }
 
   function handleEnroll(materialId) {
-    if (!currentStudent) return;
-    dispatch({ type: 'ENROLL_MATERIAL', payload: { materialId, studentId: currentStudent.id } });
+    if (!activeStudentId) return;
+    dispatch({ type: 'ENROLL_MATERIAL', payload: { materialId, studentId: activeStudentId } });
   }
 
   function handleComplete(materialId) {
-    if (!currentStudent) return;
-    dispatch({ type: 'COMPLETE_MATERIAL', payload: { materialId, studentId: currentStudent.id, completed: true } });
+    if (!activeStudentId) return;
+    dispatch({ type: 'COMPLETE_MATERIAL', payload: { materialId, studentId: activeStudentId, completed: true } });
   }
 
   function handleRatingStarClick(materialId, stars) {
@@ -273,9 +306,15 @@ export default function StudentMaterials() {
     const hasContent = Boolean(m.fileUrl || m.referenceLink || m.notesContent || (m.playlist && m.playlist.length > 0));
     if (!hasContent) return false;
 
-    // Strict branch assignment filter
-    const studentBranch = currentStudent?.branch || 'CSE';
-    const matchBranch = !m.targetBranch || m.targetBranch === 'All' || m.targetBranch === studentBranch;
+    // Strict branch assignment filter:
+    // A student only sees materials assigned specifically to their branch (or general 'All' campus materials).
+    // Students must NEVER see materials designated for other specific branches (e.g. CSE, IT, MECH, EEE).
+    const mBranch = (m.targetBranch || m.target_branch || 'All').trim().toUpperCase();
+    const sBranch = (studentBranch || '').trim().toUpperCase();
+
+    const matchBranch = mBranch === 'ALL' || mBranch === sBranch || (
+      (sBranch === 'MECH' || sBranch === 'MECHANICAL') && (mBranch === 'MECH' || mBranch === 'MECHANICAL')
+    );
     if (!matchBranch) return false;
 
     // Search and Category Filters
@@ -351,7 +390,7 @@ export default function StudentMaterials() {
             </p>
           </div>
           <div style={{ background: 'rgba(255,255,255,0.15)', padding: '6px 14px', borderRadius: 20, fontSize: 12, fontWeight: 600 }}>
-            Branch: {currentStudent?.branch || 'CSE'}
+            Branch: {studentBranch}
           </div>
         </div>
       </div>
@@ -878,8 +917,8 @@ export default function StudentMaterials() {
               {topCourses.map((course, idx) => {
                 const rank = idx + 1;
                 const isFirst = rank === 1;
-                const avgStars = typeof course.avgStars === 'number' ? course.avgStars.toFixed(1) : (course.avgRating || course.avg_stars || '—');
-                const enrollCount = course.enrollCount ?? course.enroll_count ?? course.totalEnrolled ?? '—';
+                const avgStars = typeof course.avgStars === 'number' ? course.avgStars.toFixed(1) : (course.avgRating || course.avg_stars || '-');
+                const enrollCount = course.enrollCount ?? course.enroll_count ?? course.totalEnrolled ?? '-';
                 const completionRate = course.completionRate ?? course.completion_rate ?? null;
                 const score = course.score ?? null;
 

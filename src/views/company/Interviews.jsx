@@ -1508,7 +1508,7 @@ export default function CompanyInterviews() {
                       ) : (
                         <div>
                           <div style={{ padding: '8px 12px', fontSize: 11, fontWeight: 700, color: '#6B7280', background: '#F9FAFB', borderBottom: '1px solid #F3F4F6', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                            Matching Students ({candidateSearchResults.length}) — Click to select
+                            Matching Students ({candidateSearchResults.length}) - Click to select
                           </div>
                           {candidateSearchResults.map(student => {
                             const isSelected = selectedStudents.some(s => s.id === student.id);

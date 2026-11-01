@@ -39,7 +39,7 @@ export default function Landing() {
             <span style={{ fontSize: 20, fontWeight: 800, color: '#4F46E5', letterSpacing: '-0.04em' }}>CAREER-OS</span>
           </Link>
 
-          {/* Desktop Nav — hidden on mobile */}
+          {/* Desktop Nav - hidden on mobile */}
           <nav className="desktop-flex" style={{ alignItems: 'center', gap: 28, flex: 1, justifyContent: 'center' }}>
             {[['#home','Home'],['#about','Platform'],['#capabilities','Capabilities'],['/about','About Us'],['#experience','Experience'],['#contact','Placement Cell']].map(([href,label]) => (
               href.startsWith('/') ? (
@@ -61,7 +61,7 @@ export default function Landing() {
               {hasAuth ? 'Dashboard' : 'Launch Portal'}
             </Link>
 
-            {/* Mobile hamburger — hidden on desktop */}
+            {/* Mobile hamburger - hidden on desktop */}
             <button
               onClick={() => setMobileMenuOpen(true)}
               className="mobile-only"
@@ -206,7 +206,7 @@ export default function Landing() {
             <div style={{ borderRadius: 24, overflow: 'hidden', boxShadow: '0 12px 36px -8px rgba(0,0,0,0.12)', aspectRatio: '4/3', width: '100%' }}>
               <img src="/hero_photo.jpg" alt="Students on campus placement platform" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
             </div>
-            {/* Floating stat card — desktop only */}
+            {/* Floating stat card - desktop only */}
             <div
               className="desktop-flex"
               style={{ position: 'absolute', bottom: 20, right: 20, background: 'rgba(255,255,255,0.95)', backdropFilter: 'blur(12px)', borderRadius: 16, padding: '14px 22px', boxShadow: '0 8px 24px rgba(0,0,0,0.12)', alignItems: 'center', gap: 22 }}

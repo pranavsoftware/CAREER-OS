@@ -3,7 +3,7 @@ import { NextResponse } from 'next/server';
 
 export const dynamic = 'force-dynamic';
 
-// GET — returns a ranked list of materials with Bayesian-blended scores
+// GET - returns a ranked list of materials with Bayesian-blended scores
 export async function GET(request) {
   try {
     const { searchParams } = new URL(request.url);

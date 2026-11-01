@@ -348,7 +348,10 @@ export default function CollegeExplorer() {
                     </h3>
                     <div style={{ fontSize: 12, color: '#64748B', display: 'flex', alignItems: 'center', gap: 4, marginBottom: 12 }}>
                       <MapPin size={13} />
-                      <span>{col.location} • {col.accreditation} • ⭐ {col.rating}</span>
+                      <span>{col.location} • {col.accreditation} • </span>
+                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3 }}>
+                        <Star size={12} fill="#F59E0B" color="#F59E0B" /> {col.rating}
+                      </span>
                     </div>
 
                     {/* Key Metrics */}
@@ -484,7 +487,9 @@ export default function CollegeExplorer() {
                     <td style={{ padding: '10px 12px', fontWeight: 600, color: '#475569' }}>Accreditation & Rating</td>
                     {compareList.map(c => (
                       <td key={c.id} style={{ padding: '10px 12px', color: '#334155' }}>
-                        {c.accreditation} (⭐ {c.rating})
+                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                          {c.accreditation} (<Star size={12} fill="#F59E0B" color="#F59E0B" /> {c.rating})
+                        </span>
                       </td>
                     ))}
                   </tr>
@@ -558,7 +563,7 @@ export default function CollegeExplorer() {
                 >
                   {(applyCollege.courses || []).map((crs, i) => (
                     <option key={i} value={crs.name}>
-                      {crs.name} ({crs.duration || '4 Years'}) — {crs.seats || 60} Seats
+                      {crs.name} ({crs.duration || '4 Years'}) - {crs.seats || 60} Seats
                     </option>
                   ))}
                 </select>

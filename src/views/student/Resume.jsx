@@ -494,7 +494,7 @@ export default function StudentResume() {
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
                   {myCerts.map(cert => (
                     <div key={cert.id} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12 }}>
-                      <span><strong>{cert.title}</strong> — {cert.issuer}</span>
+                      <span><strong>{cert.title}</strong> - {cert.issuer}</span>
                       <span style={{ color: '#6B7280', fontSize: 11 }}>Issued: {cert.issueDate}</span>
                     </div>
                   ))}

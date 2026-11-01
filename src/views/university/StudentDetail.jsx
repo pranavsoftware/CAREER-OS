@@ -335,9 +335,9 @@ export default function UniversityStudentDetail() {
                   <div>
                     <div><strong>Name:</strong> {student.name}</div>
                     <div><strong>Email:</strong> {student.email}</div>
-                    <div><strong>Phone:</strong> {student.phone || '—'}</div>
+                    <div><strong>Phone:</strong> {student.phone || '-'}</div>
                     <div><strong>Registration Number:</strong> {student.regNo}</div>
-                    <div><strong>Date of Birth:</strong> {student.dob || '—'}</div>
+                    <div><strong>Date of Birth:</strong> {student.dob || '-'}</div>
                   </div>
                 )}
 

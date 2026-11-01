@@ -502,7 +502,7 @@ console.log(twoSum([2, 7, 11, 15], 9)); // Output: [0, 1]
   const [questionTimeLeft, setQuestionTimeLeft] = useState(null); // in seconds
   const [assessmentTab, setAssessmentTab] = useState('onspot'); // 'onspot' | 'session' | 'custom'
 
-  // MCQ & Coding countdown timer — starts ticking from active question's display
+  // MCQ & Coding countdown timer - starts ticking from active question's display
   useEffect(() => {
     if (!activeQuestion) {
       setQuestionTimeLeft(null);

@@ -3,7 +3,7 @@ import { NextResponse } from 'next/server';
 
 export const dynamic = 'force-dynamic';
 
-// POST — submit or update a rating
+// POST - submit or update a rating
 export async function POST(request, { params }) {
   try {
     const { id: materialId } = await params;
@@ -59,7 +59,7 @@ export async function POST(request, { params }) {
   }
 }
 
-// GET — get the rating for a student
+// GET - get the rating for a student
 export async function GET(request, { params }) {
   try {
     const { id: materialId } = await params;

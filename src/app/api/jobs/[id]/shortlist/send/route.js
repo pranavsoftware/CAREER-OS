@@ -118,7 +118,7 @@ export async function POST(request, { params }) {
     `, [
       sentMailId,
       'University Career Development Center (CDC)',
-      `Official Candidate Shortlist Dispatched: ${job.company} — ${job.title}`,
+      `Official Candidate Shortlist Dispatched: ${job.company} - ${job.title}`,
       `The CDC placement team has officially verified and recommended ${approvedCandidates.length} top candidates for ${job.title} at ${job.company}. Candidates have been advanced into the Recruiter Pipeline in the 'Shortlisted' stage and notified of next technical interview steps.`,
       `Approved Candidates for ${job.company}`,
       approvedCandidates.length

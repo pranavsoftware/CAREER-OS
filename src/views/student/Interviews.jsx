@@ -860,7 +860,7 @@ export default function StudentInterviews() {
         {rescheduleModal && (
           <Modal
             isOpen={Boolean(rescheduleModal)}
-            title={`Request Interview Reschedule — ${rescheduleModal.company || 'Recruiter'}`}
+            title={`Request Interview Reschedule - ${rescheduleModal.company || 'Recruiter'}`}
             onClose={() => !rrLoading && setRescheduleModal(null)}
           >
             <form onSubmit={handleSubmitReschedule}>

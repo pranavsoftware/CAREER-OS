@@ -324,10 +324,10 @@ export default function RecordsImport() {
                     {parsedRows.slice(0, 15).map((row, idx) => (
                       <tr key={idx} style={{ borderBottom: '1px solid #F1F5F9', background: idx % 2 === 0 ? '#fff' : '#F8FAFC' }}>
                         <td style={{ padding: '8px 10px', fontWeight: 600, color: '#0F172A' }}>
-                          {row.reg_no || row.regno || '—'}
+                          {row.reg_no || row.regno || '-'}
                         </td>
                         <td style={{ padding: '8px 10px', color: '#334155' }}>
-                          {row.name || '—'}
+                          {row.name || '-'}
                         </td>
                         <td style={{ padding: '8px 10px', color: '#334155' }}>
                           <span style={{ padding: '2px 6px', background: '#E2E8F0', borderRadius: 4, fontSize: 10, fontWeight: 700 }}>

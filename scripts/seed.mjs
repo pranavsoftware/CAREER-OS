@@ -662,6 +662,10 @@ async function runMigrationAndSeed() {
   `);
   console.log('Phase 2 schemas ensured.');
 
+  // 16b. Ensure branch-specific materials exist and are categorized by branch
+  const { seedBranchMaterials } = await import('./seed-materials-branches.mjs');
+  await seedBranchMaterials();
+
   // 17. Seed sample material enrollments and ratings
   // Get a sample of material IDs from DB
   const matRes = await client.query(`SELECT id FROM materials LIMIT 6`);

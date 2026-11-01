@@ -405,7 +405,7 @@ export default function UniversityDrives() {
                   >
                     <div>
                       <div style={{ fontWeight: 600, fontSize: 13, color: '#111827' }}>
-                        {job.company} — {job.title} ({job.ctc} LPA)
+                        {job.company} - {job.title} ({job.ctc} LPA)
                       </div>
                       <div style={{ fontSize: 12, color: '#6B7280', marginTop: 2 }}>
                         Openings: {job.openings} • Min CGPA: {job.minCgpa} • Branches: {(job.eligibleBranches || []).join(', ')} • Deadline: {job.deadline}
@@ -468,7 +468,7 @@ export default function UniversityDrives() {
                 >
                   {jobs.map(j => (
                     <option key={j.id} value={j.id}>
-                      {j.company} — {j.title} ({j.ctc} LPA) • {j.openings} Openings
+                      {j.company} - {j.title} ({j.ctc} LPA) • {j.openings} Openings
                     </option>
                   ))}
                 </select>
@@ -971,7 +971,7 @@ export default function UniversityDrives() {
 
       {/* Edit Drive Modal */}
       {showEditModal && editingDrive && (
-        <Modal isOpen={showEditModal} title={`Edit Placement Drive — ${editingDrive.company}`} onClose={() => setShowEditModal(false)}>
+        <Modal isOpen={showEditModal} title={`Edit Placement Drive - ${editingDrive.company}`} onClose={() => setShowEditModal(false)}>
           <form onSubmit={handleEditSubmit}>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
               <FormField label="Company Name" required>

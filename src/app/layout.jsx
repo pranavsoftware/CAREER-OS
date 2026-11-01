@@ -37,7 +37,7 @@ export default function RootLayout({ children }) {
         {/* Viewport & Safe-Area for iPhone */}
         <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
 
-        {/* iOS Safari PWA — required for proper routing & full-screen */}
+        {/* iOS Safari PWA - required for proper routing & full-screen */}
         <meta name="mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="default" />

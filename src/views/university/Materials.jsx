@@ -802,7 +802,10 @@ export default function UniversityMaterials() {
                     </td>
                     <td style={{ padding: '12px 14px', color: '#64748B' }}>{row.targetBranch}</td>
                     <td style={{ padding: '12px 14px', color: '#F59E0B', fontWeight: 600 }}>
-                      ⭐ {Number(row.avgStars).toFixed(1)} / 5.0
+                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                        <Star size={13} fill="#F59E0B" color="#F59E0B" />
+                        {Number(row.avgStars).toFixed(1)} / 5.0
+                      </span>
                     </td>
                     <td style={{ padding: '12px 14px', color: '#475569' }}>{row.ratingCount} reviews</td>
                     <td style={{ padding: '12px 14px', color: '#475569' }}>

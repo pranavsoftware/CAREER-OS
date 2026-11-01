@@ -12,7 +12,7 @@ const ROLE_DASHBOARDS = {
 };
 
 /**
- * ProtectedRoute — works on iOS Safari & PWA.
+ * ProtectedRoute - works on iOS Safari & PWA.
  *
  * Uses next/navigation router directly (no react-router-dom shim)
  * to avoid hydration mismatch on mobile / iOS WebKit.
