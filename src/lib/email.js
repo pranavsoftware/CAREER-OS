@@ -41,7 +41,7 @@ export async function sendEmail({
   attachments = [],
 }) {
   const logId = `email_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
-  const from = process.env.EMAIL_FROM || 'onboarding@resend.dev';
+  const from = process.env.EMAIL_FROM || 'CAREER-OS <notifications@career-os.in>';
   const originalTo = to;
   let targetTo = to;
 

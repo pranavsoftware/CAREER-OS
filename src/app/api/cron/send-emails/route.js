@@ -31,7 +31,7 @@ export async function GET(request) {
   }
 
   const resend = new Resend(resendKey);
-  const from = process.env.EMAIL_FROM || 'onboarding@resend.dev';
+  const from = process.env.EMAIL_FROM || 'CAREER-OS <notifications@career-os.in>';
   const dailyLimit = parseInt(process.env.EMAIL_DAILY_LIMIT || '100', 10);
 
   try {
