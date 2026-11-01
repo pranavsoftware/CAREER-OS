@@ -236,7 +236,9 @@ function SidebarContent({ onClose }) {
         {navItems.map(item => {
           const Icon = item.icon;
           const isProfileRoute = item.to === '/student/profile';
-          const isLocked = isStudentProfileIncomplete && !isProfileRoute;
+          const isPortfolioRoute = item.to === '/student/portfolio';
+          const isAllowedWhileIncomplete = isProfileRoute || isPortfolioRoute;
+          const isLocked = isStudentProfileIncomplete && !isAllowedWhileIncomplete;
 
           return (
             <NavLink
@@ -358,8 +360,9 @@ export default function Layout({ title, children }) {
     )
   );
 
+  // Allow student access to Profile and Portfolio (GitHub connect) even when incomplete
+  const isProfilePage = location.pathname === '/student/profile' || location.pathname === '/student/portfolio';
   const isStudentProfileIncomplete = user?.role === 'student' && !isProfileComplete;
-  const isProfilePage = location.pathname === '/student/profile';
 
   return (
     <div style={{ display: 'flex', minHeight: '100dvh', background: '#F8F9FA' }}>

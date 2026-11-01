@@ -104,6 +104,12 @@ export default function StudentProfile() {
   const [addingExp, setAddingExp] = useState(false);
   const [newExp, setNewExp] = useState({ company: '', role: '', duration: '', description: '', type: 'Internship' });
 
+  // Quick GitHub Connect State in Profile
+  const [showGithubModal, setShowGithubModal] = useState(false);
+  const [quickGithubUsername, setQuickGithubUsername] = useState('');
+  const [isSyncingGithub, setIsSyncingGithub] = useState(false);
+  const [githubSyncError, setGithubSyncError] = useState(null);
+
   // Email Notification Preferences State
   const [emailPrefs, setEmailPrefs] = useState({
     drives: true,
@@ -227,7 +233,59 @@ export default function StudentProfile() {
 
   function deleteProject(id) {
     const projects = (student.projects || []).filter(p => p.id !== id);
-    dispatch({ type: 'UPDATE_STUDENT', payload: { id: student.id, projects } });
+    const profileCompletion = computeCompletion({ ...student, projects });
+    dispatch({ type: 'UPDATE_STUDENT', payload: { id: student.id, projects, profileCompletion } });
+  }
+
+  async function handleQuickGithubSync(e) {
+    if (e) e.preventDefault();
+    const handle = (quickGithubUsername || student.github || '').trim().replace(/^https?:\/\/(www\.)?github\.com\//i, '').replace(/\/+$/, '').replace(/^@/, '');
+    if (!handle) {
+      setGithubSyncError('Please enter a GitHub username or profile link.');
+      return;
+    }
+
+    setIsSyncingGithub(true);
+    setGithubSyncError(null);
+
+    try {
+      const res = await fetch('/api/students/github-sync', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          studentId: student.id,
+          githubUsername: handle,
+          action: 'sync',
+        }),
+      });
+
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        throw new Error(data.error || 'Failed to sync repositories');
+      }
+
+      dispatch({
+        type: 'UPDATE_STUDENT',
+        payload: {
+          id: student.id,
+          github: data.github,
+          projects: data.projects,
+          ...(data.profileCompletion ? { profileCompletion: data.profileCompletion } : {}),
+        },
+      });
+
+      setShowGithubModal(false);
+      setQuickGithubUsername('');
+      setMessage({
+        type: 'success',
+        text: `Connected to GitHub! Successfully imported ${data.syncedCount || 0} repositories to your profile.`,
+      });
+      setTimeout(() => setMessage(null), 4000);
+    } catch (err) {
+      setGithubSyncError(err.message || 'Error syncing with GitHub. Please check username.');
+    } finally {
+      setIsSyncingGithub(false);
+    }
   }
 
   function addExperience() {
@@ -319,36 +377,114 @@ export default function StudentProfile() {
           <div><span style={{ color: '#6B7280' }}>Name:</span> <strong>{student.name}</strong></div>
           <div><span style={{ color: '#6B7280' }}>Reg No:</span> <strong>{student.regNo}</strong></div>
           <div><span style={{ color: '#6B7280' }}>Email:</span> <strong>{student.email}</strong></div>
-          <div><span style={{ color: '#6B7280' }}>Phone:</span> <strong>{student.phone}</strong></div>
-          <div><span style={{ color: '#6B7280' }}>DOB:</span> <strong>{student.dob}</strong></div>
-          <div><span style={{ color: '#6B7280' }}>Gender:</span> <strong>{student.gender}</strong></div>
-          <div style={{ gridColumn: 'span 2' }}><span style={{ color: '#6B7280' }}>Address:</span> <strong>{student.address}</strong></div>
+          <div><span style={{ color: '#6B7280' }}>Phone:</span> <strong>{student.phone || <span style={{ color: '#9CA3AF', fontStyle: 'italic', fontWeight: 400 }}>Not added — click Edit</span>}</strong></div>
+          <div><span style={{ color: '#6B7280' }}>DOB:</span> <strong>{student.dob || <span style={{ color: '#9CA3AF', fontStyle: 'italic', fontWeight: 400 }}>Not added — click Edit</span>}</strong></div>
+          <div><span style={{ color: '#6B7280' }}>Gender:</span> <strong>{student.gender || <span style={{ color: '#9CA3AF', fontStyle: 'italic', fontWeight: 400 }}>Not added — click Edit</span>}</strong></div>
+          <div style={{ gridColumn: 'span 2' }}><span style={{ color: '#6B7280' }}>Address:</span> <strong>{student.address || <span style={{ color: '#9CA3AF', fontStyle: 'italic', fontWeight: 400 }}>Not added — click Edit</span>}</strong></div>
         </div>,
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-          <FormField label="Phone" id="phone" value={editData.phone || ''} onChange={v => setEditData({ ...editData, phone: v })} />
-          <FormField label="DOB" id="dob" type="date" value={editData.dob || ''} onChange={v => setEditData({ ...editData, dob: v })} />
+          <FormField label="Phone" id="phone" value={editData.phone || ''} placeholder="e.g. +919876543210" onChange={v => setEditData({ ...editData, phone: v })} />
+          <FormField label="Date of Birth" id="dob" type="date" value={editData.dob || ''} onChange={v => setEditData({ ...editData, dob: v })} />
           <FormField label="Gender" id="gender" type="select" value={editData.gender || ''} options={['Male', 'Female', 'Other']} onChange={v => setEditData({ ...editData, gender: v })} />
-          <FormField label="Address" id="address" value={editData.address || ''} onChange={v => setEditData({ ...editData, address: v })} />
+          <FormField label="Address" id="address" value={editData.address || ''} placeholder="e.g. 12 MG Road, Bangalore" onChange={v => setEditData({ ...editData, address: v })} />
         </div>
       )}
 
       {/* Education */}
       {sectionCard('Education', 'education',
-        <div style={{ fontSize: 13, display: 'flex', flexDirection: 'column', gap: 8 }}>
-          <div style={{ borderBottom: '1px solid #F3F4F6', paddingBottom: 8 }}>
-            <strong>10th</strong> — {student.education?.tenth?.school} ({student.education?.tenth?.board}, {student.education?.tenth?.year}) — {student.education?.tenth?.percentage}%
-          </div>
-          <div style={{ borderBottom: '1px solid #F3F4F6', paddingBottom: 8 }}>
-            <strong>12th</strong> — {student.education?.twelfth?.school} ({student.education?.twelfth?.board}, {student.education?.twelfth?.year}) — {student.education?.twelfth?.percentage}%
-          </div>
-          <div>
-            <strong>B.Tech</strong> — {student.education?.btech?.college} — {student.education?.btech?.branch} — CGPA: {student.education?.btech?.cgpa} — Sem {student.education?.btech?.currentSemester} ({student.education?.btech?.startYear}–{student.education?.btech?.endYear})
-          </div>
+        <div style={{ fontSize: 13, display: 'flex', flexDirection: 'column', gap: 10 }}>
+          {student.education?.tenth?.school ? (
+            <div style={{ borderBottom: '1px solid #F3F4F6', paddingBottom: 8 }}>
+              <strong>10th</strong> — {student.education.tenth.school} ({student.education.tenth.board}, {student.education.tenth.year}) — {student.education.tenth.percentage}%
+            </div>
+          ) : (
+            <div style={{ borderBottom: '1px solid #F3F4F6', paddingBottom: 8, color: '#9CA3AF', fontStyle: 'italic' }}>
+              <strong style={{ color: '#374151', fontStyle: 'normal' }}>10th</strong> — Not filled yet. Click Edit to add details.
+            </div>
+          )}
+          {student.education?.twelfth?.school ? (
+            <div style={{ borderBottom: '1px solid #F3F4F6', paddingBottom: 8 }}>
+              <strong>12th</strong> — {student.education.twelfth.school} ({student.education.twelfth.board}, {student.education.twelfth.year}) — {student.education.twelfth.percentage}%
+            </div>
+          ) : (
+            <div style={{ borderBottom: '1px solid #F3F4F6', paddingBottom: 8, color: '#9CA3AF', fontStyle: 'italic' }}>
+              <strong style={{ color: '#374151', fontStyle: 'normal' }}>12th</strong> — Not filled yet. Click Edit to add details.
+            </div>
+          )}
+          {student.education?.btech?.college ? (
+            <div>
+              <strong>B.Tech</strong> — {student.education.btech.college} — {student.education.btech.branch} — CGPA: {student.education.btech.cgpa} — Sem {student.education.btech.currentSemester} ({student.education.btech.startYear}–{student.education.btech.endYear})
+            </div>
+          ) : (
+            <div style={{ color: '#9CA3AF', fontStyle: 'italic' }}>
+              <strong style={{ color: '#374151', fontStyle: 'normal' }}>B.Tech</strong> — Not filled yet. Click Edit to add details.
+            </div>
+          )}
         </div>,
-        <div>
-          <div style={{ fontSize: 13, color: '#6B7280', marginBottom: 12 }}>CGPA and degree details are sourced from university records.</div>
-          <FormField label="Current Semester" id="sem" type="number" value={editData.education?.btech?.currentSemester || ''} min={1} max={8}
-            onChange={v => setEditData({ ...editData, education: { ...editData.education, btech: { ...editData.education?.btech, currentSemester: v } } })} />
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
+          {/* 10th */}
+          <div style={{ marginBottom: 16 }}>
+            <div style={{ fontSize: 13, fontWeight: 600, color: '#374151', marginBottom: 8, padding: '6px 10px', background: '#F8FAFC', borderRadius: 6, borderLeft: '3px solid #2563EB' }}>10th Standard</div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+              <FormField label="School Name" id="tenth-school" value={editData.education?.tenth?.school || ''}
+                placeholder="e.g. Delhi Public School"
+                onChange={v => setEditData({ ...editData, education: { ...editData.education, tenth: { ...editData.education?.tenth, school: v } } })} />
+              <FormField label="Board" id="tenth-board" type="select" value={editData.education?.tenth?.board || ''}
+                options={['CBSE', 'ICSE', 'State Board', 'IB', 'NIOS', 'Other']}
+                onChange={v => setEditData({ ...editData, education: { ...editData.education, tenth: { ...editData.education?.tenth, board: v } } })} />
+              <FormField label="Year of Passing" id="tenth-year" type="number" value={editData.education?.tenth?.year || ''}
+                placeholder="e.g. 2020"
+                onChange={v => setEditData({ ...editData, education: { ...editData.education, tenth: { ...editData.education?.tenth, year: v } } })} />
+              <FormField label="Percentage / CGPA" id="tenth-pct" value={editData.education?.tenth?.percentage || ''}
+                placeholder="e.g. 92.4"
+                onChange={v => setEditData({ ...editData, education: { ...editData.education, tenth: { ...editData.education?.tenth, percentage: v } } })} />
+            </div>
+          </div>
+
+          {/* 12th */}
+          <div style={{ marginBottom: 16 }}>
+            <div style={{ fontSize: 13, fontWeight: 600, color: '#374151', marginBottom: 8, padding: '6px 10px', background: '#F8FAFC', borderRadius: 6, borderLeft: '3px solid #2563EB' }}>12th Standard / Intermediate</div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+              <FormField label="School / College Name" id="twelfth-school" value={editData.education?.twelfth?.school || ''}
+                placeholder="e.g. Kendriya Vidyalaya"
+                onChange={v => setEditData({ ...editData, education: { ...editData.education, twelfth: { ...editData.education?.twelfth, school: v } } })} />
+              <FormField label="Board" id="twelfth-board" type="select" value={editData.education?.twelfth?.board || ''}
+                options={['CBSE', 'ICSE', 'State Board', 'IB', 'NIOS', 'Other']}
+                onChange={v => setEditData({ ...editData, education: { ...editData.education, twelfth: { ...editData.education?.twelfth, board: v } } })} />
+              <FormField label="Year of Passing" id="twelfth-year" type="number" value={editData.education?.twelfth?.year || ''}
+                placeholder="e.g. 2022"
+                onChange={v => setEditData({ ...editData, education: { ...editData.education, twelfth: { ...editData.education?.twelfth, year: v } } })} />
+              <FormField label="Percentage / CGPA" id="twelfth-pct" value={editData.education?.twelfth?.percentage || ''}
+                placeholder="e.g. 88.6"
+                onChange={v => setEditData({ ...editData, education: { ...editData.education, twelfth: { ...editData.education?.twelfth, percentage: v } } })} />
+            </div>
+          </div>
+
+          {/* B.Tech */}
+          <div>
+            <div style={{ fontSize: 13, fontWeight: 600, color: '#374151', marginBottom: 8, padding: '6px 10px', background: '#F8FAFC', borderRadius: 6, borderLeft: '3px solid #2563EB' }}>B.Tech / Undergraduate Degree</div>
+            <div style={{ fontSize: 12, color: '#6B7280', marginBottom: 10 }}>CGPA, branch and batch details are auto-filled from university records. You can update your current semester.</div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+              <FormField label="College / University" id="btech-college" value={editData.education?.btech?.college || ''}
+                placeholder="e.g. VIT University"
+                onChange={v => setEditData({ ...editData, education: { ...editData.education, btech: { ...editData.education?.btech, college: v } } })} />
+              <FormField label="Branch / Specialization" id="btech-branch" value={editData.education?.btech?.branch || ''}
+                placeholder="e.g. Computer Science & Engineering"
+                onChange={v => setEditData({ ...editData, education: { ...editData.education, btech: { ...editData.education?.btech, branch: v } } })} />
+              <FormField label="Start Year" id="btech-start" type="number" value={editData.education?.btech?.startYear || ''}
+                placeholder="e.g. 2022"
+                onChange={v => setEditData({ ...editData, education: { ...editData.education, btech: { ...editData.education?.btech, startYear: v } } })} />
+              <FormField label="End Year (Expected)" id="btech-end" type="number" value={editData.education?.btech?.endYear || ''}
+                placeholder="e.g. 2026"
+                onChange={v => setEditData({ ...editData, education: { ...editData.education, btech: { ...editData.education?.btech, endYear: v } } })} />
+              <FormField label="Current Semester" id="btech-sem" type="number" value={editData.education?.btech?.currentSemester || ''} min={1} max={8}
+                placeholder="e.g. 5"
+                onChange={v => setEditData({ ...editData, education: { ...editData.education, btech: { ...editData.education?.btech, currentSemester: v } } })} />
+              <FormField label="CGPA (if known)" id="btech-cgpa" value={editData.education?.btech?.cgpa || ''}
+                placeholder="e.g. 8.4"
+                onChange={v => setEditData({ ...editData, education: { ...editData.education, btech: { ...editData.education?.btech, cgpa: v } } })} />
+            </div>
+          </div>
         </div>
       )}
 
@@ -746,24 +882,50 @@ export default function StudentProfile() {
             <div style={{ fontSize: 13, color: '#6B7280' }}>
               Connect your GitHub account to showcase verified repositories, stars, and code directly on your profile.
             </div>
-            <Link
-              to="/student/portfolio"
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: 6,
-                padding: '6px 12px',
-                borderRadius: 6,
-                background: '#0F172A',
-                color: '#fff',
-                fontSize: 12,
-                fontWeight: 600,
-                textDecoration: 'none',
-              }}
-            >
-              <GithubIcon size={14} />
-              Open Project Hub & Sync
-            </Link>
+            <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+              <button
+                type="button"
+                onClick={() => {
+                  setGithubSyncError(null);
+                  setQuickGithubUsername(student.github ? student.github.replace(/^https?:\/\/(www\.)?github\.com\//i, '').replace(/\/+$/, '') : '');
+                  setShowGithubModal(true);
+                }}
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: 6,
+                  padding: '6px 12px',
+                  borderRadius: 6,
+                  border: 'none',
+                  background: '#0F172A',
+                  color: '#fff',
+                  fontSize: 12,
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                }}
+              >
+                <GithubIcon size={14} />
+                {student.github ? 'Sync Repositories' : 'Connect GitHub'}
+              </button>
+              <Link
+                to="/student/portfolio"
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: 6,
+                  padding: '6px 12px',
+                  borderRadius: 6,
+                  border: '1px solid #D1D5DB',
+                  background: '#fff',
+                  color: '#334155',
+                  fontSize: 12,
+                  fontWeight: 600,
+                  textDecoration: 'none',
+                }}
+              >
+                Open Project Hub &rarr;
+              </Link>
+            </div>
           </div>
 
           {(student.projects || []).map(p => (
@@ -803,9 +965,33 @@ export default function StudentProfile() {
             </div>
           ))}
           {!addingProject ? (
-            <div style={{ display: 'flex', gap: 10, marginTop: 12 }}>
+            <div style={{ display: 'flex', gap: 10, marginTop: 12, flexWrap: 'wrap' }}>
               <button onClick={() => setAddingProject(true)} style={{ padding: '6px 14px', border: '1px solid #E5E7EB', borderRadius: 6, background: '#fff', color: '#2563EB', cursor: 'pointer', fontSize: 13 }}>
                 + Add custom project
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setGithubSyncError(null);
+                  setQuickGithubUsername(student.github ? student.github.replace(/^https?:\/\/(www\.)?github\.com\//i, '').replace(/\/+$/, '') : '');
+                  setShowGithubModal(true);
+                }}
+                style={{
+                  padding: '6px 14px',
+                  border: '1px solid #D1D5DB',
+                  borderRadius: 6,
+                  background: '#0F172A',
+                  color: '#fff',
+                  fontSize: 13,
+                  fontWeight: 500,
+                  cursor: 'pointer',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: 6,
+                }}
+              >
+                <GithubIcon size={14} />
+                {student.github ? 'Sync Repositories' : 'Connect & Sync from GitHub'}
               </button>
               <Link
                 to="/student/portfolio"
@@ -823,8 +1009,7 @@ export default function StudentProfile() {
                   gap: 6,
                 }}
               >
-                <GithubIcon size={14} />
-                Connect & Sync from GitHub
+                Open Project Hub &rarr;
               </Link>
             </div>
           ) : (
@@ -944,6 +1129,138 @@ export default function StudentProfile() {
           ))}
         </div>
       </div>
+
+      {/* GitHub Quick Connect Modal */}
+      {showGithubModal && (
+        <div style={{
+          position: 'fixed',
+          inset: 0,
+          background: 'rgba(0,0,0,0.5)',
+          backdropFilter: 'blur(3px)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 1000,
+          padding: 16,
+        }}>
+          <div style={{
+            background: '#fff',
+            borderRadius: 12,
+            maxWidth: 480,
+            width: '100%',
+            padding: 24,
+            boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)',
+          }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <GithubIcon size={20} color="#0F172A" />
+                <h3 style={{ margin: 0, fontSize: 16, fontWeight: 700, color: '#0F172A' }}>
+                  Connect GitHub Account
+                </h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowGithubModal(false)}
+                style={{ border: 'none', background: 'transparent', cursor: 'pointer', color: '#64748B', padding: 4 }}
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <p style={{ margin: '0 0 16px', fontSize: 13, color: '#4B5563', lineHeight: 1.5 }}>
+              Enter your GitHub username or profile link. We will fetch and import your public repositories, languages, and star counts directly into your profile projects.
+            </p>
+
+            {githubSyncError && (
+              <div style={{
+                background: '#FEF2F2',
+                border: '1px solid #FECACA',
+                color: '#B91C1C',
+                borderRadius: 6,
+                padding: '8px 12px',
+                fontSize: 13,
+                marginBottom: 16,
+              }}>
+                {githubSyncError}
+              </div>
+            )}
+
+            <form onSubmit={handleQuickGithubSync}>
+              <div style={{ marginBottom: 20 }}>
+                <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: '#374151', marginBottom: 6 }}>
+                  GitHub Username or URL
+                </label>
+                <div style={{ position: 'relative' }}>
+                  <input
+                    type="text"
+                    required
+                    value={quickGithubUsername}
+                    onChange={e => setQuickGithubUsername(e.target.value)}
+                    placeholder="e.g. torvalds or https://github.com/torvalds"
+                    style={{
+                      width: '100%',
+                      padding: '10px 12px',
+                      borderRadius: 6,
+                      border: '1px solid #CBD5E1',
+                      fontSize: 14,
+                      outline: 'none',
+                      boxSizing: 'border-box',
+                    }}
+                  />
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10 }}>
+                <button
+                  type="button"
+                  onClick={() => setShowGithubModal(false)}
+                  style={{
+                    padding: '8px 16px',
+                    borderRadius: 6,
+                    border: '1px solid #D1D5DB',
+                    background: '#fff',
+                    color: '#374151',
+                    fontSize: 13,
+                    fontWeight: 500,
+                    cursor: 'pointer',
+                  }}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={isSyncingGithub}
+                  style={{
+                    padding: '8px 20px',
+                    borderRadius: 6,
+                    border: 'none',
+                    background: isSyncingGithub ? '#94A3B8' : '#0F172A',
+                    color: '#fff',
+                    fontSize: 13,
+                    fontWeight: 600,
+                    cursor: isSyncingGithub ? 'not-allowed' : 'pointer',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: 6,
+                  }}
+                >
+                  {isSyncingGithub ? (
+                    <>
+                      <RefreshCw size={14} className="animate-spin" />
+                      Syncing...
+                    </>
+                  ) : (
+                    <>
+                      <GithubIcon size={14} />
+                      Sync Repositories
+                    </>
+                  )}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </Layout>
   );
 }

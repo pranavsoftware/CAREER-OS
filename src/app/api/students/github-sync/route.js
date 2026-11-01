@@ -24,18 +24,25 @@ export async function POST(request) {
 
     // 1. Action: Disconnect GitHub
     if (action === 'disconnect') {
-      const studentRes = await query('SELECT projects FROM students WHERE id = $1', [studentId]);
+      const studentRes = await query('SELECT phone, address, gender, dob, skills, projects FROM students WHERE id = $1', [studentId]);
       if (studentRes.rows.length === 0) {
         return NextResponse.json({ error: 'Student not found' }, { status: 404 });
       }
       
-      const currentProjects = studentRes.rows[0].projects || [];
+      const row = studentRes.rows[0];
+      const currentProjects = row.projects || [];
       // Keep only non-github manual projects if requested, or keep all with isGithub: false
       const remainingProjects = currentProjects.filter(p => !p.isGithub && !p.id?.startsWith('gh_'));
 
+      let score = 25;
+      if (row.phone && (row.address || row.gender || row.dob)) score += 25;
+      if (Array.isArray(row.skills) && row.skills.length >= 1) score += (row.skills.length >= 2 ? 25 : 15);
+      if (remainingProjects.length >= 1) score += 25;
+      const profileCompletion = Math.min(100, score);
+
       await query(
-        `UPDATE students SET github = NULL, projects = $1::jsonb, updated_at = NOW() WHERE id = $2`,
-        [JSON.stringify(remainingProjects), studentId]
+        `UPDATE students SET github = NULL, projects = $1::jsonb, profile_completion = $2, updated_at = NOW() WHERE id = $3`,
+        [JSON.stringify(remainingProjects), profileCompletion, studentId]
       );
 
       return NextResponse.json({
@@ -43,6 +50,7 @@ export async function POST(request) {
         message: 'GitHub account disconnected successfully',
         github: null,
         projects: remainingProjects,
+        profileCompletion,
       });
     }
 
@@ -169,12 +177,13 @@ export async function POST(request) {
     }
 
     // Persist into database for the student
-    const studentRes = await query('SELECT projects FROM students WHERE id = $1', [studentId]);
+    const studentRes = await query('SELECT phone, address, gender, dob, skills, projects FROM students WHERE id = $1', [studentId]);
     if (studentRes.rows.length === 0) {
       return NextResponse.json({ error: 'Student not found in database' }, { status: 404 });
     }
 
-    const existingProjects = studentRes.rows[0].projects || [];
+    const row = studentRes.rows[0];
+    const existingProjects = row.projects || [];
     // Preserve manual projects
     const manualProjects = existingProjects.filter(p => !p.isGithub && !p.id?.startsWith('gh_'));
 
@@ -196,13 +205,20 @@ export async function POST(request) {
     const allProjects = [...manualProjects, ...mergedGithubProjects];
     const githubUrl = userData.html_url || `https://github.com/${username}`;
 
+    let score = 25;
+    if (row.phone && (row.address || row.gender || row.dob)) score += 25;
+    if (Array.isArray(row.skills) && row.skills.length >= 1) score += (row.skills.length >= 2 ? 25 : 15);
+    if (allProjects.length >= 1) score += 25;
+    const profileCompletion = Math.min(100, score);
+
     await query(
       `UPDATE students 
        SET github = $1, 
-           projects = $2::jsonb, 
+           projects = $2::jsonb,
+           profile_completion = $3,
            updated_at = NOW() 
-       WHERE id = $3`,
-      [githubUrl, JSON.stringify(allProjects), studentId]
+       WHERE id = $4`,
+      [githubUrl, JSON.stringify(allProjects), profileCompletion, studentId]
     );
 
     return NextResponse.json({
@@ -220,6 +236,7 @@ export async function POST(request) {
       },
       projects: allProjects,
       syncedCount: githubProjects.length,
+      profileCompletion,
     });
   } catch (error) {
     console.error('GitHub Sync API Error:', error);

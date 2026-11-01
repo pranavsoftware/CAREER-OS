@@ -153,6 +153,7 @@ export default function StudentPortfolio() {
           id: student.id,
           github: data.github,
           projects: data.projects,
+          ...(data.profileCompletion ? { profileCompletion: data.profileCompletion } : {}),
         },
       });
 
