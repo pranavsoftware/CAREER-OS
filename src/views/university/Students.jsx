@@ -6,7 +6,7 @@ import Badge from '../../components/Badge';
 import Modal from '../../components/Modal';
 import FormField from '../../components/FormField';
 import { useData } from '../../context/DataContext';
-import { Info, Download, FileSpreadsheet, UserPlus } from 'lucide-react';
+import { Info, Download, FileSpreadsheet, UserPlus, Trash2, Lock, AlertTriangle } from 'lucide-react';
 
 const BRANCH_OPTIONS = ['CSE', 'IT', 'ECE', 'EEE', 'Mechanical', 'Civil', 'Biotechnology'];
 
@@ -72,31 +72,86 @@ export default function UniversityStudents() {
     return matchSearch && matchBranch && matchCgpa && matchBacklog && matchVerif;
   });
 
+  // Student Deletion State
+  const [deleteCandidate, setDeleteCandidate] = useState(null);
+  const [deleteLoading, setDeleteLoading] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  function handleDeleteStudent(student) {
+    if (student.profileStatus === 'Verified') {
+      alert(`Cannot delete verified profile of "${student.name}". Official placement records are locked.`);
+      return;
+    }
+    setDeleteCandidate(student);
+  }
+
+  async function confirmDeleteStudent() {
+    if (!deleteCandidate) return;
+    setDeleteLoading(true);
+    try {
+      const res = await fetch(`/api/students?id=${encodeURIComponent(deleteCandidate.id)}`, {
+        method: 'DELETE',
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        alert(data.error || 'Failed to delete student.');
+        setDeleteLoading(false);
+        setDeleteCandidate(null);
+        return;
+      }
+      dispatch({ type: 'DELETE_STUDENT', payload: deleteCandidate.id });
+      setInlineMsg({
+        type: 'success',
+        text: `Student "${deleteCandidate.name}" (${deleteCandidate.regNo}) has been deleted successfully from directory.`,
+      });
+    } catch (err) {
+      console.error('Delete student error:', err);
+      alert('Network or server error while deleting student.');
+    } finally {
+      setDeleteLoading(false);
+      setDeleteCandidate(null);
+    }
+  }
+
   // Manual Form Submission
-  function handleManualSubmit(e) {
+  async function handleManualSubmit(e) {
     e.preventDefault();
     if (!manualForm.name || !manualForm.regNo || !manualForm.email) {
       alert('Please fill in Name, Registration Number, and Email.');
       return;
     }
 
+    const regNoClean = manualForm.regNo.trim().toUpperCase();
+    const emailClean = manualForm.email.trim().toLowerCase();
+
+    // Check if an existing student is already verified
+    const existing = students.find(
+      s => (s.email && s.email.toLowerCase() === emailClean) || (s.regNo && s.regNo.toUpperCase() === regNoClean)
+    );
+
+    if (existing && existing.profileStatus === 'Verified') {
+      alert(`Cannot add or modify student "${existing.name}" (${existing.regNo}). This profile is already officially Verified and locked.`);
+      return;
+    }
+
+    setIsSubmitting(true);
     const newStudent = {
-      id: `s_${Date.now()}`,
+      id: existing ? existing.id : `s_${Date.now()}`,
       name: manualForm.name.trim(),
-      regNo: manualForm.regNo.trim().toUpperCase(),
-      email: manualForm.email.trim().toLowerCase(),
+      regNo: regNoClean,
+      email: emailClean,
       branch: manualForm.branch,
       batch: Number(manualForm.batch) || 2026,
       cgpa: Number(manualForm.cgpa) || 0,
       backlogs: Number(manualForm.backlogs) || 0,
       phone: manualForm.phone.trim() || null,
-      profileStatus: 'Pending',
-      placementStatus: 'In process',
-      profileCompletion: 25,
-      skills: [],
-      projects: [],
-      experience: [],
-      verificationStatus: {
+      profileStatus: existing ? existing.profileStatus : 'Pending',
+      placementStatus: existing ? existing.placementStatus : 'In process',
+      profileCompletion: existing ? existing.profileCompletion : 25,
+      skills: existing?.skills || [],
+      projects: existing?.projects || [],
+      experience: existing?.experience || [],
+      verificationStatus: existing?.verificationStatus || {
         personal: 'Pending',
         academics: 'Pending',
         skills: 'Pending',
@@ -104,22 +159,41 @@ export default function UniversityStudents() {
       },
     };
 
-    dispatch({ type: 'ADD_STUDENT', payload: newStudent });
-    setShowAddModal(false);
-    setInlineMsg({
-      type: 'success',
-      text: `Student "${newStudent.name}" (${newStudent.regNo}) added successfully and student portal credentials generated.`,
-    });
-    setManualForm({
-      name: '',
-      regNo: '',
-      email: '',
-      branch: 'CSE',
-      batch: '2026',
-      cgpa: '8.0',
-      backlogs: '0',
-      phone: '',
-    });
+    try {
+      const res = await fetch('/api/students', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(newStudent),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        alert(data.error || 'Failed to register student.');
+        setIsSubmitting(false);
+        return;
+      }
+
+      dispatch({ type: 'ADD_STUDENT', payload: newStudent });
+      setShowAddModal(false);
+      setInlineMsg({
+        type: 'success',
+        text: `Student "${newStudent.name}" (${newStudent.regNo}) saved successfully and onboarding credentials sent directly to ${newStudent.email}.`,
+      });
+      setManualForm({
+        name: '',
+        regNo: '',
+        email: '',
+        branch: 'CSE',
+        batch: '2026',
+        cgpa: '8.0',
+        backlogs: '0',
+        phone: '',
+      });
+    } catch (err) {
+      console.error('Error submitting student:', err);
+      alert('Error connecting to server.');
+    } finally {
+      setIsSubmitting(false);
+    }
   }
 
   // Download Sample CSV
@@ -289,6 +363,76 @@ export default function UniversityStudents() {
           {v}
         </Badge>
       ),
+    },
+    {
+      key: 'actions',
+      header: 'Actions',
+      width: '110px',
+      render: (_, r) => {
+        const isVerified = r.profileStatus === 'Verified';
+        return (
+          <div
+            style={{ display: 'flex', alignItems: 'center', gap: 6 }}
+            onClick={e => e.stopPropagation()}
+          >
+            {isVerified ? (
+              <span
+                title="Verified student profiles are locked for university placement audit compliance and cannot be deleted."
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: 4,
+                  padding: '3px 8px',
+                  borderRadius: 4,
+                  fontSize: 11,
+                  fontWeight: 600,
+                  color: '#64748B',
+                  background: '#F1F5F9',
+                  border: '1px solid #E2E8F0',
+                  cursor: 'not-allowed',
+                }}
+              >
+                <Lock size={12} color="#94A3B8" />
+                Locked
+              </span>
+            ) : (
+              <button
+                type="button"
+                onClick={e => {
+                  e.stopPropagation();
+                  handleDeleteStudent(r);
+                }}
+                title={`Delete unverified student ${r.name}`}
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: 4,
+                  padding: '4px 9px',
+                  borderRadius: 5,
+                  fontSize: 12,
+                  fontWeight: 500,
+                  color: '#DC2626',
+                  background: '#FEF2F2',
+                  border: '1px solid #FECACA',
+                  cursor: 'pointer',
+                  transition: 'background 0.15s ease',
+                }}
+                onMouseEnter={e => {
+                  e.currentTarget.style.background = '#FEE2E2';
+                  e.currentTarget.style.borderColor = '#FCA5A5';
+                }}
+                onMouseLeave={e => {
+                  e.currentTarget.style.background = '#FEF2F2';
+                  e.currentTarget.style.borderColor = '#FECACA';
+                }}
+              >
+                <Trash2 size={13} color="#DC2626" />
+                Delete
+              </button>
+            )}
+          </div>
+        );
+      },
     },
   ];
 
@@ -594,9 +738,20 @@ export default function UniversityStudents() {
                 </button>
                 <button
                   type="submit"
-                  style={{ padding: '6px 16px', borderRadius: 6, border: 'none', background: '#2563EB', color: '#fff', fontSize: 13, fontWeight: 500, cursor: 'pointer' }}
+                  disabled={isSubmitting}
+                  style={{
+                    padding: '6px 16px',
+                    borderRadius: 6,
+                    border: 'none',
+                    background: '#2563EB',
+                    color: '#fff',
+                    fontSize: 13,
+                    fontWeight: 500,
+                    cursor: isSubmitting ? 'not-allowed' : 'pointer',
+                    opacity: isSubmitting ? 0.7 : 1,
+                  }}
                 >
-                  Register Student
+                  {isSubmitting ? 'Registering & Sending Email...' : 'Register Student'}
                 </button>
               </div>
             </form>
@@ -733,6 +888,80 @@ export default function UniversityStudents() {
               </div>
             </div>
           )}
+        </Modal>
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {deleteCandidate && (
+        <Modal
+          isOpen={true}
+          title="Confirm Student Deletion"
+          onClose={() => !deleteLoading && setDeleteCandidate(null)}
+        >
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'flex-start',
+                gap: 12,
+                background: '#FEF2F2',
+                border: '1px solid #FECACA',
+                borderRadius: 8,
+                padding: 14,
+              }}
+            >
+              <AlertTriangle size={22} color="#DC2626" style={{ flexShrink: 0, marginTop: 2 }} />
+              <div style={{ fontSize: 13, color: '#991B1B', lineHeight: 1.5 }}>
+                Are you sure you want to delete student <strong>"{deleteCandidate.name}"</strong> (Reg No:{' '}
+                <strong>{deleteCandidate.regNo}</strong>)?
+                <div style={{ marginTop: 6, fontSize: 12, color: '#B91C1C' }}>
+                  This will remove their directory profile, portal login account (<code>{deleteCandidate.email}</code>), and any associated placement test records. This action is permanent and cannot be undone.
+                </div>
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 4 }}>
+              <button
+                type="button"
+                disabled={deleteLoading}
+                onClick={() => setDeleteCandidate(null)}
+                style={{
+                  padding: '7px 16px',
+                  borderRadius: 6,
+                  border: '1px solid #D1D5DB',
+                  background: '#fff',
+                  color: '#374151',
+                  fontSize: 13,
+                  fontWeight: 500,
+                  cursor: deleteLoading ? 'not-allowed' : 'pointer',
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                disabled={deleteLoading}
+                onClick={confirmDeleteStudent}
+                style={{
+                  padding: '7px 18px',
+                  borderRadius: 6,
+                  border: '1px solid #DC2626',
+                  background: '#DC2626',
+                  color: '#fff',
+                  fontSize: 13,
+                  fontWeight: 600,
+                  cursor: deleteLoading ? 'not-allowed' : 'pointer',
+                  opacity: deleteLoading ? 0.7 : 1,
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 6,
+                }}
+              >
+                <Trash2 size={14} color="#fff" />
+                {deleteLoading ? 'Deleting...' : 'Delete Student'}
+              </button>
+            </div>
+          </div>
         </Modal>
       )}
     </Layout>

@@ -205,3 +205,65 @@ export async function PUT(request, { params }) {
     return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
   }
 }
+
+export async function DELETE(request, { params }) {
+  try {
+    const { id } = await params;
+    if (!id) {
+      return NextResponse.json({ error: 'Student ID is required' }, { status: 400 });
+    }
+
+    const studentRes = await query(
+      `SELECT id, name, reg_no, email, profile_status FROM students WHERE id = $1`,
+      [id]
+    );
+
+    if (!studentRes.rows || studentRes.rows.length === 0) {
+      return NextResponse.json({ error: 'Student record not found' }, { status: 404 });
+    }
+
+    const student = studentRes.rows[0];
+
+    // Verification check: Verified profiles can NEVER be deleted
+    if (student.profile_status === 'Verified') {
+      return NextResponse.json(
+        {
+          error: 'Cannot delete verified student profile. Verified records are locked for university placement auditing and compliance.',
+          isVerified: true,
+        },
+        { status: 403 }
+      );
+    }
+
+    // Cascade delete across all linked tables
+    await query(`DELETE FROM applications WHERE student_id = $1`, [id]);
+    await query(`DELETE FROM certificates WHERE student_id = $1`, [id]);
+    await query(`DELETE FROM notifications WHERE student_id = $1`, [id]);
+    await query(`DELETE FROM candidate_pipelines WHERE student_id = $1`, [id]);
+    await query(`DELETE FROM job_shortlists WHERE student_id = $1`, [id]);
+    await query(`DELETE FROM test_attempts WHERE student_id = $1`, [id]);
+    await query(`DELETE FROM resume_versions WHERE student_id = $1`, [id]);
+    await query(`DELETE FROM roadmap_progress WHERE student_id = $1`, [id]);
+    await query(`DELETE FROM ai_interviews WHERE student_id = $1`, [id]);
+    await query(`DELETE FROM verification_audit WHERE student_id = $1`, [id]);
+    await query(`DELETE FROM reschedule_requests WHERE student_id = $1`, [id]);
+    await query(`DELETE FROM recommendation_requests WHERE student_id = $1`, [id]);
+    await query(`DELETE FROM material_ratings WHERE student_id = $1`, [id]);
+    await query(`DELETE FROM material_enrollments WHERE student_id = $1`, [id]);
+    await query(`DELETE FROM users WHERE student_id = $1 OR id = $2 OR LOWER(email) = LOWER($3)`, [
+      id,
+      `user_${id}`,
+      student.email,
+    ]);
+    await query(`DELETE FROM students WHERE id = $1`, [id]);
+
+    return NextResponse.json({
+      success: true,
+      message: `Student "${student.name}" (${student.reg_no}) deleted successfully.`,
+      id,
+    });
+  } catch (error) {
+    console.error('Student DELETE ID error:', error);
+    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
+  }
+}

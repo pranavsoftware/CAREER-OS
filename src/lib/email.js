@@ -45,10 +45,11 @@ export async function sendEmail({
   const originalTo = to;
   let targetTo = to;
 
-  // In non-production, redirect recipient to TEST_EMAIL_OVERRIDE if configured
+  // In non-production, redirect recipient to TEST_EMAIL_OVERRIDE if explicitly configured and not forced direct
   const isDevOrTest = process.env.NODE_ENV !== 'production';
-  if (isDevOrTest && process.env.TEST_EMAIL_OVERRIDE) {
-    targetTo = process.env.TEST_EMAIL_OVERRIDE;
+  const testOverride = process.env.TEST_EMAIL_OVERRIDE ? process.env.TEST_EMAIL_OVERRIDE.trim() : '';
+  if (isDevOrTest && testOverride && !meta?.forceDirect) {
+    targetTo = testOverride;
     meta = { ...meta, originalRecipient: originalTo, isTestRedirect: true };
   }
 

@@ -114,7 +114,24 @@ function dataReducer(state, action) {
         body: JSON.stringify(action.payload),
       }).catch(err => console.error('Error adding student to db:', err));
 
-      return { ...state, students: [...state.students, action.payload] };
+      const exists = state.students.some(s => s.id === action.payload.id || (s.email && s.email.toLowerCase() === (action.payload.email || '').toLowerCase()));
+      const students = exists
+        ? state.students.map(s => s.id === action.payload.id || (s.email && s.email.toLowerCase() === (action.payload.email || '').toLowerCase()) ? { ...s, ...action.payload } : s)
+        : [...state.students, action.payload];
+
+      return { ...state, students };
+    }
+
+    case 'DELETE_STUDENT': {
+      const studentId = typeof action.payload === 'object' ? action.payload.id : action.payload;
+      resilientFetch(`/api/students?id=${encodeURIComponent(studentId)}`, {
+        method: 'DELETE',
+      }).catch(err => console.error('Error deleting student from db:', err));
+
+      return {
+        ...state,
+        students: state.students.filter(s => s.id !== studentId),
+      };
     }
 
     case 'ADD_STUDENTS': {

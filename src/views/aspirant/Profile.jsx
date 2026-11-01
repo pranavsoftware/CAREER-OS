@@ -48,7 +48,9 @@ export default function AspirantProfile() {
               twelfthPercentage: p.twelfthPercentage ?? 0,
               state: p.state || '',
               phone: p.phone || '',
-              entranceExams: Array.isArray(p.entranceExams) ? p.entranceExams : [],
+              entranceExams: Array.isArray(p.entranceExams)
+                ? p.entranceExams.map(ex => ({ exam: ex.exam || '', percentile: ex.percentile ?? '', score: ex.score ?? '' }))
+                : [],
               interests: Array.isArray(p.interests) ? p.interests : [],
             });
           }

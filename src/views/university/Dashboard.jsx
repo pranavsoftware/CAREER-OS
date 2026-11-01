@@ -16,7 +16,8 @@ import { useData } from '../../context/DataContext';
 
 export default function UniversityDashboard() {
   const { state } = useData();
-  const { students, drives } = state;
+  const students = state?.students || [];
+  const drives = state?.drives || [];
 
   const totalStudents = students.length;
   const verifiedProfiles = students.filter(s => s.profileStatus === 'Verified').length;
