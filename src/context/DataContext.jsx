@@ -864,8 +864,15 @@ export function DataProvider({ children }) {
     async function loadBackendData() {
       try {
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 6000);
-        const res = await fetch('/api/initial-data', { signal: controller.signal });
+        const timeoutId = setTimeout(() => controller.abort(), 10000);
+        // Force fresh load with no-cache and timestamp query to ensure UI is never stale
+        const res = await fetch(`/api/initial-data?_t=${Date.now()}`, {
+          signal: controller.signal,
+          headers: {
+            'Cache-Control': 'no-cache, no-store, must-revalidate',
+            'Pragma': 'no-cache',
+          },
+        });
         clearTimeout(timeoutId);
 
         if (!res.ok) throw new Error(`HTTP error ${res.status}`);

@@ -7,15 +7,15 @@
   "crons": [
     {
       "path": "/api/cron/send-emails",
-      "schedule": "*/10 * * * *"
+      "schedule": "0 0 * * *"
     },
     {
       "path": "/api/cron/interview-reminders",
-      "schedule": "0 * * * *"
+      "schedule": "0 1 * * *"
     },
     {
       "path": "/api/cron/certificate-expiry",
-      "schedule": "0 0 * * *"
+      "schedule": "0 2 * * *"
     },
     {
       "path": "/api/cron/university-digest",
