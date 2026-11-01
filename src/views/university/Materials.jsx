@@ -64,6 +64,7 @@ export default function UniversityMaterials() {
   const [readingMaterial, setReadingMaterial] = useState(null);
   const [activePlaylistItemIndex, setActivePlaylistItemIndex] = useState(0);
   const [inlineMsg, setInlineMsg] = useState(null);
+  const [deleteTarget, setDeleteTarget] = useState(null);
 
   // Ratings & Analytics State (Phase 2.1)
   const [analyticsData, setAnalyticsData] = useState([]);
@@ -142,7 +143,7 @@ export default function UniversityMaterials() {
     reader.onerror = () => {
       clearInterval(interval);
       onProgress(null, '');
-      alert('Error reading file. Please try again.');
+      setInlineMsg({ type: 'error', text: 'Error reading file. Please try again.' });
     };
     reader.readAsDataURL(file);
   }
@@ -198,7 +199,7 @@ export default function UniversityMaterials() {
 
   function handleAddPlaylistItem() {
     if (!playlistItemForm.title.trim()) {
-      alert('Please enter a title for the playlist item.');
+      setInlineMsg({ type: 'error', text: 'Please enter a title for the playlist item.' });
       return;
     }
     const newItem = {
@@ -321,13 +322,17 @@ export default function UniversityMaterials() {
   }
 
   function handleDelete(id, title) {
-    if (window.confirm(`Delete material "${title}"?`)) {
-      dispatch({ type: 'DELETE_MATERIAL', payload: id });
-      setInlineMsg({
-        type: 'success',
-        text: `Material "${title}" was removed.`,
-      });
-    }
+    setDeleteTarget({ id, title });
+  }
+
+  function confirmDelete() {
+    if (!deleteTarget) return;
+    dispatch({ type: 'DELETE_MATERIAL', payload: deleteTarget.id });
+    setInlineMsg({
+      type: 'success',
+      text: `Material "${deleteTarget.title}" was removed.`,
+    });
+    setDeleteTarget(null);
   }
 
   // Dynamic Content & Tag Detection (Accurate tags based on real content uploaded)
@@ -1483,6 +1488,99 @@ export default function UniversityMaterials() {
             >
               Close
             </button>
+          </div>
+        </Modal>
+      )}
+
+      {/* In-App Delete Confirmation Modal (Replaces browser confirm popup) */}
+      {deleteTarget && (
+        <Modal
+          isOpen={Boolean(deleteTarget)}
+          onClose={() => setDeleteTarget(null)}
+          title="Confirm Deletion"
+          width={460}
+        >
+          <div style={{ padding: '6px 0' }}>
+            <div style={{ display: 'flex', alignItems: 'flex-start', gap: 14, marginBottom: 16 }}>
+              <div
+                style={{
+                  width: 44,
+                  height: 44,
+                  borderRadius: '50%',
+                  background: '#FEE2E2',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  flexShrink: 0,
+                }}
+              >
+                <Trash2 size={22} color="#DC2626" />
+              </div>
+              <div>
+                <h4 style={{ margin: '0 0 6px', fontSize: 16, fontWeight: 700, color: '#111827' }}>
+                  Delete Study Material?
+                </h4>
+                <p style={{ margin: 0, fontSize: 13, color: '#6B7280', lineHeight: 1.5 }}>
+                  Are you sure you want to delete this learning material? It will be permanently removed and no longer visible to students.
+                </p>
+              </div>
+            </div>
+
+            <div
+              style={{
+                background: '#F8FAFC',
+                border: '1px solid #E2E8F0',
+                borderRadius: 6,
+                padding: '12px 14px',
+                marginBottom: 20,
+              }}
+            >
+              <div style={{ fontSize: 11, color: '#64748B', textTransform: 'uppercase', fontWeight: 700, marginBottom: 4 }}>
+                Material Title
+              </div>
+              <div style={{ fontSize: 14, fontWeight: 600, color: '#1E293B', wordBreak: 'break-word' }}>
+                "{deleteTarget.title}"
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10 }}>
+              <button
+                type="button"
+                onClick={() => setDeleteTarget(null)}
+                style={{
+                  padding: '9px 18px',
+                  borderRadius: 6,
+                  border: '1px solid #D1D5DB',
+                  background: '#fff',
+                  color: '#374151',
+                  fontSize: 13,
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={confirmDelete}
+                style={{
+                  padding: '9px 20px',
+                  borderRadius: 6,
+                  border: 'none',
+                  background: '#DC2626',
+                  color: '#fff',
+                  fontSize: 13,
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 6,
+                }}
+              >
+                <Trash2 size={15} />
+                Delete Material
+              </button>
+            </div>
           </div>
         </Modal>
       )}

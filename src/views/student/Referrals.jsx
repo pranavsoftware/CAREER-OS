@@ -136,7 +136,7 @@ export default function StudentReferrals() {
 
   const handleRedeemPerk = async (perk) => {
     if (!referralData || referralData.totalPoints < perk.pointsCost) {
-      alert(`You need ${perk.pointsCost} points to redeem this benefit.`);
+      setRedeemMsg({ type: 'error', text: `You need ${perk.pointsCost} points to redeem "${perk.title}".` });
       return;
     }
     setRedeemLoading(perk.id);

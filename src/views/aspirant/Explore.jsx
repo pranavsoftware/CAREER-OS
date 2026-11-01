@@ -37,6 +37,7 @@ export default function CollegeExplorer() {
   // Comparison State (max 3 colleges)
   const [compareList, setCompareList] = useState([]);
   const [showCompareModal, setShowCompareModal] = useState(false);
+  const [compareNotice, setCompareNotice] = useState(null);
 
   // Shortlist state (local storage)
   const [shortlistedIds, setShortlistedIds] = useState(() => {
@@ -96,7 +97,8 @@ export default function CollegeExplorer() {
         return prev.filter(c => c.id !== col.id);
       }
       if (prev.length >= 3) {
-        alert('You can compare a maximum of 3 colleges simultaneously.');
+        setCompareNotice('You can compare a maximum of 3 colleges simultaneously.');
+        setTimeout(() => setCompareNotice(null), 4000);
         return prev;
       }
       return [...prev, col];
@@ -196,6 +198,14 @@ export default function CollegeExplorer() {
             </button>
           )}
         </div>
+
+        {/* Compare Notice Toast/Banner */}
+        {compareNotice && (
+          <div style={{ background: '#FEF2F2', border: '1px solid #FECACA', borderRadius: 8, padding: '10px 14px', marginBottom: 16, color: '#B91C1C', fontSize: 13, display: 'flex', alignItems: 'center', gap: 8 }}>
+            <AlertCircle size={16} />
+            <span>{compareNotice}</span>
+          </div>
+        )}
 
         {/* Filter Bar */}
         <div style={{ background: '#fff', border: '1px solid #E5E7EB', borderRadius: 12, padding: 16, marginBottom: 24, display: 'flex', flexWrap: 'wrap', gap: 12, alignItems: 'center' }}>

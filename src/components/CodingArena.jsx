@@ -54,6 +54,7 @@ export default function CodingArena({ onProblemSolved, solvedIds = [] }) {
     studentTier: null,
     rationale: '',
   });
+  const [showResetConfirm, setShowResetConfirm] = useState(false);
 
   const textareaRef = useRef(null);
   const lineNumbersRef = useRef(null);
@@ -110,11 +111,14 @@ export default function CodingArena({ onProblemSolved, solvedIds = [] }) {
   }
 
   function handleResetCode() {
-    if (confirm('Reset editor to original starter template?')) {
-      const template = selectedProblem?.starterTemplates?.[language] || '';
-      setCode(template);
-      setExecutionResult(null);
-    }
+    setShowResetConfirm(true);
+  }
+
+  function confirmResetCode() {
+    const template = selectedProblem?.starterTemplates?.[language] || '';
+    setCode(template);
+    setExecutionResult(null);
+    setShowResetConfirm(false);
   }
 
   // Get function name for submission
@@ -1382,6 +1386,100 @@ export default function CodingArena({ onProblemSolved, solvedIds = [] }) {
               >
                 <span>Accept Challenge & Code Now</span>
                 <ChevronRight size={14} />
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* In-App Reset Code Confirmation Modal (Replaces browser confirm) */}
+      {showResetConfirm && (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            background: 'rgba(0,0,0,0.6)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 9999,
+            padding: 16,
+          }}
+          onClick={e => { if (e.target === e.currentTarget) setShowResetConfirm(false); }}
+        >
+          <div
+            style={{
+              background: '#1E293B',
+              border: '1px solid #334155',
+              borderRadius: 12,
+              maxWidth: 420,
+              width: '100%',
+              padding: 22,
+              boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)',
+              color: '#F8FAFC',
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12, marginBottom: 16 }}>
+              <div
+                style={{
+                  width: 40,
+                  height: 40,
+                  borderRadius: '50%',
+                  background: '#7F1D1D',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  flexShrink: 0,
+                }}
+              >
+                <RotateCcw size={18} color="#F87171" />
+              </div>
+              <div>
+                <h4 style={{ margin: '0 0 6px', fontSize: 16, fontWeight: 700, color: '#F8FAFC' }}>
+                  Reset Editor Code?
+                </h4>
+                <p style={{ margin: 0, fontSize: 13, color: '#94A3B8', lineHeight: 1.5 }}>
+                  This will discard your current solution edits and reset the editor to the original problem starter template.
+                </p>
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, marginTop: 20 }}>
+              <button
+                type="button"
+                onClick={() => setShowResetConfirm(false)}
+                style={{
+                  padding: '8px 16px',
+                  borderRadius: 6,
+                  border: '1px solid #475569',
+                  background: 'transparent',
+                  color: '#E2E8F0',
+                  fontSize: 13,
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                }}
+              >
+                Keep Code
+              </button>
+              <button
+                type="button"
+                onClick={confirmResetCode}
+                style={{
+                  padding: '8px 18px',
+                  borderRadius: 6,
+                  border: 'none',
+                  background: '#DC2626',
+                  color: '#fff',
+                  fontSize: 13,
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 6,
+                }}
+              >
+                <RotateCcw size={14} />
+                Reset Code
               </button>
             </div>
           </div>

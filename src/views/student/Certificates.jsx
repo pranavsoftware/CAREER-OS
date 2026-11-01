@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import Layout from '../../components/Layout';
 import FormField from '../../components/FormField';
+import Modal from '../../components/Modal';
 import { useData } from '../../context/DataContext';
 import { useAuth } from '../../context/AuthContext';
 import { initialStudents } from '../../data/students';
@@ -48,6 +49,7 @@ export default function StudentCertificates() {
   const [inlineMsg, setInlineMsg] = useState(null);
   const [reverifyingId, setReverifyingId] = useState(null);
   const [selectedCertForDetails, setSelectedCertForDetails] = useState(null);
+  const [deleteTargetCert, setDeleteTargetCert] = useState(null);
 
   const fileInputRef = useRef(null);
 
@@ -252,20 +254,26 @@ export default function StudentCertificates() {
     }
   }
 
-  async function handleDelete(certId) {
-    if (!confirm('Are you sure you want to delete this certificate?')) return;
+  function handleDelete(cert) {
+    setDeleteTargetCert(cert);
+  }
+
+  async function confirmDeleteCert() {
+    if (!deleteTargetCert) return;
     try {
-      const res = await fetch(`/api/certificates?id=${certId}`, {
+      const res = await fetch(`/api/certificates?id=${deleteTargetCert.id}`, {
         method: 'DELETE',
       });
       if (!res.ok) {
         const d = await res.json();
         throw new Error(d.error || 'Failed to delete certificate.');
       }
-      dispatch({ type: 'DELETE_CERTIFICATE', payload: certId });
-      setInlineMsg({ type: 'success', text: 'Certificate removed.' });
+      dispatch({ type: 'DELETE_CERTIFICATE', payload: deleteTargetCert.id });
+      setInlineMsg({ type: 'success', text: `Certificate "${deleteTargetCert.title}" removed.` });
     } catch (err) {
       setInlineMsg({ type: 'error', text: err.message });
+    } finally {
+      setDeleteTargetCert(null);
     }
   }
 
@@ -625,7 +633,7 @@ export default function StudentCertificates() {
                         </button>
 
                         <button
-                          onClick={() => handleDelete(cert.id)}
+                          onClick={() => handleDelete(cert)}
                           title="Delete certificate"
                           style={{
                             padding: '4px 8px',
@@ -807,6 +815,102 @@ export default function StudentCertificates() {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Delete Confirmation In-App Modal (replaces browser confirm) */}
+      {deleteTargetCert && (
+        <Modal
+          isOpen={Boolean(deleteTargetCert)}
+          onClose={() => setDeleteTargetCert(null)}
+          title="Confirm Deletion"
+          width={440}
+        >
+          <div style={{ padding: '6px 0' }}>
+            <div style={{ display: 'flex', alignItems: 'flex-start', gap: 14, marginBottom: 16 }}>
+              <div
+                style={{
+                  width: 44,
+                  height: 44,
+                  borderRadius: '50%',
+                  background: '#FEE2E2',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  flexShrink: 0,
+                }}
+              >
+                <Trash2 size={22} color="#DC2626" />
+              </div>
+              <div>
+                <h4 style={{ margin: '0 0 6px', fontSize: 16, fontWeight: 700, color: '#111827' }}>
+                  Delete Certificate?
+                </h4>
+                <p style={{ margin: 0, fontSize: 13, color: '#6B7280', lineHeight: 1.5 }}>
+                  Are you sure you want to delete this verified credential? It will be removed from your profile and recruiter scoring.
+                </p>
+              </div>
+            </div>
+
+            <div
+              style={{
+                background: '#F8FAFC',
+                border: '1px solid #E2E8F0',
+                borderRadius: 6,
+                padding: '12px 14px',
+                marginBottom: 20,
+              }}
+            >
+              <div style={{ fontSize: 11, color: '#64748B', textTransform: 'uppercase', fontWeight: 700, marginBottom: 4 }}>
+                Certificate
+              </div>
+              <div style={{ fontSize: 14, fontWeight: 600, color: '#1E293B', wordBreak: 'break-word' }}>
+                "{deleteTargetCert.title}"
+              </div>
+              <div style={{ fontSize: 12, color: '#64748B', marginTop: 2 }}>
+                Issuer: {deleteTargetCert.issuer}
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10 }}>
+              <button
+                type="button"
+                onClick={() => setDeleteTargetCert(null)}
+                style={{
+                  padding: '9px 18px',
+                  borderRadius: 6,
+                  border: '1px solid #D1D5DB',
+                  background: '#fff',
+                  color: '#374151',
+                  fontSize: 13,
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={confirmDeleteCert}
+                style={{
+                  padding: '9px 20px',
+                  borderRadius: 6,
+                  border: 'none',
+                  background: '#DC2626',
+                  color: '#fff',
+                  fontSize: 13,
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 6,
+                }}
+              >
+                <Trash2 size={15} />
+                Delete Certificate
+              </button>
+            </div>
+          </div>
+        </Modal>
       )}
     </Layout>
   );

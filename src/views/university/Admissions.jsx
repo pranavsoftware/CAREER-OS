@@ -24,6 +24,7 @@ export default function UniversityAdmissions() {
   const [reviewStatus, setReviewStatus] = useState('Accepted');
   const [reviewRemarks, setReviewRemarks] = useState('');
   const [actionLoading, setActionLoading] = useState(false);
+  const [inlineMsg, setInlineMsg] = useState(null);
 
   const fetchAdmissionsData = async () => {
     setLoading(true);
@@ -65,7 +66,7 @@ export default function UniversityAdmissions() {
         fetchAdmissionsData();
       }
     } catch (err) {
-      alert(err.message);
+      setInlineMsg({ type: 'danger', text: err.message });
     } finally {
       setActionLoading(false);
     }

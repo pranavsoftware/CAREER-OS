@@ -79,7 +79,10 @@ export default function UniversityStudents() {
 
   function handleDeleteStudent(student) {
     if (student.profileStatus === 'Verified') {
-      alert(`Cannot delete verified profile of "${student.name}". Official placement records are locked.`);
+      setInlineMsg({
+        type: 'danger',
+        text: `Cannot delete verified profile of "${student.name}". Official placement records are locked.`,
+      });
       return;
     }
     setDeleteCandidate(student);
@@ -94,7 +97,10 @@ export default function UniversityStudents() {
       });
       const data = await res.json();
       if (!res.ok) {
-        alert(data.error || 'Failed to delete student.');
+        setInlineMsg({
+          type: 'danger',
+          text: data.error || 'Failed to delete student.',
+        });
         setDeleteLoading(false);
         setDeleteCandidate(null);
         return;
@@ -106,7 +112,10 @@ export default function UniversityStudents() {
       });
     } catch (err) {
       console.error('Delete student error:', err);
-      alert('Network or server error while deleting student.');
+      setInlineMsg({
+        type: 'danger',
+        text: 'Network or server error while deleting student.',
+      });
     } finally {
       setDeleteLoading(false);
       setDeleteCandidate(null);
@@ -117,7 +126,10 @@ export default function UniversityStudents() {
   async function handleManualSubmit(e) {
     e.preventDefault();
     if (!manualForm.name || !manualForm.regNo || !manualForm.email) {
-      alert('Please fill in Name, Registration Number, and Email.');
+      setInlineMsg({
+        type: 'danger',
+        text: 'Please fill in Name, Registration Number, and Email.',
+      });
       return;
     }
 
@@ -130,7 +142,10 @@ export default function UniversityStudents() {
     );
 
     if (existing && existing.profileStatus === 'Verified') {
-      alert(`Cannot add or modify student "${existing.name}" (${existing.regNo}). This profile is already officially Verified and locked.`);
+      setInlineMsg({
+        type: 'danger',
+        text: `Cannot add or modify student "${existing.name}" (${existing.regNo}). This profile is already officially Verified and locked.`,
+      });
       return;
     }
 
@@ -167,7 +182,10 @@ export default function UniversityStudents() {
       });
       const data = await res.json();
       if (!res.ok) {
-        alert(data.error || 'Failed to register student.');
+        setInlineMsg({
+          type: 'danger',
+          text: data.error || 'Failed to register student.',
+        });
         setIsSubmitting(false);
         return;
       }
@@ -190,7 +208,10 @@ export default function UniversityStudents() {
       });
     } catch (err) {
       console.error('Error submitting student:', err);
-      alert('Error connecting to server.');
+      setInlineMsg({
+        type: 'danger',
+        text: 'Error connecting to server.',
+      });
     } finally {
       setIsSubmitting(false);
     }
@@ -285,7 +306,10 @@ export default function UniversityStudents() {
   // Mass Import CSV
   function handleImportCsv() {
     if (csvParsedRows.length === 0) {
-      alert('No parsed student records to import.');
+      setInlineMsg({
+        type: 'danger',
+        text: 'No parsed student records to import.',
+      });
       return;
     }
 

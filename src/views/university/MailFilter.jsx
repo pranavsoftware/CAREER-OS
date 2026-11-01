@@ -256,7 +256,10 @@ export default function UniversityMailFilter() {
 
     const recipients = getTargetRecipients();
     if (recipients.length === 0) {
-      alert('No students match the selected target criteria.');
+      setInlineMsg({
+        type: 'danger',
+        text: 'No students match the selected target criteria.',
+      });
       return;
     }
 

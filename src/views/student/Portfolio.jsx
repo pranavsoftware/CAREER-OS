@@ -60,6 +60,7 @@ export default function StudentPortfolio() {
   const [filterFeaturedOnly, setFilterFeaturedOnly] = useState(false);
   const [copied, setCopied] = useState(false);
   const [showAddModal, setShowAddModal] = useState(false);
+  const [showDisconnectModal, setShowDisconnectModal] = useState(false);
 
   // Manual project form state
   const [manualProj, setManualProj] = useState({
@@ -174,12 +175,13 @@ export default function StudentPortfolio() {
     }
   }
 
-  // Disconnect GitHub handler
-  async function handleDisconnect() {
-    if (!window.confirm('Are you sure you want to disconnect GitHub? This will remove GitHub synced repositories from your portfolio.')) {
-      return;
-    }
+  // Disconnect GitHub handler (opens in-app modal instead of browser popup)
+  function handleDisconnect() {
+    setShowDisconnectModal(true);
+  }
 
+  async function confirmDisconnect() {
+    setShowDisconnectModal(false);
     setIsSyncing(true);
     try {
       const res = await fetch('/api/students/github-sync', {
@@ -1328,6 +1330,98 @@ export default function StudentPortfolio() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* In-App Disconnect GitHub Confirmation Modal */}
+      {showDisconnectModal && (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            background: 'rgba(0,0,0,0.5)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 9999,
+            padding: 16,
+          }}
+          onClick={e => { if (e.target === e.currentTarget) setShowDisconnectModal(false); }}
+        >
+          <div
+            style={{
+              background: '#fff',
+              borderRadius: 12,
+              maxWidth: 440,
+              width: '100%',
+              padding: 24,
+              boxShadow: '0 20px 25px -5px rgba(0,0,0,0.15)',
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'flex-start', gap: 14, marginBottom: 16 }}>
+              <div
+                style={{
+                  width: 44,
+                  height: 44,
+                  borderRadius: '50%',
+                  background: '#FEE2E2',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  flexShrink: 0,
+                }}
+              >
+                <Trash2 size={22} color="#DC2626" />
+              </div>
+              <div>
+                <h4 style={{ margin: '0 0 6px', fontSize: 16, fontWeight: 700, color: '#111827' }}>
+                  Disconnect GitHub Account?
+                </h4>
+                <p style={{ margin: 0, fontSize: 13, color: '#6B7280', lineHeight: 1.5 }}>
+                  This will remove your synced GitHub repositories and contribution metrics from your public placement portfolio.
+                </p>
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10 }}>
+              <button
+                type="button"
+                onClick={() => setShowDisconnectModal(false)}
+                style={{
+                  padding: '9px 18px',
+                  borderRadius: 6,
+                  border: '1px solid #D1D5DB',
+                  background: '#fff',
+                  color: '#374151',
+                  fontSize: 13,
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={confirmDisconnect}
+                style={{
+                  padding: '9px 20px',
+                  borderRadius: 6,
+                  border: 'none',
+                  background: '#DC2626',
+                  color: '#fff',
+                  fontSize: 13,
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 6,
+                }}
+              >
+                <Trash2 size={15} />
+                Disconnect
+              </button>
+            </div>
           </div>
         </div>
       )}

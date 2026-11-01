@@ -62,6 +62,7 @@ export default function CompanyInterviews() {
   const [searchQuery, setSearchQuery] = useState('');
   const [typeFilter, setTypeFilter] = useState('all');
   const [recommendationFilter, setRecommendationFilter] = useState('all');
+  const [cancelTargetCall, setCancelTargetCall] = useState(null);
 
   // Real-time tick for live call badges & countdowns
   const [currentTime, setCurrentTime] = useState(() => new Date());
@@ -157,7 +158,7 @@ export default function CompanyInterviews() {
         body.recruiterNote = rescheduleActionData.recruiterNote || 'Declined due to scheduling constraints.';
       } else if (action === 'propose') {
         if (!rescheduleActionData.newDate || !rescheduleActionData.newTime) {
-          alert('Please select both a date and a time to propose.');
+          setInlineMsg({ type: 'danger', text: 'Please select both a date and a time to propose.' });
           setRescheduleActionLoading(false);
           return;
         }
@@ -196,7 +197,7 @@ export default function CompanyInterviews() {
         text: `Reschedule request successfully ${action === 'approve' ? 'approved (interview updated)' : action === 'decline' ? 'declined' : 'counter-proposed'}! Candidate notified.`,
       });
     } catch (err) {
-      alert(err.message);
+      setInlineMsg({ type: 'danger', text: err.message });
     } finally {
       setRescheduleActionLoading(false);
     }
@@ -474,15 +475,19 @@ export default function CompanyInterviews() {
     setActiveTab('history');
   }
 
-  // Cancel interview
+  // Cancel interview (opens in-app modal instead of browser popup)
   function handleCancelCall(id, studentName) {
-    if (window.confirm(`Are you sure you want to cancel the scheduled video interview with ${studentName}?`)) {
-      dispatch({ type: 'CANCEL_INTERVIEW', payload: id });
-      setInlineMsg({
-        type: 'danger',
-        text: `Interview with ${studentName} has been cancelled.`,
-      });
-    }
+    setCancelTargetCall({ id, studentName });
+  }
+
+  function confirmCancelCall() {
+    if (!cancelTargetCall) return;
+    dispatch({ type: 'CANCEL_INTERVIEW', payload: cancelTargetCall.id });
+    setInlineMsg({
+      type: 'danger',
+      text: `Interview with ${cancelTargetCall.studentName} has been cancelled.`,
+    });
+    setCancelTargetCall(null);
   }
 
   // Template autofill helper
@@ -2198,6 +2203,83 @@ export default function CompanyInterviews() {
                       <Check size={14} /> Approve Candidate Slot ({selectedRescheduleReq.proposedDate || selectedRescheduleReq.proposed_date})
                     </>
                   )}
+                </button>
+              </div>
+            </div>
+          </Modal>
+        )}
+
+        {/* In-App Cancel Interview Confirmation Modal (Replaces browser confirm) */}
+        {cancelTargetCall && (
+          <Modal
+            isOpen={Boolean(cancelTargetCall)}
+            onClose={() => setCancelTargetCall(null)}
+            title="Cancel Scheduled Interview"
+            width={450}
+          >
+            <div style={{ padding: '6px 0' }}>
+              <div style={{ display: 'flex', alignItems: 'flex-start', gap: 14, marginBottom: 16 }}>
+                <div
+                  style={{
+                    width: 44,
+                    height: 44,
+                    borderRadius: '50%',
+                    background: '#FEE2E2',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    flexShrink: 0,
+                  }}
+                >
+                  <Trash2 size={22} color="#DC2626" />
+                </div>
+                <div>
+                  <h4 style={{ margin: '0 0 6px', fontSize: 16, fontWeight: 700, color: '#111827' }}>
+                    Cancel Video Interview?
+                  </h4>
+                  <p style={{ margin: 0, fontSize: 13, color: '#6B7280', lineHeight: 1.5 }}>
+                    Are you sure you want to cancel the scheduled video interview with{' '}
+                    <strong>{cancelTargetCall.studentName}</strong>? The candidate will be notified.
+                  </p>
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10 }}>
+                <button
+                  type="button"
+                  onClick={() => setCancelTargetCall(null)}
+                  style={{
+                    padding: '9px 18px',
+                    borderRadius: 6,
+                    border: '1px solid #D1D5DB',
+                    background: '#fff',
+                    color: '#374151',
+                    fontSize: 13,
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                  }}
+                >
+                  Keep Interview
+                </button>
+                <button
+                  type="button"
+                  onClick={confirmCancelCall}
+                  style={{
+                    padding: '9px 20px',
+                    borderRadius: 6,
+                    border: 'none',
+                    background: '#DC2626',
+                    color: '#fff',
+                    fontSize: 13,
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 6,
+                  }}
+                >
+                  <Trash2 size={15} />
+                  Cancel Interview
                 </button>
               </div>
             </div>

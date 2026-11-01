@@ -158,6 +158,7 @@ export default function StudentProfile() {
   const [quickGithubUsername, setQuickGithubUsername] = useState('');
   const [isSyncingGithub, setIsSyncingGithub] = useState(false);
   const [githubSyncError, setGithubSyncError] = useState(null);
+  const [deleteTargetExp, setDeleteTargetExp] = useState(null);
 
   // Email Notification Preferences State
   const [emailPrefs, setEmailPrefs] = useState({
@@ -454,13 +455,18 @@ export default function StudentProfile() {
     setTimeout(() => setMessage(null), 4000);
   }
 
-  async function deleteExperience(id) {
-    if (!confirm('Are you sure you want to remove this internship record?')) return;
-    const experience = (student.experience || []).filter(e => e.id !== id);
+  function deleteExperience(id, company) {
+    setDeleteTargetExp({ id, company });
+  }
+
+  async function confirmDeleteExperience() {
+    if (!deleteTargetExp) return;
+    const experience = (student.experience || []).filter(e => e.id !== deleteTargetExp.id);
     dispatch({ type: 'UPDATE_STUDENT', payload: { id: student.id, experience } });
     await persistStudentUpdate({ experience });
-    setMessage({ type: 'success', text: 'Internship record removed.' });
+    setMessage({ type: 'success', text: `Internship record at ${deleteTargetExp.company || 'company'} removed.` });
     setTimeout(() => setMessage(null), 3000);
+    setDeleteTargetExp(null);
   }
 
   const sectionCard = (title, section, content, editContent) => (
@@ -1282,7 +1288,7 @@ export default function StudentProfile() {
                       {e.stipend || 'Paid'}{e.stipendAmount ? ` (${e.stipendAmount})` : ''}
                     </span>
                     <button
-                      onClick={() => deleteExperience(e.id)}
+                      onClick={() => deleteExperience(e.id, e.company)}
                       title="Delete internship"
                       style={{ border: 'none', background: 'none', cursor: 'pointer', color: '#DC2626', padding: '4px', display: 'inline-flex', alignItems: 'center' }}
                     >
@@ -1928,6 +1934,115 @@ export default function StudentProfile() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* In-App Delete Internship Confirmation Modal */}
+      {deleteTargetExp && (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            background: 'rgba(0,0,0,0.5)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 9999,
+            padding: 16,
+          }}
+          onClick={e => { if (e.target === e.currentTarget) setDeleteTargetExp(null); }}
+        >
+          <div
+            style={{
+              background: '#fff',
+              borderRadius: 12,
+              maxWidth: 440,
+              width: '100%',
+              padding: 24,
+              boxShadow: '0 20px 25px -5px rgba(0,0,0,0.15)',
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'flex-start', gap: 14, marginBottom: 16 }}>
+              <div
+                style={{
+                  width: 44,
+                  height: 44,
+                  borderRadius: '50%',
+                  background: '#FEE2E2',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  flexShrink: 0,
+                }}
+              >
+                <Trash2 size={22} color="#DC2626" />
+              </div>
+              <div>
+                <h4 style={{ margin: '0 0 6px', fontSize: 16, fontWeight: 700, color: '#111827' }}>
+                  Remove Internship Record?
+                </h4>
+                <p style={{ margin: 0, fontSize: 13, color: '#6B7280', lineHeight: 1.5 }}>
+                  Are you sure you want to remove this internship experience and its attached verification documents from your profile?
+                </p>
+              </div>
+            </div>
+
+            <div
+              style={{
+                background: '#F8FAFC',
+                border: '1px solid #E2E8F0',
+                borderRadius: 6,
+                padding: '12px 14px',
+                marginBottom: 20,
+              }}
+            >
+              <div style={{ fontSize: 11, color: '#64748B', textTransform: 'uppercase', fontWeight: 700, marginBottom: 4 }}>
+                Company / Organization
+              </div>
+              <div style={{ fontSize: 14, fontWeight: 600, color: '#1E293B', wordBreak: 'break-word' }}>
+                {deleteTargetExp.company || 'Internship Experience'}
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10 }}>
+              <button
+                type="button"
+                onClick={() => setDeleteTargetExp(null)}
+                style={{
+                  padding: '9px 18px',
+                  borderRadius: 6,
+                  border: '1px solid #D1D5DB',
+                  background: '#fff',
+                  color: '#374151',
+                  fontSize: 13,
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={confirmDeleteExperience}
+                style={{
+                  padding: '9px 20px',
+                  borderRadius: 6,
+                  border: 'none',
+                  background: '#DC2626',
+                  color: '#fff',
+                  fontSize: 13,
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 6,
+                }}
+              >
+                <Trash2 size={15} />
+                Remove
+              </button>
+            </div>
           </div>
         </div>
       )}

@@ -23,6 +23,8 @@ export default function UniversityReferrals() {
   const [actionLoading, setActionLoading] = useState(false);
   const [endorseModal, setEndorseModal] = useState(null);
   const [customEndorsement, setCustomEndorsement] = useState('');
+  const [declineTarget, setDeclineTarget] = useState(null);
+  const [errorMsg, setErrorMsg] = useState(null);
 
   const fetchUniversityReferrals = async () => {
     setLoading(true);
@@ -62,26 +64,33 @@ export default function UniversityReferrals() {
         fetchUniversityReferrals();
       }
     } catch (err) {
-      alert(err.message);
+      setErrorMsg(err.message);
     } finally {
       setActionLoading(false);
     }
   };
 
-  const handleDecline = async (rec) => {
-    if (!confirm('Are you sure you want to decline this recommendation request?')) return;
+  const handleDecline = (rec) => {
+    setDeclineTarget(rec);
+  };
+
+  const confirmDecline = async () => {
+    if (!declineTarget) return;
     setActionLoading(true);
     try {
       await fetch('/api/university/referrals', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json', 'x-user-role': 'university' },
         body: JSON.stringify({
-          recommendationId: rec.id,
+          recommendationId: declineTarget.id,
           status: 'Declined',
           endorsement: 'Declined due to insufficient coursework / project records',
         }),
       });
+      setDeclineTarget(null);
       fetchUniversityReferrals();
+    } catch (err) {
+      setErrorMsg(err.message);
     } finally {
       setActionLoading(false);
     }
@@ -352,6 +361,45 @@ export default function UniversityReferrals() {
                   style={{ padding: '8px 20px', borderRadius: 6, background: '#059669', color: '#fff', border: 'none', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}
                 >
                   {actionLoading ? 'Saving...' : 'Confirm & Publish Badge'}
+                </button>
+              </div>
+            </div>
+          </Modal>
+        )}
+
+        {/* Decline Recommendation In-App Modal */}
+        {declineTarget && (
+          <Modal
+            isOpen={Boolean(declineTarget)}
+            title="Decline Recommendation Request"
+            width={440}
+            onClose={() => setDeclineTarget(null)}
+          >
+            <div style={{ padding: '6px 0' }}>
+              <div style={{ marginBottom: 16 }}>
+                <h4 style={{ margin: '0 0 6px', fontSize: 15, fontWeight: 700, color: '#1F2937' }}>
+                  Decline Recommendation for {declineTarget.studentName || declineTarget.studentId}?
+                </h4>
+                <p style={{ margin: 0, fontSize: 13, color: '#6B7280', lineHeight: 1.5 }}>
+                  This request will be marked as declined. The student will be notified.
+                </p>
+              </div>
+
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, marginTop: 20 }}>
+                <button
+                  type="button"
+                  onClick={() => setDeclineTarget(null)}
+                  style={{ padding: '8px 16px', borderRadius: 6, border: '1px solid #D1D5DB', background: '#fff', fontSize: 13, cursor: 'pointer' }}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  disabled={actionLoading}
+                  onClick={confirmDecline}
+                  style={{ padding: '8px 18px', borderRadius: 6, background: '#DC2626', color: '#fff', border: 'none', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}
+                >
+                  {actionLoading ? 'Declining...' : 'Decline Request'}
                 </button>
               </div>
             </div>
