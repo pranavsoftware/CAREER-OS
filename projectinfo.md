@@ -20,6 +20,7 @@
 6. [AI Subsystems, 3D WebGL Avatar & Vision Proctoring](#6-ai-subsystems-3d-webgl-avatar--vision-proctoring)
 7. [Client State Architecture & Offline Mutation Pipeline](#7-client-state-architecture--offline-mutation-pipeline)
 8. [Deployment & Environment Configuration](#8-deployment--environment-configuration)
+9. [Email Notification System & Resend Integration](#9-email-notification-system--resend-integration)
 
 ---
 
@@ -1300,3 +1301,58 @@ python main.py
 - **Vercel**: Pre-configured in `vercel.json` with dynamic serverless route rules.
 - **Render**: Pre-configured in `render.yaml` defining web service and disk storage for AI models.
 - **Docker**: `ai-service/Dockerfile` and `docker-compose.yml` for containerized zero-setup deployment of Piper TTS and Faster-Whisper.
+
+---
+
+## 9. Email Notification System & Resend Integration
+
+### 9.1 Architecture Overview
+CAREER-OS incorporates a production-ready, transactional and queued email notification system built on top of the Resend API SDK with zero third-party client dependencies.
+
+```
+  ┌───────────────────────────────────────────────────────────────┐
+  │                   CAREER-OS Event Triggers                   │
+  │  (Applications, Interviews, Shortlists, Verifications, etc.) │
+  └───────────────────────────────┬───────────────────────────────┘
+                                  │
+                                  ▼
+                    ┌───────────────────────────┐
+                    │  src/lib/emailEvents.js   │
+                    │  - User preferences check │
+                    │  - Token generation       │
+                    │  - ICS invite generation  │
+                    └─────────────┬─────────────┘
+                                  │
+                                  ▼
+                    ┌───────────────────────────┐
+                    │     src/lib/email.js      │
+                    │  - Non-prod redirect guard│
+                    │  - Deduplication check    │
+                    │  - Daily quota monitor    │
+                    │  - Never-throw error wrapper
+                    └─────────────┬─────────────┘
+                                  │
+            ┌─────────────────────┴─────────────────────┐
+            ▼                                           ▼
+┌───────────────────────┐                   ┌───────────────────────┐
+│     Resend API        │                   │ PostgreSQL email_logs │
+│ (Transactional Email) │                   │ (Audit Trail & Queue) │
+└───────────────────────┘                   └───────────────────────┘
+```
+
+### 9.2 Core Components & File Reference
+1. **`src/lib/email.js`**: Core dispatcher implementing `sendEmail` and `sendBulkEmail`. In non-production environments (`NODE_ENV !== 'production'`), recipient addresses are redirected to `TEST_EMAIL_OVERRIDE` (`careeros.admin@gmail.com`) to prevent sending emails to student testing addresses while maintaining live deliverability verification.
+2. **`src/lib/emailTemplates.js`**: Universal responsive email layout (dark modern brand card, max-width 600px, inline styles, Asia/Kolkata IST timestamps, HTML escaping) along with 35 specialized event templates across Student, Recruiter, University, and Aspirant domains.
+3. **`src/lib/emailEvents.js`**: High-level orchestrator functions that check user notification preferences in `users.email_preferences`, generate HMAC-signed one-click unsubscribe tokens, build RFC 5545 `.ics` iCalendar calendar invites for interview schedules, and dispatch emails.
+4. **`src/app/api/email/preferences/route.js`**: `GET` and `PATCH` endpoints for student and recruiter notification categories (`drives`, `reminders`, `circulars`, `marketing`).
+5. **`src/app/api/email/unsubscribe/route.js`**: Token-verified one-click unsubscribe endpoint complying with RFC 8058.
+6. **`src/app/api/university/email-logs/route.js`**: University administrator audit log query endpoint with delivery counts and quota monitoring.
+7. **`scripts/migrations/phase5_email_system.mjs`**: Idempotent database schema adding `email_logs` and `users.email_preferences`.
+8. **`scripts/test-emails.mjs`**: 18-point verification test suite (`npm run email:test`) checking layout rendering, token validation, live delivery, deduplication, and PostgreSQL audit logging.
+
+### 9.3 Vercel Scheduled Cron Workers
+Configured via `vercel.json` and secured by `CRON_SECRET`:
+- **`/api/cron/send-emails`** (`*/10 * * * *`): Processes `queued` messages respecting daily free-tier limits and throttling chunks to prevent exceeding rate limits.
+- **`/api/cron/interview-reminders`** (`0 * * * *`): Scans scheduled interviews occurring in the next 24 hours and 1 hour, dispatching reminder notifications with `.ics` meeting room attachments.
+- **`/api/cron/certificate-expiry`** (`0 0 * * *`): Evaluates student certificates expiring within 30 days and notifies students to submit renewals.
+- **`/api/cron/university-digest`** (`30 2 * * *` / 8:00 AM IST): Compiles daily placement counts, open drives, and pending verification queues into an executive digest for university officers.
