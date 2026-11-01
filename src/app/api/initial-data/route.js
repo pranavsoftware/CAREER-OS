@@ -18,7 +18,7 @@ export async function GET() {
     const res = await query(`
       SELECT
         (SELECT COALESCE(json_agg(t), '[]'::json) FROM (
-          SELECT id, name, reg_no AS "regNo", email, branch, batch, CAST(cgpa AS FLOAT) AS cgpa, backlogs, phone, dob, gender, address, profile_status AS "profileStatus", placement_status AS "placementStatus", profile_completion AS "profileCompletion", github, linkedin, verification_status AS "verificationStatus", education, skills, projects, experience, resume_url AS "resumeUrl"
+          SELECT id, name, reg_no AS "regNo", email, branch, batch, CAST(cgpa AS FLOAT) AS cgpa, backlogs, phone, dob, gender, address, profile_status AS "profileStatus", placement_status AS "placementStatus", profile_completion AS "profileCompletion", github, linkedin, verification_status AS "verificationStatus", education, skills, projects, experience, resume_url AS "resumeUrl", avatar
           FROM students ORDER BY id ASC
         ) t) AS students,
 

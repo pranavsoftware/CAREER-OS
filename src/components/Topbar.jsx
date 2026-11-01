@@ -69,9 +69,15 @@ export default function Topbar({ title }) {
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
+              overflow: 'hidden',
+              flexShrink: 0,
             }}
           >
-            {user?.avatar || user?.name?.charAt(0)}
+            {user?.avatar && (user.avatar.startsWith('data:') || user.avatar.startsWith('http')) ? (
+              <img src={user.avatar} alt={user?.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+            ) : (
+              user?.name?.charAt(0) || 'U'
+            )}
           </span>
           <div style={{ textAlign: 'left' }}>
             <div style={{ fontWeight: 500, color: '#111827', fontSize: 13 }}>{user?.name}</div>

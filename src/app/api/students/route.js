@@ -19,7 +19,7 @@ export async function GET(request) {
         s.profile_status AS "profileStatus", s.placement_status AS "placementStatus",
         s.profile_completion AS "profileCompletion", s.github, s.linkedin,
         s.verification_status AS "verificationStatus", s.education,
-        s.skills, s.projects, s.experience, s.resume_url AS "resumeUrl",
+        s.skills, s.projects, s.experience, s.resume_url AS "resumeUrl", s.avatar,
         COALESCE(
           (
             SELECT json_agg(

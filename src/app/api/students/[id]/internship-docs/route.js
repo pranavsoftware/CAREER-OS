@@ -1,19 +1,9 @@
 import { NextResponse } from 'next/server';
-import fs from 'fs';
-import path from 'path';
-
-const UPLOAD_DIR = path.join(process.cwd(), '.private_uploads', 'internships');
-
-// Ensure storage folder exists
-try {
-  if (!fs.existsSync(UPLOAD_DIR)) {
-    fs.mkdirSync(UPLOAD_DIR, { recursive: true });
-  }
-} catch (_) {}
+import { query } from '@/lib/db.js';
 
 export async function POST(request, { params }) {
   try {
-    const { id } = await params;
+    const { id: studentId } = await params;
     const formData = await request.formData();
     const file = formData.get('file');
     const docType = formData.get('docType') || 'general';
@@ -42,21 +32,34 @@ export async function POST(request, { params }) {
       );
     }
 
+    const mimeType = isPdf ? 'application/pdf' : isPng ? 'image/png' : 'image/jpeg';
     const ext = isPdf ? '.pdf' : isPng ? '.png' : '.jpg';
     const safeBase = file.name.replace(/[^a-zA-Z0-9_-]/g, '_').slice(0, 30);
     const storageFileName = `intern_${docType}_${Date.now()}_${safeBase}${ext}`;
-    const destinationPath = path.join(UPLOAD_DIR, storageFileName);
+    const docId = `doc_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;
+    const base64Data = buffer.toString('base64');
 
-    fs.writeFileSync(destinationPath, buffer);
+    // Save document directly into PostgreSQL database (zero local disk persistence)
+    await query(`
+      INSERT INTO internship_documents (
+        id, student_id, file_name, original_name, doc_type, mime_type, file_size, file_data, created_at
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NOW())
+      ON CONFLICT (file_name) DO UPDATE SET
+        file_data = EXCLUDED.file_data,
+        mime_type = EXCLUDED.mime_type,
+        file_size = EXCLUDED.file_size;
+    `, [docId, studentId, storageFileName, file.name, docType, mimeType, buffer.length, base64Data]);
 
     return NextResponse.json({
       success: true,
       document: {
+        id: docId,
         docType,
         originalName: file.name,
         fileName: storageFileName,
-        url: `/api/students/${id}/internship-docs/${storageFileName}`,
+        url: `/api/students/${studentId}/internship-docs/${storageFileName}`,
         size: buffer.length,
+        mimeType,
         uploadedAt: new Date().toISOString(),
       },
     });
@@ -65,4 +68,3 @@ export async function POST(request, { params }) {
     return NextResponse.json({ error: error.message || 'Internal Server Error' }, { status: 500 });
   }
 }
-

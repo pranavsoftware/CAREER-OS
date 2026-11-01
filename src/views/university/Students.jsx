@@ -352,9 +352,45 @@ export default function UniversityStudents() {
       key: 'name',
       header: 'Student Name',
       render: (v, r) => (
-        <div>
-          <span style={{ fontWeight: 600, color: '#111827' }}>{v}</span>
-          <div style={{ fontSize: 11, color: '#6B7280' }}>{r.email}</div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          {r.avatar ? (
+            <img
+              src={r.avatar}
+              alt={v}
+              style={{
+                width: 36,
+                height: 36,
+                borderRadius: '50%',
+                objectFit: 'cover',
+                border: '1.5px solid #10B981',
+                boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+                flexShrink: 0,
+              }}
+            />
+          ) : (
+            <div
+              style={{
+                width: 36,
+                height: 36,
+                borderRadius: '50%',
+                background: '#EEF2FF',
+                color: '#4F46E5',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontSize: 13,
+                fontWeight: 700,
+                border: '1.5px solid #E0E7FF',
+                flexShrink: 0,
+              }}
+            >
+              {v ? v.charAt(0).toUpperCase() : 'S'}
+            </div>
+          )}
+          <div>
+            <span style={{ fontWeight: 600, color: '#111827' }}>{v}</span>
+            <div style={{ fontSize: 11, color: '#6B7280' }}>{r.email}</div>
+          </div>
         </div>
       ),
     },

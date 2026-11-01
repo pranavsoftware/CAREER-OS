@@ -312,9 +312,9 @@ async function runMigrationAndSeed() {
       INSERT INTO students (
         id, name, reg_no, email, branch, batch, cgpa, backlogs, phone, dob, gender,
         address, profile_status, placement_status, profile_completion, github, linkedin,
-        verification_status, education, skills, projects, experience, resume_url
+        verification_status, education, skills, projects, experience, resume_url, avatar
       )
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24)
       ON CONFLICT (id) DO UPDATE SET
         name = EXCLUDED.name,
         reg_no = EXCLUDED.reg_no,
@@ -337,12 +337,14 @@ async function runMigrationAndSeed() {
         skills = EXCLUDED.skills,
         projects = EXCLUDED.projects,
         experience = EXCLUDED.experience,
-        resume_url = EXCLUDED.resume_url;
+        resume_url = EXCLUDED.resume_url,
+        avatar = COALESCE(EXCLUDED.avatar, students.avatar);
     `, [
       s.id, s.name, s.regNo, s.email, s.branch, s.batch, s.cgpa, s.backlogs || 0, s.phone || null, s.dob || null, s.gender || null,
       s.address || null, s.profileStatus || 'Pending', s.placementStatus || 'In process', s.profileCompletion || 0,
       s.github || null, s.linkedin || null, JSON.stringify(s.verificationStatus || {}), JSON.stringify(s.education || {}),
-      JSON.stringify(s.skills || []), JSON.stringify(s.projects || []), JSON.stringify(s.experience || []), s.resumeUrl || null
+      JSON.stringify(s.skills || []), JSON.stringify(s.projects || []), JSON.stringify(s.experience || []), s.resumeUrl || null,
+      s.avatar || null
     ]);
   }
   console.log(`Seeded ${initialStudents.length} students.`);
@@ -665,6 +667,10 @@ async function runMigrationAndSeed() {
   // 16b. Ensure branch-specific materials exist and are categorized by branch
   const { seedBranchMaterials } = await import('./seed-materials-branches.mjs');
   await seedBranchMaterials();
+
+  // 16c. Phase 6 schemas: student avatar and database-backed document storage
+  const { runPhase6Migration } = await import('./migrations/phase6_student_avatar_and_db_docs.mjs');
+  await runPhase6Migration();
 
   // 17. Seed sample material enrollments and ratings
   // Get a sample of material IDs from DB

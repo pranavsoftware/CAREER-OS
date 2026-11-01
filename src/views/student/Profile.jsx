@@ -29,9 +29,11 @@ import {
   FileText,
   CheckCircle2,
   Paperclip,
-  Trash2
+  Trash2,
+  Camera
 } from 'lucide-react';
 import GithubIcon from '../../components/GithubIcon';
+import StudentPhotoUploadModal from '../../components/StudentPhotoUploadModal';
 
 const SKILL_CATALOG = [
   // Frontend
@@ -160,6 +162,9 @@ export default function StudentProfile() {
   const [githubSyncError, setGithubSyncError] = useState(null);
   const [deleteTargetExp, setDeleteTargetExp] = useState(null);
 
+  // 75% Face Visibility Student Photo Upload State
+  const [showPhotoModal, setShowPhotoModal] = useState(false);
+
   // Email Notification Preferences State
   const [emailPrefs, setEmailPrefs] = useState({
     drives: true,
@@ -231,6 +236,17 @@ export default function StudentProfile() {
     setMessage({ type: 'success', text: `${section} updated successfully. Profile completion: ${profileCompletion}%.` });
     setTimeout(() => setMessage(null), 3500);
     await persistStudentUpdate(payload);
+  }
+
+  async function handleSavePhoto(dataUrl) {
+    const payload = { avatar: dataUrl };
+    dispatch({ type: 'UPDATE_STUDENT', payload: { id: student.id, avatar: dataUrl } });
+    await persistStudentUpdate(payload);
+    setMessage({
+      type: 'success',
+      text: 'Official student profile picture (75%+ face visibility verified) uploaded and saved to database successfully.',
+    });
+    setTimeout(() => setMessage(null), 4000);
   }
 
   async function addSkill(nameOverride = null, levelOverride = null) {
@@ -536,6 +552,142 @@ export default function StudentProfile() {
         </div>
         <div style={{ width: '100%', height: 8, background: '#F3F4F6', borderRadius: 4, overflow: 'hidden' }}>
           <div style={{ width: `${student.profileCompletion || 25}%`, height: '100%', background: '#2563EB', borderRadius: 4, transition: 'width 0.3s ease' }} />
+        </div>
+      </div>
+
+      {/* Official Student Profile Photo & Identity Card */}
+      <div style={{ background: '#fff', border: '1px solid #E5E7EB', borderRadius: 8, padding: '16px 20px', marginBottom: 16 }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 16 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+            {/* Avatar Circle */}
+            <div style={{ position: 'relative', width: 84, height: 84, borderRadius: '50%', flexShrink: 0 }}>
+              {student.avatar ? (
+                <img
+                  src={student.avatar}
+                  alt={student.name}
+                  style={{
+                    width: 84,
+                    height: 84,
+                    borderRadius: '50%',
+                    objectFit: 'cover',
+                    border: '3px solid #10B981',
+                    boxShadow: '0 2px 10px rgba(16, 185, 129, 0.2)',
+                  }}
+                />
+              ) : (
+                <div
+                  style={{
+                    width: 84,
+                    height: 84,
+                    borderRadius: '50%',
+                    background: '#EFF6FF',
+                    color: '#2563EB',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    fontSize: 28,
+                    fontWeight: 700,
+                    border: '3px dashed #93C5FD',
+                  }}
+                >
+                  {student.name ? student.name.charAt(0).toUpperCase() : 'S'}
+                </div>
+              )}
+              <button
+                type="button"
+                onClick={() => setShowPhotoModal(true)}
+                title="Update photo (75% face visibility verified)"
+                style={{
+                  position: 'absolute',
+                  bottom: -2,
+                  right: -2,
+                  width: 28,
+                  height: 28,
+                  borderRadius: '50%',
+                  background: '#2563EB',
+                  border: '2px solid #fff',
+                  color: '#fff',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  cursor: 'pointer',
+                  boxShadow: '0 2px 5px rgba(0,0,0,0.2)',
+                }}
+              >
+                <Camera size={14} />
+              </button>
+            </div>
+
+            <div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                <h3 style={{ margin: 0, fontSize: 16, fontWeight: 700, color: '#111827' }}>
+                  {student.name}
+                </h3>
+                {student.avatar ? (
+                  <span
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: 4,
+                      background: '#ECFDF5',
+                      color: '#059669',
+                      border: '1px solid #A7F3D0',
+                      padding: '2px 8px',
+                      borderRadius: 9999,
+                      fontSize: 11,
+                      fontWeight: 700,
+                    }}
+                  >
+                    <Check size={12} /> 75%+ Face Verified Photo
+                  </span>
+                ) : (
+                  <span
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: 4,
+                      background: '#FFFBEB',
+                      color: '#B45309',
+                      border: '1px solid #FDE68A',
+                      padding: '2px 8px',
+                      borderRadius: 9999,
+                      fontSize: 11,
+                      fontWeight: 600,
+                    }}
+                  >
+                    Photo Required for Placements
+                  </span>
+                )}
+              </div>
+              <div style={{ fontSize: 12, color: '#4B5563', marginTop: 4 }}>
+                Reg: <strong>{student.regNo}</strong> • {student.branch} • Batch {student.batch || '2026'}
+              </div>
+              <div style={{ fontSize: 11, color: '#6B7280', marginTop: 4 }}>
+                This official portrait is verified for 75%+ face visibility and is visible to university placement coordinators and company recruiters.
+              </div>
+            </div>
+          </div>
+
+          <button
+            type="button"
+            onClick={() => setShowPhotoModal(true)}
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 6,
+              padding: '8px 16px',
+              borderRadius: 6,
+              border: 'none',
+              background: '#2563EB',
+              color: '#fff',
+              fontSize: 13,
+              fontWeight: 600,
+              cursor: 'pointer',
+              boxShadow: '0 1px 3px rgba(37,99,235,0.2)',
+            }}
+          >
+            <Camera size={15} /> {student.avatar ? 'Update Profile Picture' : 'Upload Profile Picture'}
+          </button>
         </div>
       </div>
 
@@ -2046,6 +2198,14 @@ export default function StudentProfile() {
           </div>
         </div>
       )}
+      {/* Student 75% Face Visibility Photo Upload Modal */}
+      <StudentPhotoUploadModal
+        isOpen={showPhotoModal}
+        onClose={() => setShowPhotoModal(false)}
+        currentAvatar={student.avatar}
+        studentName={student.name}
+        onSavePhoto={handleSavePhoto}
+      />
     </Layout>
   );
 }

@@ -1552,9 +1552,15 @@ export default function CompanyInterviews() {
                                       fontWeight: 800,
                                       fontSize: 13,
                                       flexShrink: 0,
+                                      overflow: 'hidden',
+                                      border: student.avatar ? '1.5px solid #10B981' : 'none',
                                     }}
                                   >
-                                    {student.name?.charAt(0) || 'S'}
+                                    {student.avatar ? (
+                                      <img src={student.avatar} alt={student.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                    ) : (
+                                      student.name?.charAt(0) || 'S'
+                                    )}
                                   </div>
                                   <div>
                                     <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
@@ -1642,8 +1648,12 @@ export default function CompanyInterviews() {
                               fontSize: 12,
                             }}
                           >
-                            <div style={{ width: 22, height: 22, borderRadius: '50%', background: '#0284C7', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: 11 }}>
-                              {student.name?.charAt(0) || 'S'}
+                            <div style={{ width: 22, height: 22, borderRadius: '50%', background: '#0284C7', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: 11, overflow: 'hidden' }}>
+                              {student.avatar ? (
+                                <img src={student.avatar} alt={student.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                              ) : (
+                                student.name?.charAt(0) || 'S'
+                              )}
                             </div>
                             <div>
                               <div style={{ fontWeight: 700, color: '#0369A1' }}>

@@ -136,24 +136,67 @@ export default function UniversityStudentDetail() {
 
       {/* Student Profile Overview Card */}
       <div style={{ background: '#fff', border: '1px solid #E5E7EB', borderRadius: 8, padding: 20, marginBottom: 20 }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 12 }}>
-          <div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <h1 style={{ margin: 0, fontSize: 20, fontWeight: 700, color: '#111827' }}>
-                {student.name}
-              </h1>
-              {student.profileStatus === 'Verified' && (
-                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, background: '#ECFDF5', color: '#059669', border: '1px solid #A7F3D0', padding: '2px 8px', borderRadius: 9999, fontSize: 11, fontWeight: 700 }}>
-                  <ShieldCheck size={13} />
-                  100% University Verified
-                </span>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 16 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+            {/* Student Avatar */}
+            <div style={{ position: 'relative', width: 68, height: 68, borderRadius: '50%', flexShrink: 0 }}>
+              {student.avatar ? (
+                <img
+                  src={student.avatar}
+                  alt={student.name}
+                  style={{
+                    width: 68,
+                    height: 68,
+                    borderRadius: '50%',
+                    objectFit: 'cover',
+                    border: '2.5px solid #10B981',
+                    boxShadow: '0 2px 8px rgba(16, 185, 129, 0.25)',
+                  }}
+                />
+              ) : (
+                <div
+                  style={{
+                    width: 68,
+                    height: 68,
+                    borderRadius: '50%',
+                    background: '#EEF2FF',
+                    color: '#4F46E5',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    fontSize: 24,
+                    fontWeight: 700,
+                    border: '2px dashed #C7D2FE',
+                  }}
+                >
+                  {student.name ? student.name.charAt(0).toUpperCase() : 'S'}
+                </div>
               )}
             </div>
-            <div style={{ fontSize: 13, color: '#4B5563', marginTop: 4 }}>
-              B.Tech in {student.branch} • Batch {student.batch} • Reg: <strong>{student.regNo}</strong>
-            </div>
-            <div style={{ fontSize: 12, color: '#6B7280', marginTop: 4 }}>
-              Email: {student.email} • Phone: {student.phone || 'Not provided'}
+
+            <div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                <h1 style={{ margin: 0, fontSize: 20, fontWeight: 700, color: '#111827' }}>
+                  {student.name}
+                </h1>
+                {student.profileStatus === 'Verified' && (
+                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, background: '#ECFDF5', color: '#059669', border: '1px solid #A7F3D0', padding: '2px 8px', borderRadius: 9999, fontSize: 11, fontWeight: 700 }}>
+                    <ShieldCheck size={13} />
+                    100% University Verified
+                  </span>
+                )}
+                {student.avatar && (
+                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, background: '#F0FDF4', color: '#16A34A', border: '1px solid #BBF7D0', padding: '2px 8px', borderRadius: 9999, fontSize: 10, fontWeight: 700 }}>
+                    <Check size={11} /> 75%+ Face Verified
+                  </span>
+                )}
+              </div>
+              <div style={{ fontSize: 13, color: '#4B5563', marginTop: 4 }}>
+                B.Tech in {student.branch} • Batch {student.batch} • Reg: <strong>{student.regNo}</strong>
+              </div>
+              <div style={{ fontSize: 12, color: '#6B7280', marginTop: 4 }}>
+                Email: {student.email} • Phone: {student.phone || 'Not provided'}
+              </div>
             </div>
           </div>
           <div style={{ textAlign: 'right' }}>

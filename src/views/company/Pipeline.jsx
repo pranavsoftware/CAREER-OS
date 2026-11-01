@@ -104,6 +104,7 @@ export default function CompanyPipeline() {
         id: stId,
         studentId: stId,
         name: student.name,
+        avatar: student.avatar,
         regNo: student.regNo,
         branch: student.branch,
         cgpa: student.cgpa,
@@ -168,12 +169,39 @@ export default function CompanyPipeline() {
           fontSize: 13,
         }}
       >
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 2 }}>
-          <span style={{ fontWeight: 600, color: '#111827' }}>{card.name}</span>
-          <span style={{ fontSize: 11, fontWeight: 600, color: '#2563EB' }}>{card.cgpa}</span>
-        </div>
-        <div style={{ fontSize: 11, color: '#6B7280', marginBottom: 6 }}>
-          {card.regNo} • {card.branch}
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            {card.avatar ? (
+              <img
+                src={card.avatar}
+                alt={card.name}
+                style={{ width: 28, height: 28, borderRadius: '50%', objectFit: 'cover', border: '1.5px solid #10B981', flexShrink: 0 }}
+              />
+            ) : (
+              <div
+                style={{
+                  width: 28,
+                  height: 28,
+                  borderRadius: '50%',
+                  background: '#EFF6FF',
+                  color: '#2563EB',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  fontWeight: 700,
+                  fontSize: 11,
+                  flexShrink: 0,
+                }}
+              >
+                {card.name ? card.name.charAt(0).toUpperCase() : 'C'}
+              </div>
+            )}
+            <div>
+              <span style={{ fontWeight: 600, color: '#111827', display: 'block', lineHeight: 1.2 }}>{card.name}</span>
+              <span style={{ fontSize: 10, color: '#6B7280' }}>{card.regNo} • {card.branch}</span>
+            </div>
+          </div>
+          <span style={{ fontSize: 11, fontWeight: 700, color: '#2563EB', background: '#EFF6FF', padding: '2px 6px', borderRadius: 4 }}>{card.cgpa}</span>
         </div>
 
         {/* Scheduled Interview Note if present */}

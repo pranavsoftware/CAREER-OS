@@ -16,7 +16,7 @@ export async function GET(request, { params }) {
         profile_status AS "profileStatus", placement_status AS "placementStatus",
         profile_completion AS "profileCompletion", github, linkedin,
         verification_status AS "verificationStatus", education,
-        skills, projects, experience, resume_url AS "resumeUrl"
+        skills, projects, experience, resume_url AS "resumeUrl", avatar
       FROM students
       WHERE id = $1
     `, [id]);
@@ -47,7 +47,7 @@ export async function PUT(request, { params }) {
         profile_status AS "profileStatus", placement_status AS "placementStatus",
         profile_completion AS "profileCompletion", github, linkedin,
         verification_status AS "verificationStatus", verification_remarks AS "verificationRemarks",
-        education, skills, projects, experience, resume_url AS "resumeUrl"
+        education, skills, projects, experience, resume_url AS "resumeUrl", avatar
       FROM students
       WHERE id = $1
     `, [id]);
@@ -151,6 +151,7 @@ export async function PUT(request, { params }) {
         backlogs = COALESCE($16, backlogs),
         dob = COALESCE($18, dob),
         gender = COALESCE($19, gender),
+        avatar = COALESCE($20, avatar),
         updated_at = NOW()
       WHERE id = $17
       RETURNING 
@@ -159,7 +160,7 @@ export async function PUT(request, { params }) {
         profile_status AS "profileStatus", placement_status AS "placementStatus",
         profile_completion AS "profileCompletion", github, linkedin,
         verification_status AS "verificationStatus", verification_remarks AS "verificationRemarks",
-        education, skills, projects, experience, resume_url AS "resumeUrl";
+        education, skills, projects, experience, resume_url AS "resumeUrl", avatar;
     `, [
       s.name ?? null,
       s.phone ?? null,
@@ -180,9 +181,19 @@ export async function PUT(request, { params }) {
       id,
       s.dob ?? null,
       s.gender ?? null,
+      s.avatar ?? null,
     ]);
 
     const updatedStudent = res.rows[0];
+
+    // Sync avatar to users table as well
+    if (s.avatar) {
+      try {
+        await query(`UPDATE users SET avatar = $1 WHERE student_id = $2 OR email = $3`, [s.avatar, id, updatedStudent.email]);
+      } catch (userAvatarErr) {
+        console.warn('Sync avatar to users notice:', userAvatarErr.message);
+      }
+    }
 
     // Trigger verification notification emails
     try {

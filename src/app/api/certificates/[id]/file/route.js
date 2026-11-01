@@ -12,11 +12,12 @@ export async function GET(request, { params }) {
     const role = (request.headers.get('x-user-role') || searchParams.get('role') || '').toLowerCase();
     const currentUserId = request.headers.get('x-user-id') || searchParams.get('userId');
 
-    // Fetch cert record
+    // Fetch cert record from database
     const res = await query(`
       SELECT 
         id, student_id AS "studentId", file_name AS "fileName",
-        trust_level AS "trustLevel", verified
+        trust_level AS "trustLevel", verified, file_data AS "fileData",
+        file_mime_type AS "fileMimeType"
       FROM certificates
       WHERE id = $1
     `, [certId]);
@@ -42,13 +43,29 @@ export async function GET(request, { params }) {
       return NextResponse.json({ error: 'Unauthorized: You do not have permission to view this certificate document.' }, { status: 403 });
     }
 
+    // 1. Primary: Serve directly from PostgreSQL database storage
+    if (cert.fileData) {
+      const fileBuffer = Buffer.from(cert.fileData, 'base64');
+      const ext = path.extname(cert.fileName || '').toLowerCase();
+      const contentType = cert.fileMimeType || (ext === '.pdf' ? 'application/pdf' : ext === '.png' ? 'image/png' : 'image/jpeg');
+
+      return new Response(fileBuffer, {
+        status: 200,
+        headers: {
+          'Content-Type': contentType,
+          'Content-Disposition': `inline; filename="${cert.fileName || 'certificate' + ext}"`,
+          'Cache-Control': 'private, no-cache, no-store, must-revalidate',
+        },
+      });
+    }
+
     if (!cert.fileName) {
       return NextResponse.json({ error: 'No uploaded document file associated with this record.' }, { status: 404 });
     }
 
+    // 2. Fallback: check legacy local storage
     const filePath = path.join(UPLOAD_DIR, cert.fileName);
     if (!fs.existsSync(filePath)) {
-      // In dev or mock demo data, return placeholder or 404
       return NextResponse.json({ error: 'Certificate file not found on server storage.' }, { status: 404 });
     }
 

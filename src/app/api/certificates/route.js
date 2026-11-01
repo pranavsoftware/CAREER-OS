@@ -125,24 +125,18 @@ export async function POST(request) {
         fileHash = computeFileHash(buffer);
         const ext = isPdf ? '.pdf' : isPng ? '.png' : '.jpg';
         storageFileName = `cert_${Date.now()}_${Math.random().toString(36).slice(2, 8)}${ext}`;
-
-        // Save safely to private directory
-        try {
-          fs.writeFileSync(path.join(UPLOAD_DIR, storageFileName), buffer);
-        } catch (saveErr) {
-          console.warn('Private upload local save notice:', saveErr.message);
-        }
       }
 
       const id = `cert_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;
+      const fileDataBase64 = buffer ? buffer.toString('base64') : null;
 
-      // Insert initially as Unverified, verified = false, score = 0
+      // Insert initially as Unverified, verified = false, score = 0, storing file directly in database
       const insertRes = await query(`
         INSERT INTO certificates (
           id, student_id, title, issuer, issue_date, expiry_date, skills, status, 
           file_name, verified, verification_score, credential_id, verification_url, 
-          file_hash, trust_level, review_status, check_results
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, false, 0, $10, $11, $12, 'Unverified', 'Pending Review', '{}'::jsonb)
+          file_hash, trust_level, review_status, check_results, file_data, file_mime_type
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, false, 0, $10, $11, $12, 'Unverified', 'Pending Review', '{}'::jsonb, $13, $14)
         RETURNING 
           id, student_id AS "studentId", title, issuer, issue_date AS "issueDate",
           expiry_date AS "expiryDate", skills, status, file_name AS "fileName",
@@ -152,7 +146,8 @@ export async function POST(request) {
       `, [
         id, studentId, title, issuer, issueDate, expiryDate,
         JSON.stringify(skills), 'Valid', storageFileName || file?.name || null,
-        credentialId, verificationUrl, fileHash
+        credentialId, verificationUrl, fileHash,
+        fileDataBase64, mimeType || null
       ]);
 
       const initialRecord = insertRes.rows[0];

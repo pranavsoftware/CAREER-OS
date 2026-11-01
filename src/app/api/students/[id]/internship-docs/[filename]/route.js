@@ -1,36 +1,58 @@
 import { NextResponse } from 'next/server';
-import fs from 'fs';
+import { query } from '@/lib/db.js';
 import path from 'path';
+import fs from 'fs';
 
 const UPLOAD_DIR = path.join(process.cwd(), '.private_uploads', 'internships');
 
 export async function GET(request, { params }) {
   try {
     const { filename } = await params;
-
-    // Prevent directory traversal
     const safeFilename = path.basename(filename);
-    const filePath = path.join(UPLOAD_DIR, safeFilename);
 
-    if (!fs.existsSync(filePath)) {
-      return NextResponse.json({ error: 'Document not found' }, { status: 404 });
+    // 1. Primary: Fetch document data directly from PostgreSQL database
+    const dbRes = await query(`
+      SELECT file_data, mime_type, original_name, file_name, file_size
+      FROM internship_documents
+      WHERE file_name = $1
+    `, [safeFilename]);
+
+    if (dbRes.rows.length > 0) {
+      const doc = dbRes.rows[0];
+      const buffer = Buffer.from(doc.file_data, 'base64');
+      const ext = path.extname(safeFilename).toLowerCase();
+      const contentType = doc.mime_type || (ext === '.pdf' ? 'application/pdf' : ext === '.png' ? 'image/png' : 'image/jpeg');
+
+      return new Response(buffer, {
+        status: 200,
+        headers: {
+          'Content-Type': contentType,
+          'Content-Disposition': `inline; filename="${doc.original_name || safeFilename}"`,
+          'Cache-Control': 'public, max-age=86400, stale-while-revalidate=43200',
+        },
+      });
     }
 
-    const fileBuffer = fs.readFileSync(filePath);
-    const ext = path.extname(safeFilename).toLowerCase();
-    const contentType = ext === '.pdf' ? 'application/pdf' : ext === '.png' ? 'image/png' : 'image/jpeg';
+    // 2. Fallback: check legacy local storage if document was uploaded prior to database storage
+    const filePath = path.join(UPLOAD_DIR, safeFilename);
+    if (fs.existsSync(filePath)) {
+      const fileBuffer = fs.readFileSync(filePath);
+      const ext = path.extname(safeFilename).toLowerCase();
+      const contentType = ext === '.pdf' ? 'application/pdf' : ext === '.png' ? 'image/png' : 'image/jpeg';
 
-    return new Response(fileBuffer, {
-      status: 200,
-      headers: {
-        'Content-Type': contentType,
-        'Content-Disposition': `inline; filename="${safeFilename}"`,
-        'Cache-Control': 'private, max-age=3600',
-      },
-    });
+      return new Response(fileBuffer, {
+        status: 200,
+        headers: {
+          'Content-Type': contentType,
+          'Content-Disposition': `inline; filename="${safeFilename}"`,
+          'Cache-Control': 'public, max-age=86400',
+        },
+      });
+    }
+
+    return NextResponse.json({ error: 'Document not found in database' }, { status: 404 });
   } catch (error) {
     console.error('Internship document read error:', error);
     return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
   }
 }
-

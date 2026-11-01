@@ -325,9 +325,18 @@ function SidebarContent({ onClose }) {
 
       {/* Bottom user info + actions (Padded for iPhone home bar) */}
       <div style={{ borderTop: '1px solid #E5E7EB', padding: '12px 10px calc(16px + env(safe-area-inset-bottom, 0px))', flexShrink: 0 }}>
-        <div style={{ padding: '8px 12px', marginBottom: 6, borderRadius: 8, background: '#F9FAFB' }}>
-          <div style={{ fontSize: 13, fontWeight: 600, color: '#111827' }}>{user?.name}</div>
-          <div style={{ fontSize: 11, color: '#9CA3AF', textTransform: 'uppercase', letterSpacing: '0.05em', marginTop: 2 }}>{user?.role} portal</div>
+        <div style={{ padding: '8px 12px', marginBottom: 6, borderRadius: 8, background: '#F9FAFB', display: 'flex', alignItems: 'center', gap: 10 }}>
+          <div style={{ width: 32, height: 32, borderRadius: '50%', background: '#EFF6FF', color: '#2563EB', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: 12, flexShrink: 0, overflow: 'hidden', border: (currentStudent?.avatar || user?.avatar) ? '1px solid #10B981' : '1px solid #BFDBFE' }}>
+            {(currentStudent?.avatar || user?.avatar) && ((currentStudent?.avatar || user?.avatar).startsWith('data:') || (currentStudent?.avatar || user?.avatar).startsWith('http')) ? (
+              <img src={currentStudent?.avatar || user?.avatar} alt={user?.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+            ) : (
+              user?.name?.charAt(0) || 'U'
+            )}
+          </div>
+          <div style={{ overflow: 'hidden' }}>
+            <div style={{ fontSize: 13, fontWeight: 600, color: '#111827', whiteSpace: 'nowrap', textOverflow: 'ellipsis', overflow: 'hidden' }}>{user?.name}</div>
+            <div style={{ fontSize: 11, color: '#9CA3AF', textTransform: 'uppercase', letterSpacing: '0.05em', marginTop: 1 }}>{user?.role} portal</div>
+          </div>
         </div>
         <button
           onClick={handleLogout}
