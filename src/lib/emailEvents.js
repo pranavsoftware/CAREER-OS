@@ -117,7 +117,7 @@ export async function notifyWelcomeStudent(student, tempPassword) {
     subject,
     html,
     eventType: 'welcome_student',
-    meta: { studentId: student.id, dedupeKey: `welcome_${student.id}_${Date.now()}`, forceDirect: true },
+    meta: { studentId: student.id, dedupeKey: `welcome_${student.email.trim().toLowerCase()}`, forceDirect: true },
   });
 }
 

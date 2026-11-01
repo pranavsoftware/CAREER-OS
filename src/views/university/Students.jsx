@@ -172,7 +172,7 @@ export default function UniversityStudents() {
         return;
       }
 
-      dispatch({ type: 'ADD_STUDENT', payload: newStudent });
+      dispatch({ type: 'ADD_STUDENT', payload: { ...newStudent, skipApi: true } });
       setShowAddModal(false);
       setInlineMsg({
         type: 'success',

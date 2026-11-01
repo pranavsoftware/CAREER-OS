@@ -329,8 +329,8 @@ export default function StudentReferrals() {
                       </span>
                     </div>
                     {r.endorsement && (
-                      <div style={{ marginTop: 6, fontSize: 12, color: '#166534', fontWeight: 600 }}>
-                        🎖️ "{r.endorsement}"
+                      <div style={{ marginTop: 6, fontSize: 12, color: '#166534', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 4 }}>
+                        <Award size={14} color="#166534" /> "{r.endorsement}"
                       </div>
                     )}
                   </div>

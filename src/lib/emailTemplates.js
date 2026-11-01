@@ -47,8 +47,8 @@ export function renderEmailLayout({
   const finalCta = ctaUrl && ctaText ? `
     <table role="presentation" border="0" cellpadding="0" cellspacing="0" style="margin: 28px 0 16px;">
       <tr>
-        <td align="center" style="border-radius: 8px; background-color: #2563EB;">
-          <a href="${escapeHtml(ctaUrl)}" target="_blank" style="font-size: 14px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-weight: 600; color: #ffffff; text-decoration: none; display: inline-block; padding: 12px 28px; border-radius: 8px; border: 1px solid #1D4ED8; letter-spacing: 0.2px;">
+        <td align="center" style="border-radius: 6px; background-color: #2563EB;">
+          <a href="${escapeHtml(ctaUrl)}" target="_blank" style="font-size: 14px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-weight: 600; color: #ffffff; text-decoration: none; display: inline-block; padding: 12px 28px; border-radius: 6px; border: 1px solid #1D4ED8; letter-spacing: 0.2px;">
             ${escapeHtml(ctaText)} &rarr;
           </a>
         </td>
@@ -56,9 +56,7 @@ export function renderEmailLayout({
     </table>
   ` : '';
 
-  const unsubUrl = unsubToken
-    ? `${APP_URL}/api/email/unsubscribe?token=${encodeURIComponent(unsubToken)}`
-    : `${APP_URL}/student/profile`;
+  const isAuthOrCritical = emailCategory === 'auth' || emailCategory === 'welcome' || emailCategory === 'critical';
 
   return `<!DOCTYPE html>
 <html lang="en">
@@ -69,7 +67,7 @@ export function renderEmailLayout({
   <style>
     body { margin: 0; padding: 0; background-color: #0F172A; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; -webkit-font-smoothing: antialiased; }
     table { border-collapse: separate; }
-    a { color: #38BDF8; text-decoration: none; }
+    a { color: #2563EB; text-decoration: none; }
     @media only screen and (max-width: 620px) {
       .email-container { width: 100% !important; padding: 12px !important; }
       .email-card { padding: 20px !important; }
@@ -77,60 +75,52 @@ export function renderEmailLayout({
   </style>
 </head>
 <body style="margin: 0; padding: 0; background-color: #0F172A;">
-  <span style="display:none;font-size:1px;color:#0F172A;line-height:1px;max-height:0px;max-width:0px;opacity:0;overflow:hidden;">
+  <span style="display:none;font-size:1px;color: #0F172A;line-height:1px;max-height:0px;max-width:0px;opacity:0;overflow:hidden;">
     ${escapeHtml(preheader || title)}
   </span>
-  <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%" style="background-color: #0F172A; padding: 24px 0 36px;">
+  <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%" style="background-color: #0F172A; padding: 28px 0 36px;">
     <tr>
       <td align="center">
-        <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%" style="max-width: 600px;" class="email-container">
+        <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%" style="max-width: 580px;" class="email-container">
           <!-- Brand Header -->
           <tr>
             <td align="center" style="padding-bottom: 20px;">
-              <div style="display: inline-block; padding: 8px 18px; border-radius: 9999px; background: rgba(30, 41, 59, 0.8); border: 1px solid #334155;">
-                <span style="font-size: 15px; font-weight: 800; letter-spacing: 1.5px; color: #38BDF8;">CAREER-OS</span>
-                <span style="font-size: 11px; color: #94A3B8; margin-left: 8px; font-weight: 500;">Placement Intelligence</span>
+              <div style="text-align: center;">
+                <span style="font-size: 20px; font-weight: 800; letter-spacing: 0.5px; color: #1E40AF;">CAREER-OS</span>
+                <span style="display: block; font-size: 12px; color: #64748B; margin-top: 2px; font-weight: 500;">Campus Placement Operating System</span>
               </div>
             </td>
           </tr>
 
           <!-- Main Card -->
           <tr>
-            <td class="email-card" style="background-color: #1E293B; border-radius: 12px; border: 1px solid #334155; padding: 32px; box-shadow: 0 10px 25px rgba(0,0,0,0.3);">
+            <td class="email-card" style="background-color: #FFFFFF; border-radius: 8px; border: 1px solid #E2E8F0; padding: 32px; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
               ${heading ? `
-                <h1 style="margin: 0 0 18px; font-size: 20px; font-weight: 700; color: #F8FAFC; line-height: 1.35;">
+                <h1 style="margin: 0 0 18px; font-size: 20px; font-weight: 700; color: #0F172A; line-height: 1.35;">
                   ${escapeHtml(heading)}
                 </h1>
               ` : ''}
 
-              <div style="font-size: 14px; line-height: 1.6; color: #CBD5E1;">
+              <div style="font-size: 14px; line-height: 1.6; color: #334155;">
                 ${bodyHtml}
               </div>
 
               ${finalCta}
 
               ${secondaryText ? `
-                <p style="margin: 16px 0 0; font-size: 12px; color: #94A3B8; line-height: 1.5;">
+                <p style="margin: 16px 0 0; font-size: 12px; color: #64748B; line-height: 1.5;">
                   ${secondaryText}
                 </p>
               ` : ''}
             </td>
           </tr>
 
-          <!-- Footer -->
+          <!-- Minimal Footer -->
           <tr>
-            <td align="center" style="padding-top: 24px; color: #64748B; font-size: 12px; line-height: 1.6;">
-              <p style="margin: 0 0 8px;">
-                Automated campus placement notification from <strong>CAREER-OS</strong>.
-              </p>
-              <p style="margin: 0;">
-                <a href="${escapeHtml(unsubUrl)}" style="color: #94A3B8; text-decoration: underline;">
-                  Manage email preferences or unsubscribe
-                </a>
-                &bull;
-                <a href="${escapeHtml(APP_URL)}" style="color: #94A3B8; text-decoration: underline;">
-                  Login to Portal
-                </a>
+            <td align="center" style="padding-top: 20px; color: #94A3B8; font-size: 12px; line-height: 1.5;">
+              <p style="margin: 0;">Automated campus placement notification from <strong>CAREER-OS</strong>.</p>
+              <p style="margin: 4px 0 0;">
+                <a href="https://www.career-os.in" style="color: #64748B; text-decoration: underline;">www.career-os.in</a>
               </p>
             </td>
           </tr>
@@ -147,33 +137,46 @@ export function renderEmailLayout({
    ========================================================================== */
 
 // 1. Welcome / account created
-export function welcomeStudent({ name, email, tempPassword, loginUrl = `${APP_URL}/login`, unsubToken }) {
+export function welcomeStudent({ name, email, tempPassword, loginUrl = 'https://www.career-os.in/login' }) {
   const title = 'Welcome to CAREER-OS Campus Placement Portal';
   return {
     subject: `Welcome to CAREER-OS, ${name}! Your Campus Placement Credentials Inside`,
     html: renderEmailLayout({
       title,
       heading: `Welcome to the Placement Portal, ${name}!`,
+      emailCategory: 'welcome',
       bodyHtml: `
-        <p>Your official student profile has been registered in the University Placement Directory by the CDC.</p>
+        <p style="margin: 0 0 16px; color: #334155; font-size: 14px; line-height: 1.6;">
+          Your student profile has been registered in the University Placement Directory by the Career Development Cell (CDC).
+        </p>
         
-        <div style="background: rgba(15, 23, 42, 0.7); border: 1px solid #334155; border-radius: 8px; padding: 18px; margin: 18px 0;">
-          <p style="margin: 0 0 8px; font-size: 13px; color: #94A3B8;">Registered Email: <strong style="color: #F8FAFC;">${escapeHtml(email || '')}</strong></p>
-          <p style="margin: 0 0 8px; font-size: 13px; color: #94A3B8;">Temporary Password: <code style="display: inline-block; background: #0F172A; color: #38BDF8; padding: 4px 10px; border-radius: 4px; font-weight: 700; font-size: 15px; border: 1px dashed #0284C7; letter-spacing: 0.5px;">${escapeHtml(tempPassword || 'demo')}</code></p>
-          <p style="margin: 0; font-size: 12px; color: #94A3B8;">Login Portal: <a href="${escapeHtml(loginUrl)}" style="color: #38BDF8; text-decoration: underline;">${escapeHtml(loginUrl)}</a></p>
+        <div style="background-color: #0F172A; border: 1px solid #E2E8F0; border-radius: 8px; padding: 20px; margin: 20px 0;">
+          <div style="margin-bottom: 14px;">
+            <div style="font-size: 11px; font-weight: 700; color: #64748B; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 3px;">Registered Email Address</div>
+            <div style="font-size: 15px; font-weight: 600; color: #0F172A;">${escapeHtml(email || '')}</div>
+          </div>
+          
+          <div style="margin-bottom: 14px;">
+            <div style="font-size: 11px; font-weight: 700; color: #64748B; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px;">Temporary Password</div>
+            <div style="display: inline-block; background-color: #EFF6FF; color: #1D4ED8; border: 1px solid #BFDBFE; border-radius: 6px; padding: 6px 14px; font-family: 'Courier New', Courier, monospace; font-size: 16px; font-weight: 700; letter-spacing: 1px;">${escapeHtml(tempPassword || 'demo')}</div>
+          </div>
+
+          <div>
+            <div style="font-size: 11px; font-weight: 700; color: #64748B; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 3px;">Portal Sign-In Address</div>
+            <a href="https://www.career-os.in/login" style="font-size: 13px; color: #2563EB; text-decoration: underline;">https://www.career-os.in/login</a>
+          </div>
         </div>
 
-        <div style="background: rgba(245, 158, 11, 0.12); border-left: 4px solid #F59E0B; padding: 12px 16px; margin: 16px 0; border-radius: 4px;">
-          <p style="margin: 0; font-size: 13px; color: #FCD34D;"><strong>⚠️ Required First-Time Steps:</strong></p>
-          <p style="margin: 6px 0 0; font-size: 12px; color: #E2E8F0; line-height: 1.5;">
-            &bull; Upon signing in with this temporary password, you will be prompted to reset your password.<br/>
-            &bull; Next, you must fill and submit your profile sections (Academic Records, Technical Skills, and Projects). All other platform features (Drives, AI Mock Interviews, Applications) remain locked until your profile is completed.
-          </p>
+        <div style="background-color: #FEF9C3; border: 1px solid #FEF08A; border-left: 4px solid #CA8A04; border-radius: 6px; padding: 14px 16px; margin: 20px 0;">
+          <div style="font-size: 13px; font-weight: 700; color: #854D0E; margin-bottom: 6px;">Required Next Steps</div>
+          <div style="font-size: 13px; color: #713F12; line-height: 1.5;">
+            1. Sign in using your temporary password above and set your permanent password.<br/>
+            2. Complete and submit your profile section (Academics, Skills, and Projects) to unlock campus placement drives and AI interview prep.
+          </div>
         </div>
       `,
-      ctaText: 'Sign In & Activate Profile',
-      ctaUrl: loginUrl,
-      unsubToken,
+      ctaText: 'Sign In to Student Portal',
+      ctaUrl: 'https://www.career-os.in/login',
     }),
   };
 }
@@ -189,9 +192,9 @@ export function newDrivePublished({ studentName, driveTitle, companyName, ctc, d
       bodyHtml: `
         <p>Hello ${escapeHtml(studentName)},</p>
         <p>A new campus placement drive matching your department has just been published by the CDC.</p>
-        <div style="background: rgba(15, 23, 42, 0.6); border: 1px solid #334155; border-radius: 8px; padding: 16px; margin: 16px 0;">
-          <p style="margin: 0 0 6px; font-size: 13px; color: #94A3B8;">Role: <strong style="color: #F8FAFC;">${escapeHtml(driveTitle)}</strong></p>
-          <p style="margin: 0 0 6px; font-size: 13px; color: #94A3B8;">Package: <strong style="color: #38BDF8;">${escapeHtml(ctc)} LPA</strong></p>
+        <div style="background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 8px; padding: 16px; margin: 16px 0;">
+          <p style="margin: 0 0 6px; font-size: 13px; color: #94A3B8;">Role: <strong style="color: #0F172A;">${escapeHtml(driveTitle)}</strong></p>
+          <p style="margin: 0 0 6px; font-size: 13px; color: #94A3B8;">Package: <strong style="color: #2563EB;">${escapeHtml(ctc)} LPA</strong></p>
           <p style="margin: 0; font-size: 13px; color: #94A3B8;">Application Deadline: <strong style="color: #F43F5E;">${formatIST(deadline)}</strong></p>
         </div>
         <p>Review the job requirements and ensure your profile meets the eligibility criteria before applying.</p>
@@ -242,8 +245,8 @@ export function applicationStatusChanged({ studentName, jobTitle, companyName, n
           </span>
         </div>
         ${remarks ? `
-          <div style="background: rgba(15, 23, 42, 0.6); border-left: 4px solid #38BDF8; padding: 12px 16px; margin: 16px 0; border-radius: 4px;">
-            <p style="margin: 0; font-size: 13px; color: #CBD5E1;"><strong>Officer / Recruiter Notes:</strong> ${escapeHtml(remarks)}</p>
+          <div style="background: #F8FAFC; border-left: 4px solid #38BDF8; padding: 12px 16px; margin: 16px 0; border-radius: 4px;">
+            <p style="margin: 0; font-size: 13px; color: #334155;"><strong>Officer / Recruiter Notes:</strong> ${escapeHtml(remarks)}</p>
           </div>
         ` : ''}
       `,
@@ -283,13 +286,13 @@ export function interviewScheduled({ studentName, companyName, round, date, time
       bodyHtml: `
         <p>Hi ${escapeHtml(studentName)},</p>
         <p>Your upcoming recruitment round has been officially scheduled:</p>
-        <div style="background: rgba(15, 23, 42, 0.7); border: 1px solid #334155; border-radius: 8px; padding: 16px; margin: 16px 0;">
-          <p style="margin: 0 0 8px; font-size: 13px; color: #94A3B8;">Company: <strong style="color: #F8FAFC;">${escapeHtml(companyName)}</strong></p>
-          <p style="margin: 0 0 8px; font-size: 13px; color: #94A3B8;">Round: <strong style="color: #38BDF8;">${escapeHtml(round)}</strong></p>
-          <p style="margin: 0 0 8px; font-size: 13px; color: #94A3B8;">Date &amp; Time: <strong style="color: #F8FAFC;">${formatIST(date)} ${escapeHtml(time || '')}</strong></p>
-          <p style="margin: 0; font-size: 13px; color: #94A3B8;">Mode: <strong style="color: #F8FAFC;">${escapeHtml(mode || 'Online Video')}</strong></p>
+        <div style="background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 8px; padding: 16px; margin: 16px 0;">
+          <p style="margin: 0 0 8px; font-size: 13px; color: #94A3B8;">Company: <strong style="color: #0F172A;">${escapeHtml(companyName)}</strong></p>
+          <p style="margin: 0 0 8px; font-size: 13px; color: #94A3B8;">Round: <strong style="color: #2563EB;">${escapeHtml(round)}</strong></p>
+          <p style="margin: 0 0 8px; font-size: 13px; color: #94A3B8;">Date &amp; Time: <strong style="color: #0F172A;">${formatIST(date)} ${escapeHtml(time || '')}</strong></p>
+          <p style="margin: 0; font-size: 13px; color: #94A3B8;">Mode: <strong style="color: #0F172A;">${escapeHtml(mode || 'Online Video')}</strong></p>
           ${meetLink ? `
-            <p style="margin: 10px 0 0; font-size: 13px;"><a href="${escapeHtml(meetLink)}" target="_blank" style="color: #38BDF8; font-weight: 600;">Direct Meeting Link &rarr;</a></p>
+            <p style="margin: 10px 0 0; font-size: 13px;"><a href="${escapeHtml(meetLink)}" target="_blank" style="color: #2563EB; font-weight: 600;">Direct Meeting Link &rarr;</a></p>
           ` : ''}
         </div>
         <p>A calendar invitation (.ics) is linked to this event. Please join 5 minutes before your scheduled slot.</p>
@@ -311,9 +314,9 @@ export function interviewRescheduled({ studentName, companyName, round, newDate,
       bodyHtml: `
         <p>Hi ${escapeHtml(studentName)},</p>
         <p>Your interview round for <strong>${escapeHtml(round)}</strong> at <strong>${escapeHtml(companyName)}</strong> has been rescheduled.</p>
-        <div style="background: rgba(15, 23, 42, 0.7); border: 1px solid #334155; border-radius: 8px; padding: 16px; margin: 16px 0;">
-          <p style="margin: 0 0 8px; font-size: 13px; color: #94A3B8;">New Timing: <strong style="color: #38BDF8;">${formatIST(newDate)} ${escapeHtml(newTime || '')}</strong></p>
-          ${reason ? `<p style="margin: 0; font-size: 13px; color: #94A3B8;">Reason: <span style="color: #E2E8F0;">${escapeHtml(reason)}</span></p>` : ''}
+        <div style="background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 8px; padding: 16px; margin: 16px 0;">
+          <p style="margin: 0 0 8px; font-size: 13px; color: #94A3B8;">New Timing: <strong style="color: #2563EB;">${formatIST(newDate)} ${escapeHtml(newTime || '')}</strong></p>
+          ${reason ? `<p style="margin: 0; font-size: 13px; color: #94A3B8;">Reason: <span style="color: #475569;">${escapeHtml(reason)}</span></p>` : ''}
         </div>
       `,
       ctaText: 'View Updated Slot',
@@ -334,8 +337,8 @@ export function interviewCancelled({ studentName, companyName, round, reason, po
         <p>Hi ${escapeHtml(studentName)},</p>
         <p>Your interview round for <strong>${escapeHtml(round)}</strong> with <strong>${escapeHtml(companyName)}</strong> has been cancelled.</p>
         ${reason ? `
-          <div style="background: rgba(15, 23, 42, 0.6); border-left: 4px solid #F43F5E; padding: 12px 16px; margin: 16px 0;">
-            <p style="margin: 0; font-size: 13px; color: #CBD5E1;"><strong>Reason:</strong> ${escapeHtml(reason)}</p>
+          <div style="background: #F8FAFC; border-left: 4px solid #F43F5E; padding: 12px 16px; margin: 16px 0;">
+            <p style="margin: 0; font-size: 13px; color: #334155;"><strong>Reason:</strong> ${escapeHtml(reason)}</p>
           </div>
         ` : ''}
         <p>If this was due to recruiter availability, a revised schedule will be arranged by the placement team.</p>
@@ -358,8 +361,8 @@ export function interviewFeedbackAvailable({ studentName, companyName, round, ov
         <p>Hi ${escapeHtml(studentName)},</p>
         <p>The recruiter feedback and rubric evaluations for your <strong>${escapeHtml(round)}</strong> with <strong>${escapeHtml(companyName)}</strong> have been submitted.</p>
         ${overallScore ? `
-          <div style="background: rgba(15, 23, 42, 0.6); border: 1px solid #334155; border-radius: 8px; padding: 14px; margin: 14px 0;">
-            <p style="margin: 0; font-size: 13px; color: #94A3B8;">Overall Performance Score: <strong style="color: #38BDF8; font-size: 16px;">${escapeHtml(overallScore)}/100</strong></p>
+          <div style="background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 8px; padding: 14px; margin: 14px 0;">
+            <p style="margin: 0; font-size: 13px; color: #94A3B8;">Overall Performance Score: <strong style="color: #2563EB; font-size: 16px;">${escapeHtml(overallScore)}/100</strong></p>
           </div>
         ` : ''}
         <p>Check the breakdown to review strengths and areas for technical improvement.</p>
@@ -380,8 +383,8 @@ export function offerLetterReleased({ studentName, companyName, role, ctc, deadl
       heading: `Congratulations, ${studentName}!`,
       bodyHtml: `
         <p>We are delighted to share that <strong>${escapeHtml(companyName)}</strong> has extended a formal campus placement offer to you for the position of <strong>${escapeHtml(role)}</strong>.</p>
-        <div style="background: rgba(15, 23, 42, 0.8); border: 1px solid #10B981; border-radius: 8px; padding: 20px; margin: 20px 0;">
-          <p style="margin: 0 0 8px; font-size: 14px; color: #94A3B8;">Role: <strong style="color: #F8FAFC;">${escapeHtml(role)}</strong></p>
+        <div style="background: #F8FAFC; border: 1px solid #10B981; border-radius: 8px; padding: 20px; margin: 20px 0;">
+          <p style="margin: 0 0 8px; font-size: 14px; color: #94A3B8;">Role: <strong style="color: #0F172A;">${escapeHtml(role)}</strong></p>
           <p style="margin: 0 0 8px; font-size: 14px; color: #94A3B8;">Annual Compensation (CTC): <strong style="color: #10B981; font-size: 16px;">${escapeHtml(ctc)} LPA</strong></p>
           ${deadline ? `<p style="margin: 0; font-size: 13px; color: #94A3B8;">Decision Deadline: <strong style="color: #F43F5E;">${formatIST(deadline)}</strong></p>` : ''}
         </div>
@@ -423,8 +426,8 @@ export function profileVerificationFailed({ studentName, section, reason, editUr
       bodyHtml: `
         <p>Hi ${escapeHtml(studentName)},</p>
         <p>During automated registrar synchronization, your profile section <strong>${escapeHtml(section || 'Academic Records')}</strong> could not be verified.</p>
-        <div style="background: rgba(15, 23, 42, 0.6); border-left: 4px solid #F43F5E; padding: 12px 16px; margin: 16px 0;">
-          <p style="margin: 0; font-size: 13px; color: #CBD5E1;"><strong>Reason:</strong> ${escapeHtml(reason || 'Data mismatch with registrar database.')}</p>
+        <div style="background: #F8FAFC; border-left: 4px solid #F43F5E; padding: 12px 16px; margin: 16px 0;">
+          <p style="margin: 0; font-size: 13px; color: #334155;"><strong>Reason:</strong> ${escapeHtml(reason || 'Data mismatch with registrar database.')}</p>
         </div>
         <p>Please review and submit corrected information so our placement officers can re-verify your standing.</p>
       `,
@@ -445,7 +448,7 @@ export function profileDiscrepancyFlagged({ studentName, section, registryValue,
       bodyHtml: `
         <p>Hi ${escapeHtml(studentName)},</p>
         <p>A discrepancy was identified between your entered details and the University Registry database for <strong>${escapeHtml(section)}</strong>:</p>
-        <div style="background: rgba(15, 23, 42, 0.6); border: 1px solid #334155; border-radius: 8px; padding: 16px; margin: 16px 0;">
+        <div style="background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 8px; padding: 16px; margin: 16px 0;">
           <p style="margin: 0 0 6px; font-size: 13px; color: #94A3B8;">Entered in Portal: <strong style="color: #F43F5E;">${escapeHtml(submittedValue)}</strong></p>
           <p style="margin: 0; font-size: 13px; color: #94A3B8;">Official University Registry: <strong style="color: #10B981;">${escapeHtml(registryValue)}</strong></p>
         </div>
@@ -468,8 +471,8 @@ export function newCircular({ studentName, title, priority, summary, circularUrl
       heading: escapeHtml(title),
       bodyHtml: `
         <p>Dear ${escapeHtml(studentName)},</p>
-        <div style="background: rgba(15, 23, 42, 0.6); border: 1px solid #334155; border-radius: 8px; padding: 16px; margin: 16px 0;">
-          <p style="margin: 0; font-size: 13px; line-height: 1.6; color: #CBD5E1;">${escapeHtml(summary)}</p>
+        <div style="background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 8px; padding: 16px; margin: 16px 0;">
+          <p style="margin: 0; font-size: 13px; line-height: 1.6; color: #334155;">${escapeHtml(summary)}</p>
         </div>
         <p>Read the official circular issued by the Placement Directorate for complete details and guidelines.</p>
       `,
@@ -511,8 +514,8 @@ export function placementPassRevoked({ studentName, reason, appealUrl, unsubToke
         <p>Dear ${escapeHtml(studentName)},</p>
         <p>Your campus placement pass has been revoked by the placement office.</p>
         ${reason ? `
-          <div style="background: rgba(15, 23, 42, 0.6); border-left: 4px solid #F43F5E; padding: 12px 16px; margin: 16px 0;">
-            <p style="margin: 0; font-size: 13px; color: #CBD5E1;"><strong>Reason:</strong> ${escapeHtml(reason)}</p>
+          <div style="background: #F8FAFC; border-left: 4px solid #F43F5E; padding: 12px 16px; margin: 16px 0;">
+            <p style="margin: 0; font-size: 13px; color: #334155;"><strong>Reason:</strong> ${escapeHtml(reason)}</p>
           </div>
         ` : ''}
         <p>If you believe this was in error, you may file an appeal through the placement grievance desk.</p>
@@ -534,9 +537,9 @@ export function newStudyMaterial({ studentName, title, subject, materialUrl, uns
       bodyHtml: `
         <p>Hi ${escapeHtml(studentName)},</p>
         <p>A new placement preparation guide has been uploaded to the material hub:</p>
-        <div style="background: rgba(15, 23, 42, 0.6); border: 1px solid #334155; border-radius: 8px; padding: 16px; margin: 16px 0;">
-          <p style="margin: 0 0 6px; font-size: 14px; font-weight: 600; color: #F8FAFC;">${escapeHtml(title)}</p>
-          <p style="margin: 0; font-size: 13px; color: #38BDF8;">Category: ${escapeHtml(subject)}</p>
+        <div style="background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 8px; padding: 16px; margin: 16px 0;">
+          <p style="margin: 0 0 6px; font-size: 14px; font-weight: 600; color: #0F172A;">${escapeHtml(title)}</p>
+          <p style="margin: 0; font-size: 13px; color: #2563EB;">Category: ${escapeHtml(subject)}</p>
         </div>
       `,
       ctaText: 'View Preparation Material',
@@ -556,9 +559,9 @@ export function referralCreated({ studentName, referralCode, referralBonus = '50
       bodyHtml: `
         <p>Hi ${escapeHtml(studentName)},</p>
         <p>Your personal peer referral code is ready to share. Invite your classmates and batchmates to onboard on CAREER-OS:</p>
-        <div style="background: rgba(15, 23, 42, 0.8); border: 1px dashed #38BDF8; border-radius: 8px; padding: 16px; text-align: center; margin: 16px 0;">
+        <div style="background: #F8FAFC; border: 1px dashed #38BDF8; border-radius: 8px; padding: 16px; text-align: center; margin: 16px 0;">
           <p style="margin: 0 0 4px; font-size: 12px; color: #94A3B8;">YOUR UNIQUE CODE</p>
-          <span style="font-size: 20px; font-weight: 800; letter-spacing: 2px; color: #38BDF8;">${escapeHtml(referralCode)}</span>
+          <span style="font-size: 20px; font-weight: 800; letter-spacing: 2px; color: #2563EB;">${escapeHtml(referralCode)}</span>
         </div>
         <p>Earn reward credits towards premium interview mock simulations when your peers activate their profiles.</p>
       `,
@@ -579,7 +582,7 @@ export function referralEarned({ studentName, referredName, rewardAmount, wallet
       bodyHtml: `
         <p>Hi ${escapeHtml(studentName)},</p>
         <p>Your peer <strong>${escapeHtml(referredName)}</strong> has verified their profile using your referral code.</p>
-        <div style="background: rgba(15, 23, 42, 0.6); border: 1px solid #10B981; border-radius: 8px; padding: 16px; margin: 16px 0;">
+        <div style="background: #F8FAFC; border: 1px solid #10B981; border-radius: 8px; padding: 16px; margin: 16px 0;">
           <p style="margin: 0; font-size: 14px; color: #94A3B8;">Reward Credited: <strong style="color: #10B981; font-size: 16px;">${escapeHtml(rewardAmount)}</strong></p>
         </div>
       `,
@@ -660,9 +663,9 @@ export function newApplicationReceived({ recruiterName, candidateName, jobTitle,
       bodyHtml: `
         <p>Hello ${escapeHtml(recruiterName)},</p>
         <p>A new eligible candidate has applied for <strong>${escapeHtml(jobTitle)}</strong>:</p>
-        <div style="background: rgba(15, 23, 42, 0.6); border: 1px solid #334155; border-radius: 8px; padding: 16px; margin: 16px 0;">
-          <p style="margin: 0 0 6px; font-size: 13px; color: #94A3B8;">Candidate: <strong style="color: #F8FAFC;">${escapeHtml(candidateName)}</strong></p>
-          <p style="margin: 0; font-size: 13px; color: #94A3B8;">Verified CGPA: <strong style="color: #38BDF8;">${escapeHtml(cGpa)}</strong></p>
+        <div style="background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 8px; padding: 16px; margin: 16px 0;">
+          <p style="margin: 0 0 6px; font-size: 13px; color: #94A3B8;">Candidate: <strong style="color: #0F172A;">${escapeHtml(candidateName)}</strong></p>
+          <p style="margin: 0; font-size: 13px; color: #94A3B8;">Verified CGPA: <strong style="color: #2563EB;">${escapeHtml(cGpa)}</strong></p>
         </div>
       `,
       ctaText: 'View Applicant Profile',
@@ -682,7 +685,7 @@ export function studentAcceptedInterview({ recruiterName, candidateName, jobTitl
       bodyHtml: `
         <p>Hello ${escapeHtml(recruiterName)},</p>
         <p><strong>${escapeHtml(candidateName)}</strong> has confirmed attendance for the <strong>${escapeHtml(round)}</strong> interview round for <strong>${escapeHtml(jobTitle)}</strong>.</p>
-        <p style="font-size: 13px; color: #94A3B8;">Slot: <strong style="color: #F8FAFC;">${formatIST(scheduledAt)}</strong></p>
+        <p style="font-size: 13px; color: #94A3B8;">Slot: <strong style="color: #0F172A;">${formatIST(scheduledAt)}</strong></p>
       `,
       ctaText: 'View Interview Schedule',
       ctaUrl: pipelineUrl || `${APP_URL}/company/interviews`,
@@ -701,9 +704,9 @@ export function studentRescheduleRequested({ recruiterName, candidateName, jobTi
       bodyHtml: `
         <p>Hello ${escapeHtml(recruiterName)},</p>
         <p>Candidate <strong>${escapeHtml(candidateName)}</strong> has requested to reschedule their <strong>${escapeHtml(round)}</strong> interview for <strong>${escapeHtml(jobTitle)}</strong>.</p>
-        <div style="background: rgba(15, 23, 42, 0.6); border: 1px solid #334155; border-radius: 8px; padding: 16px; margin: 16px 0;">
-          <p style="margin: 0 0 6px; font-size: 13px; color: #94A3B8;">Proposed Slot: <strong style="color: #38BDF8;">${escapeHtml(requestedSlot)}</strong></p>
-          ${reason ? `<p style="margin: 0; font-size: 13px; color: #94A3B8;">Reason: <span style="color: #E2E8F0;">${escapeHtml(reason)}</span></p>` : ''}
+        <div style="background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 8px; padding: 16px; margin: 16px 0;">
+          <p style="margin: 0 0 6px; font-size: 13px; color: #94A3B8;">Proposed Slot: <strong style="color: #2563EB;">${escapeHtml(requestedSlot)}</strong></p>
+          ${reason ? `<p style="margin: 0; font-size: 13px; color: #94A3B8;">Reason: <span style="color: #475569;">${escapeHtml(reason)}</span></p>` : ''}
         </div>
       `,
       ctaText: 'Review & Respond to Request',
@@ -723,8 +726,8 @@ export function interviewScoreSubmitted({ recruiterName, candidateName, jobTitle
       bodyHtml: `
         <p>Hello ${escapeHtml(recruiterName)},</p>
         <p>Interviewer <strong>${escapeHtml(interviewerName || 'Panelist')}</strong> has completed evaluation for <strong>${escapeHtml(candidateName)}</strong> on <strong>${escapeHtml(jobTitle)}</strong>.</p>
-        <div style="background: rgba(15, 23, 42, 0.6); border: 1px solid #334155; border-radius: 8px; padding: 14px; margin: 14px 0;">
-          <p style="margin: 0; font-size: 13px; color: #94A3B8;">Rubric Score: <strong style="color: #38BDF8; font-size: 16px;">${escapeHtml(score)}/100</strong></p>
+        <div style="background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 8px; padding: 14px; margin: 14px 0;">
+          <p style="margin: 0; font-size: 13px; color: #94A3B8;">Rubric Score: <strong style="color: #2563EB; font-size: 16px;">${escapeHtml(score)}/100</strong></p>
         </div>
       `,
       ctaText: 'Inspect Full Scorecard',
@@ -787,7 +790,7 @@ export function driveDeadlineApproaching({ universityAdminName = 'Placement Team
       bodyHtml: `
         <p>Hello ${escapeHtml(universityAdminName)},</p>
         <p>The application window for <strong>${escapeHtml(driveTitle)}</strong> will close within 24 hours on <strong>${formatIST(deadline)}</strong>.</p>
-        <p style="font-size: 13px; color: #94A3B8;">Current Applicant Count: <strong style="color: #38BDF8;">${applicantCount} students</strong></p>
+        <p style="font-size: 13px; color: #94A3B8;">Current Applicant Count: <strong style="color: #2563EB;">${applicantCount} students</strong></p>
       `,
       ctaText: 'Inspect Drive Details',
       ctaUrl: driveUrl || `${APP_URL}/university/drives`,
@@ -806,10 +809,10 @@ export function dailyDigest({ universityAdminName = 'Placement Cell', date, plac
       bodyHtml: `
         <p>Good morning ${escapeHtml(universityAdminName)},</p>
         <p>Here is your daily operational summary across the placement directorate:</p>
-        <div style="background: rgba(15, 23, 42, 0.6); border: 1px solid #334155; border-radius: 8px; padding: 16px; margin: 16px 0;">
+        <div style="background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 8px; padding: 16px; margin: 16px 0;">
           <p style="margin: 0 0 8px; font-size: 13px; color: #94A3B8;">Offers Logged Today: <strong style="color: #10B981; font-size: 15px;">${placedToday || 0}</strong></p>
-          <p style="margin: 0 0 8px; font-size: 13px; color: #94A3B8;">Cumulative Placed Students: <strong style="color: #38BDF8;">${totalPlaced || 0}</strong></p>
-          <p style="margin: 0 0 8px; font-size: 13px; color: #94A3B8;">Active Recruitment Drives: <strong style="color: #F8FAFC;">${activeDrives || 0}</strong></p>
+          <p style="margin: 0 0 8px; font-size: 13px; color: #94A3B8;">Cumulative Placed Students: <strong style="color: #2563EB;">${totalPlaced || 0}</strong></p>
+          <p style="margin: 0 0 8px; font-size: 13px; color: #94A3B8;">Active Recruitment Drives: <strong style="color: #0F172A;">${activeDrives || 0}</strong></p>
           <p style="margin: 0; font-size: 13px; color: #94A3B8;">Pending Registrar Verifications: <strong style="color: #F43F5E;">${pendingVerifications || 0}</strong></p>
         </div>
       `,
@@ -852,8 +855,8 @@ export function collegePredictionReady({ aspirantName, score, predictedCount, ex
       bodyHtml: `
         <p>Hi ${escapeHtml(aspirantName)},</p>
         <p>Based on your 12th percentage score of <strong>${escapeHtml(score)}%</strong>, our engine has calculated your admission odds across universities:</p>
-        <div style="background: rgba(15, 23, 42, 0.6); border: 1px solid #334155; border-radius: 8px; padding: 16px; margin: 16px 0;">
-          <p style="margin: 0; font-size: 14px; color: #38BDF8; font-weight: 700;">${predictedCount} Recommended Institutes Identified</p>
+        <div style="background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 8px; padding: 16px; margin: 16px 0;">
+          <p style="margin: 0; font-size: 14px; color: #2563EB; font-weight: 700;">${predictedCount} Recommended Institutes Identified</p>
         </div>
       `,
       ctaText: 'View Predicted Colleges',

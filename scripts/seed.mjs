@@ -74,9 +74,12 @@ async function runMigrationAndSeed() {
       projects JSONB DEFAULT '[]'::jsonb,
       experience JSONB DEFAULT '[]'::jsonb,
       resume_url TEXT,
+      verification_remarks JSONB DEFAULT '{}'::jsonb,
       created_at TIMESTAMPTZ DEFAULT NOW(),
       updated_at TIMESTAMPTZ DEFAULT NOW()
     );
+
+    ALTER TABLE students ADD COLUMN IF NOT EXISTS verification_remarks JSONB DEFAULT '{}'::jsonb;
 
     -- Jobs Table
     CREATE TABLE IF NOT EXISTS jobs (

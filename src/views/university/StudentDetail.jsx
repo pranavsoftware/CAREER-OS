@@ -167,12 +167,12 @@ export default function UniversityStudentDetail() {
               CGPA: <strong>{Number(student.cgpa).toFixed(2)}</strong> • Backlogs: <strong>{student.backlogs ?? 0}</strong>
             </div>
             {uRec ? (
-              <div style={{ fontSize: 11, color: '#059669', marginTop: 4 }}>
-                ✓ Official Registrar match found
+              <div style={{ fontSize: 11, color: '#059669', marginTop: 4, display: 'flex', alignItems: 'center', gap: 4 }}>
+                <Check size={12} color="#059669" /> Official Registrar match found
               </div>
             ) : (
-              <div style={{ fontSize: 11, color: '#DC2626', marginTop: 4 }}>
-                ⚠ No registrar baseline record found
+              <div style={{ fontSize: 11, color: '#DC2626', marginTop: 4, display: 'flex', alignItems: 'center', gap: 4 }}>
+                <AlertTriangle size={12} color="#DC2626" /> No registrar baseline record found
               </div>
             )}
           </div>

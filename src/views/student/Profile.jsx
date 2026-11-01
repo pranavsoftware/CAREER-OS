@@ -220,7 +220,7 @@ export default function StudentProfile() {
     });
     setMessage({
       type: 'success',
-      text: '🎉 Profile submitted and fully activated! All placement features and drives are now unlocked.',
+      text: 'Profile submitted and fully activated. All placement features and drives are now unlocked.',
     });
     setTimeout(() => setMessage(null), 5000);
   }

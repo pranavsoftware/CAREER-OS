@@ -911,7 +911,7 @@ export default function StudentMaterials() {
                         flexShrink: 0,
                       }}
                     >
-                      {isFirst ? '🏆' : rank}
+                      {isFirst ? <Trophy size={16} color="#fff" /> : rank}
                     </div>
 
                     {/* Course info */}

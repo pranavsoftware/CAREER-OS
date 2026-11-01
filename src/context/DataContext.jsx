@@ -108,11 +108,13 @@ function dataReducer(state, action) {
     }
 
     case 'ADD_STUDENT': {
-      resilientFetch('/api/students', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(action.payload),
-      }).catch(err => console.error('Error adding student to db:', err));
+      if (!action.payload?.skipApi && !action.skipApi) {
+        resilientFetch('/api/students', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(action.payload),
+        }).catch(err => console.error('Error adding student to db:', err));
+      }
 
       const exists = state.students.some(s => s.id === action.payload.id || (s.email && s.email.toLowerCase() === (action.payload.email || '').toLowerCase()));
       const students = exists

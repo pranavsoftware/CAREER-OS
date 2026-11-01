@@ -197,8 +197,8 @@ export default function UniversityReferrals() {
                           "{rec.message}"
                         </div>
                         {rec.endorsement && (
-                          <div style={{ marginTop: 8, fontSize: 12, color: '#166534', fontWeight: 600 }}>
-                            🎖️ Endorsement Badge: "{rec.endorsement}"
+                          <div style={{ marginTop: 8, fontSize: 12, color: '#166534', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 4 }}>
+                            <Award size={14} color="#166534" /> Endorsement Badge: "{rec.endorsement}"
                           </div>
                         )}
                       </div>
