@@ -38,17 +38,24 @@ export default function CompanyCandidates() {
   const [selectedCertSkills, setSelectedCertSkills] = useState([]);
   const [certValidOnly, setCertValidOnly] = useState(true);
 
-  // Extract unique issuers and certified skills
+  // Extract unique issuers and certified skills from verified credentials only
   const availableIssuers = useMemo(() => {
-    const set = new Set(certificates.map(c => c.issuer).filter(Boolean));
+    const set = new Set(
+      certificates
+        .filter(c => c.trust_level === 'Issuer Verified' || c.trust_level === 'Placement Cell Verified' || c.trustLevel === 'Issuer Verified' || c.trustLevel === 'Placement Cell Verified' || c.verified === true)
+        .map(c => c.issuer)
+        .filter(Boolean)
+    );
     return Array.from(set).sort();
   }, [certificates]);
 
   const availableCertSkills = useMemo(() => {
     const set = new Set();
-    certificates.forEach(c => {
-      (c.skills || []).forEach(s => set.add(s));
-    });
+    certificates
+      .filter(c => c.trust_level === 'Issuer Verified' || c.trust_level === 'Placement Cell Verified' || c.trustLevel === 'Issuer Verified' || c.trustLevel === 'Placement Cell Verified' || c.verified === true)
+      .forEach(c => {
+        (c.skills || []).forEach(s => set.add(s));
+      });
     return Array.from(set).sort();
   }, [certificates]);
 
@@ -98,10 +105,10 @@ export default function CompanyCandidates() {
       selectedSkills.length === 0 ||
       selectedSkills.every(sk => studentSkillNames.includes(sk.toLowerCase()));
 
-    // 5. Certificate Filters (Only verified and non-expired count)
+    // 5. Certificate Filters (Only verified credentials count for recruiter search)
     const studentCerts = certificates.filter(c =>
       (c.studentId === s.id || c.student_id === s.id) &&
-      c.verified !== false &&
+      (c.trust_level === 'Issuer Verified' || c.trust_level === 'Placement Cell Verified' || c.trustLevel === 'Issuer Verified' || c.trustLevel === 'Placement Cell Verified' || c.verified === true) &&
       (!certValidOnly || c.status === 'Valid')
     );
 

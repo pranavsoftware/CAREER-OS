@@ -48,6 +48,33 @@ export async function POST(request, { params }) {
 
     const studentIds = approvedCandidates.map(c => c.student_id);
 
+    // Re-verify certificates older than 30 days before dispatching shortlist
+    try {
+      const staleCertsRes = await query(`
+        SELECT id, student_id, verification_url 
+        FROM certificates 
+        WHERE student_id = ANY($1::text[]) 
+          AND trust_level = 'Issuer Verified'
+          AND (last_verified_at IS NULL OR last_verified_at < NOW() - INTERVAL '30 days')
+        LIMIT 10
+      `, [studentIds]);
+
+      if (staleCertsRes.rows.length > 0) {
+        const { verifyCertificate } = await import('@/lib/certVerify/index.js');
+        await Promise.allSettled(
+          staleCertsRes.rows.map(cert =>
+            verifyCertificate({
+              certificateId: cert.id,
+              typedUrl: cert.verification_url,
+              actor: 'pre_shortlist_dispatch',
+            })
+          )
+        );
+      }
+    } catch (reverifyErr) {
+      console.warn('Pre-shortlist re-verification notice:', reverifyErr.message);
+    }
+
     // 3. Mark shortlist status as 'Sent to Company' and record emailed_at
     await query(`
       UPDATE job_shortlists

@@ -38,7 +38,13 @@ export async function GET() {
         ) t) AS applications,
 
         (SELECT COALESCE(json_agg(t), '[]'::json) FROM (
-          SELECT id, student_id AS "studentId", title, issuer, issue_date AS "issueDate", expiry_date AS "expiryDate", skills, status, file_name AS "fileName", verified, verification_score AS "verificationScore"
+          SELECT 
+            id, student_id AS "studentId", title, issuer, issue_date AS "issueDate", 
+            expiry_date AS "expiryDate", skills, status, file_name AS "fileName", 
+            verified, verification_score AS "verificationScore", credential_id AS "credentialId",
+            verification_url AS "verificationUrl", trust_level AS "trustLevel",
+            review_status AS "reviewStatus", review_remark AS "reviewRemark",
+            check_results AS "checkResults", last_verified_at AS "lastVerifiedAt"
           FROM certificates ORDER BY id ASC
         ) t) AS certificates,
 

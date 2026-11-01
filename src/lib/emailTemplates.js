@@ -931,3 +931,214 @@ export function passwordResetLink({ name = 'User', resetLink, expiresInMinutes =
   };
 }
 
+/* ==========================================================================
+   CERTIFICATE VERIFICATION SYSTEM TEMPLATES (36 - 41)
+   ========================================================================== */
+
+export function certAutoVerified({ studentName, certTitle, issuer, skills = [] }) {
+  const body = `
+    <p style="margin: 0 0 16px; font-size: 14px; line-height: 22px; color: #374151;">
+      Hello <strong>${escapeHtml(studentName)}</strong>,
+    </p>
+    <div style="background-color: #F0FDF4; border: 1px solid #BBF7D0; border-radius: 8px; padding: 18px; margin: 16px 0 24px;">
+      <h3 style="margin: 0 0 8px; font-size: 16px; color: #166534; font-weight: 700;">
+        ✓ Certificate Verified by Issuer
+      </h3>
+      <p style="margin: 0; font-size: 13px; color: #15803D; line-height: 20px;">
+        Your credential <strong>"${escapeHtml(certTitle)}"</strong> from <strong>${escapeHtml(issuer)}</strong> has been verified directly against issuer registries.
+      </p>
+    </div>
+    <p style="margin: 0 0 14px; font-size: 14px; line-height: 22px; color: #374151;">
+      <strong>What this means for your placements:</strong>
+    </p>
+    <ul style="margin: 0 0 20px 20px; padding: 0; font-size: 13px; color: #4B5563; line-height: 22px;">
+      <li>This certificate now carries the green <strong>Issuer Verified</strong> trust badge.</li>
+      <li>It is now active and directly visible to enterprise recruiters and hiring managers.</li>
+      <li>Skills verified by this credential have been credited to your campus ATS matching score.</li>
+    </ul>
+  `;
+
+  return {
+    subject: `Certificate Verified: ${certTitle} (${issuer})`,
+    html: renderEmailLayout({
+      title: 'Certificate Verified',
+      preheader: `Your ${certTitle} certificate is verified and visible to recruiters`,
+      heading: 'Credential Verified Successfully',
+      bodyHtml: body,
+      ctaText: 'View My Certificates',
+      ctaUrl: `${APP_URL}/student/certificates`,
+      emailCategory: 'critical',
+    }),
+  };
+}
+
+export function certSentToReview({ studentName, certTitle, issuer, reasons }) {
+  const body = `
+    <p style="margin: 0 0 16px; font-size: 14px; line-height: 22px; color: #374151;">
+      Hello <strong>${escapeHtml(studentName)}</strong>,
+    </p>
+    <div style="background-color: #FEF3C7; border: 1px solid #FDE68A; border-radius: 8px; padding: 18px; margin: 16px 0 24px;">
+      <h3 style="margin: 0 0 8px; font-size: 16px; color: #92400E; font-weight: 700;">
+        Certificate Queued for Placement Cell Review
+      </h3>
+      <p style="margin: 0; font-size: 13px; color: #B45309; line-height: 20px;">
+        Your certificate <strong>"${escapeHtml(certTitle)}"</strong> from <strong>${escapeHtml(issuer)}</strong> has been uploaded and queued for manual verification by your university placement officer.
+      </p>
+      ${reasons ? `<p style="margin: 10px 0 0; font-size: 12px; color: #78350F;"><em>Note: ${escapeHtml(reasons)}</em></p>` : ''}
+    </div>
+    <p style="margin: 0 0 14px; font-size: 14px; line-height: 22px; color: #374151;">
+      Certificates are usually reviewed within <strong>2 working days</strong>. Once approved by the placement cell, it will immediately unlock recruiter visibility and ATS skill credit.
+    </p>
+  `;
+
+  return {
+    subject: `Certificate Queued for Review: ${certTitle}`,
+    html: renderEmailLayout({
+      title: 'Certificate Under Review',
+      preheader: `Your ${certTitle} certificate is under placement cell review`,
+      heading: 'Verification in Progress',
+      bodyHtml: body,
+      ctaText: 'Check Review Status',
+      ctaUrl: `${APP_URL}/student/certificates`,
+      emailCategory: 'critical',
+    }),
+  };
+}
+
+export function certApprovedByOfficer({ studentName, certTitle, issuer, remark }) {
+  const body = `
+    <p style="margin: 0 0 16px; font-size: 14px; line-height: 22px; color: #374151;">
+      Hello <strong>${escapeHtml(studentName)}</strong>,
+    </p>
+    <div style="background-color: #F0FDF4; border: 1px solid #BBF7D0; border-radius: 8px; padding: 18px; margin: 16px 0 24px;">
+      <h3 style="margin: 0 0 8px; font-size: 16px; color: #166534; font-weight: 700;">
+        ✓ Certificate Approved by Placement Directorate
+      </h3>
+      <p style="margin: 0; font-size: 13px; color: #15803D; line-height: 20px;">
+        Your university placement cell has approved <strong>"${escapeHtml(certTitle)}"</strong> (${escapeHtml(issuer)}).
+      </p>
+      ${remark ? `<p style="margin: 10px 0 0; font-size: 12px; color: #166534;"><strong>Officer Remarks:</strong> ${escapeHtml(remark)}</p>` : ''}
+    </div>
+    <p style="margin: 0 0 16px; font-size: 14px; line-height: 22px; color: #374151;">
+      This credential now carries the <strong>Placement Cell Verified</strong> trust seal and is visible on your profile to campus recruiters.
+    </p>
+  `;
+
+  return {
+    subject: `Certificate Approved: ${certTitle}`,
+    html: renderEmailLayout({
+      title: 'Certificate Approved',
+      preheader: `Your placement cell approved ${certTitle}`,
+      heading: 'Certificate Approved by University',
+      bodyHtml: body,
+      ctaText: 'View Approved Certificate',
+      ctaUrl: `${APP_URL}/student/certificates`,
+      emailCategory: 'critical',
+    }),
+  };
+}
+
+export function certRejectedByOfficer({ studentName, certTitle, issuer, remark }) {
+  const body = `
+    <p style="margin: 0 0 16px; font-size: 14px; line-height: 22px; color: #374151;">
+      Hello <strong>${escapeHtml(studentName)}</strong>,
+    </p>
+    <div style="background-color: #FEF2F2; border: 1px solid #FECACA; border-radius: 8px; padding: 18px; margin: 16px 0 24px;">
+      <h3 style="margin: 0 0 8px; font-size: 16px; color: #991B1B; font-weight: 700;">
+        Certificate Not Approved
+      </h3>
+      <p style="margin: 0 0 8px; font-size: 13px; color: #B91C1C; line-height: 20px;">
+        Your certificate <strong>"${escapeHtml(certTitle)}"</strong> was reviewed by the placement cell and could not be verified.
+      </p>
+      <p style="margin: 0; font-size: 13px; color: #991B1B;">
+        <strong>Officer Remark:</strong> ${escapeHtml(remark || 'Provided document could not be authenticated against issuer registry.')}
+      </p>
+    </div>
+    <p style="margin: 0 0 16px; font-size: 14px; line-height: 22px; color: #374151;">
+      <strong>Action Required:</strong> Please check that your certificate has a valid verification URL or QR code, verify your registered student name matches the document, and re-upload with official credentials.
+    </p>
+  `;
+
+  return {
+    subject: `Certificate Verification Update: ${certTitle}`,
+    html: renderEmailLayout({
+      title: 'Certificate Verification Update',
+      preheader: `Update on verification for ${certTitle}`,
+      heading: 'Certificate Verification Notice',
+      bodyHtml: body,
+      ctaText: 'Review My Certificates',
+      ctaUrl: `${APP_URL}/student/certificates`,
+      emailCategory: 'critical',
+    }),
+  };
+}
+
+export function certFlaggedAlert({ officerName = 'Placement Officer', studentName, regNo, certTitle, issuer, reason }) {
+  const body = `
+    <p style="margin: 0 0 16px; font-size: 14px; line-height: 22px; color: #374151;">
+      Dear <strong>${escapeHtml(officerName)}</strong>,
+    </p>
+    <div style="background-color: #FEF2F2; border: 1px solid #FECACA; border-radius: 8px; padding: 18px; margin: 16px 0 24px;">
+      <h3 style="margin: 0 0 8px; font-size: 16px; color: #991B1B; font-weight: 700;">
+        ⚠️ Security Alert: Certificate Flagged for Discrepancy
+      </h3>
+      <p style="margin: 0 0 8px; font-size: 13px; color: #B91C1C; line-height: 20px;">
+        A certificate uploaded by student <strong>${escapeHtml(studentName)}</strong> (${escapeHtml(regNo)}) was flagged during automated registry verification.
+      </p>
+      <p style="margin: 0; font-size: 13px; color: #991B1B;">
+        <strong>Flag Reason:</strong> ${escapeHtml(reason)}
+      </p>
+    </div>
+    <p style="margin: 0 0 16px; font-size: 14px; line-height: 22px; color: #374151;">
+      Certificate: <strong>${escapeHtml(certTitle)}</strong> (${escapeHtml(issuer)})<br />
+      This certificate is currently blocked from recruiter visibility and CDC shortlist scoring. Please review the document in the Certificate Review queue.
+    </p>
+  `;
+
+  return {
+    subject: `[ALERT] Certificate Flagged: ${studentName} (${regNo})`,
+    html: renderEmailLayout({
+      title: 'Certificate Security Alert',
+      preheader: `Flagged certificate uploaded by ${studentName}`,
+      heading: 'Certificate Security Review Required',
+      bodyHtml: body,
+      ctaText: 'Open Review Queue',
+      ctaUrl: `${APP_URL}/university/certificate-review`,
+      emailCategory: 'critical',
+    }),
+  };
+}
+
+export function certRevokedAlert({ studentName, certTitle, issuer }) {
+  const body = `
+    <p style="margin: 0 0 16px; font-size: 14px; line-height: 22px; color: #374151;">
+      Hello <strong>${escapeHtml(studentName)}</strong>,
+    </p>
+    <div style="background-color: #FEF2F2; border: 1px solid #FECACA; border-radius: 8px; padding: 18px; margin: 16px 0 24px;">
+      <h3 style="margin: 0 0 8px; font-size: 16px; color: #991B1B; font-weight: 700;">
+        Credential Revoked or Invalidated by Issuer
+      </h3>
+      <p style="margin: 0; font-size: 13px; color: #B91C1C; line-height: 20px;">
+        During automated audit re-verification, your credential <strong>"${escapeHtml(certTitle)}"</strong> was flagged as revoked or no longer active on <strong>${escapeHtml(issuer)}</strong> records.
+      </p>
+    </div>
+    <p style="margin: 0 0 16px; font-size: 14px; line-height: 22px; color: #374151;">
+      This certificate has been suspended from active campus recruitment filters and queued for placement officer review.
+    </p>
+  `;
+
+  return {
+    subject: `Notice: Credential Revoked on Issuer Registry (${certTitle})`,
+    html: renderEmailLayout({
+      title: 'Credential Revocation Notice',
+      preheader: `Credential ${certTitle} was marked revoked by ${issuer}`,
+      heading: 'Credential Status Notice',
+      bodyHtml: body,
+      ctaText: 'View Certificate Details',
+      ctaUrl: `${APP_URL}/student/certificates`,
+      emailCategory: 'critical',
+    }),
+  };
+}
+
+

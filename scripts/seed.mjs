@@ -149,8 +149,18 @@ async function runMigrationAndSeed() {
       skills JSONB DEFAULT '[]'::jsonb,
       status TEXT DEFAULT 'Valid',
       file_name TEXT,
-      verified BOOLEAN DEFAULT TRUE,
-      verification_score INT DEFAULT 95,
+      verified BOOLEAN DEFAULT FALSE,
+      verification_score INT DEFAULT 0,
+      credential_id TEXT,
+      verification_url TEXT,
+      file_hash TEXT,
+      trust_level TEXT DEFAULT 'Unverified',
+      check_results JSONB DEFAULT '{}'::jsonb,
+      review_status TEXT DEFAULT 'Not Required',
+      reviewed_by TEXT,
+      reviewed_at TIMESTAMPTZ,
+      review_remark TEXT,
+      last_verified_at TIMESTAMPTZ,
       created_at TIMESTAMPTZ DEFAULT NOW()
     );
 
@@ -260,6 +270,20 @@ async function runMigrationAndSeed() {
       auto_enabled BOOLEAN DEFAULT true,
       updated_at TIMESTAMPTZ DEFAULT NOW()
     );
+
+    CREATE TABLE IF NOT EXISTS certificate_audit (
+      id TEXT PRIMARY KEY,
+      certificate_id TEXT NOT NULL,
+      student_id TEXT NOT NULL,
+      action TEXT NOT NULL,
+      actor TEXT,
+      details JSONB DEFAULT '{}'::jsonb,
+      created_at TIMESTAMPTZ DEFAULT NOW()
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_cert_hash ON certificates(file_hash);
+    CREATE INDEX IF NOT EXISTS idx_cert_cred ON certificates(credential_id);
+    CREATE INDEX IF NOT EXISTS idx_cert_review ON certificates(review_status, created_at);
   `);
 
   console.log('Tables created successfully. Seeding initial data...');

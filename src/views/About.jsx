@@ -574,7 +574,7 @@ export default function About() {
               Why We Built CAREER-OS.
             </h2>
             <p style={{ fontSize: 15, color: '#6B7280', margin: 0, maxWidth: 640, marginLeft: 'auto', marginRight: 'auto' }}>
-              Campus recruitment in top universities handles thousands of students, hundreds of hiring partners, and millions of data points — yet relies on scattered forms, unverified resumes, and manual spreadsheets.
+              Campus recruitment in top universities handles thousands of students, hundreds of hiring partners, and millions of data points - yet relies on scattered forms, unverified resumes, and manual spreadsheets.
             </p>
           </div>
 
@@ -665,7 +665,7 @@ export default function About() {
             Ready to Experience Modern Placement?
           </h2>
           <p style={{ fontSize: 15, color: '#E0E7FF', maxWidth: 540, margin: '0 0 28px', lineHeight: 1.6 }}>
-            Whether you are a student preparing for upcoming drives, a university placement officer, or an enterprise recruiter — CAREER-OS is built for you.
+            Whether you are a student preparing for upcoming drives, a university placement officer, or an enterprise recruiter - CAREER-OS is built for you.
           </p>
           <div style={{ display: 'flex', gap: 14, flexWrap: 'wrap', justifyContent: 'center' }}>
             <Link

@@ -40,10 +40,14 @@ export function calculateShortlistScore(student, job, studentCerts = [], student
   }
 
   // 2. Certificate relevance (20%)
-  // Counts valid, verified certificates covering required skills
+  // Counts ONLY trusted, verified certificates ('Issuer Verified' or 'Placement Cell Verified')
   const validCerts = (studentCerts || []).filter(c => 
     c.studentId === student.id || c.student_id === student.id
-  ).filter(c => c.verified !== false && c.status === 'Valid');
+  ).filter(c => 
+    c.verified === true && 
+    c.status === 'Valid' &&
+    (c.trust_level === 'Issuer Verified' || c.trust_level === 'Placement Cell Verified' || c.trustLevel === 'Issuer Verified' || c.trustLevel === 'Placement Cell Verified')
+  );
 
   let certSkillsCovered = 0;
   if (reqSkills.length > 0) {

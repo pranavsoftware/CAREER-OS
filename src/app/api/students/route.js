@@ -32,7 +32,9 @@ export async function GET(request) {
                 'skills', c.skills,
                 'status', c.status,
                 'verified', c.verified,
-                'verificationScore', c.verification_score
+                'verificationScore', c.verification_score,
+                'trustLevel', c.trust_level,
+                'reviewStatus', c.review_status
               )
             )
             FROM certificates c
@@ -55,9 +57,13 @@ export async function GET(request) {
       sql += ` AND (s.name ILIKE $${params.length} OR s.reg_no ILIKE $${params.length} OR s.email ILIKE $${params.length})`;
     }
 
-    // Certificate filters (Phase 1.2)
+    // Certificate filters: only consider verified certificates
     if (certTitle || certIssuer || certSkill || certValidOnly) {
-      let certConditions = ['c.student_id = s.id', 'c.verified = true'];
+      let certConditions = [
+        'c.student_id = s.id', 
+        'c.verified = true',
+        "(c.trust_level = 'Issuer Verified' OR c.trust_level = 'Placement Cell Verified')"
+      ];
 
       if (certValidOnly) {
         certConditions.push("(c.status = 'Valid' AND (c.expiry_date IS NULL OR c.expiry_date >= TO_CHAR(CURRENT_DATE, 'YYYY-MM-DD')))");

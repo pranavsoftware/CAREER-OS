@@ -29,6 +29,7 @@ const studentNav = [
 const universityNav = [
   { to: '/university/dashboard', label: 'Dashboard', icon: PieChart },
   { to: '/university/students', label: 'Students', icon: Users },
+  { to: '/university/certificate-review', label: 'Certificate Review', icon: Award, badge: 'Audit' },
   { to: '/university/drives', label: 'Drives', icon: BookMarked },
   { to: '/university/materials', label: 'Class Materials', icon: BookOpen },
   { to: '/university/mail-filter', label: 'Mail Filter', icon: Mail },

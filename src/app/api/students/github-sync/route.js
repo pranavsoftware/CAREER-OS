@@ -24,7 +24,7 @@ export async function POST(request) {
 
     // 1. Action: Disconnect GitHub
     if (action === 'disconnect') {
-      const studentRes = await query('SELECT phone, address, gender, dob, skills, projects FROM students WHERE id = $1', [studentId]);
+      const studentRes = await query('SELECT phone, address, gender, dob, skills, projects, profile_completion FROM students WHERE id = $1', [studentId]);
       if (studentRes.rows.length === 0) {
         return NextResponse.json({ error: 'Student not found' }, { status: 404 });
       }
@@ -38,7 +38,8 @@ export async function POST(request) {
       if (row.phone && (row.address || row.gender || row.dob)) score += 25;
       if (Array.isArray(row.skills) && row.skills.length >= 1) score += (row.skills.length >= 2 ? 25 : 15);
       if (remainingProjects.length >= 1) score += 25;
-      const profileCompletion = Math.min(100, score);
+      // Do not downgrade if already marked completed
+      const profileCompletion = (row.profile_completion >= 100) ? 100 : Math.min(100, score);
 
       await query(
         `UPDATE students SET github = NULL, projects = $1::jsonb, profile_completion = $2, updated_at = NOW() WHERE id = $3`,
@@ -177,7 +178,7 @@ export async function POST(request) {
     }
 
     // Persist into database for the student
-    const studentRes = await query('SELECT phone, address, gender, dob, skills, projects FROM students WHERE id = $1', [studentId]);
+    const studentRes = await query('SELECT phone, address, gender, dob, skills, projects, profile_completion FROM students WHERE id = $1', [studentId]);
     if (studentRes.rows.length === 0) {
       return NextResponse.json({ error: 'Student not found in database' }, { status: 404 });
     }
@@ -209,7 +210,8 @@ export async function POST(request) {
     if (row.phone && (row.address || row.gender || row.dob)) score += 25;
     if (Array.isArray(row.skills) && row.skills.length >= 1) score += (row.skills.length >= 2 ? 25 : 15);
     if (allProjects.length >= 1) score += 25;
-    const profileCompletion = Math.min(100, score);
+    // Never downgrade an already completed profile upon connecting GitHub
+    const profileCompletion = (row.profile_completion >= 100) ? 100 : Math.max(row.profile_completion || 0, Math.min(100, score));
 
     await query(
       `UPDATE students 

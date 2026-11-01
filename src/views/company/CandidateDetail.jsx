@@ -15,7 +15,10 @@ export default function CompanyCandidateDetail() {
 
   const myCompany = user?.company || 'Infosys';
   const student = state.students.find(s => s.id === id);
-  const studentCerts = state.certificates.filter(c => c.studentId === id && c.status === 'Valid');
+  const studentCerts = (state.certificates || []).filter(c =>
+    (c.studentId === id || c.student_id === id) &&
+    (c.trust_level === 'Issuer Verified' || c.trust_level === 'Placement Cell Verified' || c.trustLevel === 'Issuer Verified' || c.trustLevel === 'Placement Cell Verified' || c.verified === true)
+  );
 
   // Find job associated with this company
   const myJob = state.jobs.find(j => j.company === myCompany) || state.jobs[0];
@@ -246,11 +249,14 @@ export default function CompanyCandidateDetail() {
             ) : (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                 {studentCerts.map(c => (
-                  <div key={c.id} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, borderBottom: '1px solid #F3F4F6', paddingBottom: 6 }}>
+                  <div key={c.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 12, borderBottom: '1px solid #F3F4F6', paddingBottom: 6 }}>
                     <div>
-                      <strong>{c.title}</strong> — {c.issuer}
+                      <strong>{c.title}</strong> - {c.issuer}
+                      <span style={{ marginLeft: 8, padding: '2px 6px', borderRadius: 4, background: '#ECFDF5', color: '#065F46', border: '1px solid #A7F3D0', fontSize: 10, fontWeight: 600 }}>
+                        {c.trust_level || 'Verified'}
+                      </span>
                     </div>
-                    <span style={{ color: '#6B7280' }}>Issued: {c.issueDate}</span>
+                    <span style={{ color: '#6B7280' }}>Issued: {c.issue_date || c.issueDate}</span>
                   </div>
                 ))}
               </div>

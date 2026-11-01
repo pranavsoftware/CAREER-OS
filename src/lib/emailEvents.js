@@ -835,3 +835,158 @@ export async function notifyPasswordReset(user, resetLink) {
   });
 }
 
+/* ==========================================================================
+   CERTIFICATE VERIFICATION EVENT DISPATCHERS
+   ========================================================================== */
+
+export async function notifyCertificateAutoVerified(student, cert) {
+  if (!student?.email) return;
+  const dedupeKey = `cert:${cert.id}:verified`;
+  const { subject, html } = templates.certAutoVerified({
+    studentName: student.name,
+    certTitle: cert.title,
+    issuer: cert.issuer,
+    skills: cert.skills || [],
+  });
+
+  return sendEmail({
+    to: student.email,
+    subject,
+    html,
+    dedupeKey,
+    eventType: 'cert_auto_verified',
+    meta: { studentId: student.id, certId: cert.id, critical: true },
+  });
+}
+
+export async function notifyCertificateSentToReview(student, cert, reasons) {
+  if (!student?.email) return;
+  const dedupeKey = `cert:${cert.id}:review_queued`;
+  const { subject, html } = templates.certSentToReview({
+    studentName: student.name,
+    certTitle: cert.title,
+    issuer: cert.issuer,
+    reasons,
+  });
+
+  return sendEmail({
+    to: student.email,
+    subject,
+    html,
+    dedupeKey,
+    eventType: 'cert_sent_to_review',
+    meta: { studentId: student.id, certId: cert.id, critical: true },
+  });
+}
+
+export async function notifyCertificateApprovedByOfficer(student, cert, remark) {
+  if (!student?.email) return;
+  const dedupeKey = `cert:${cert.id}:approved`;
+  const { subject, html } = templates.certApprovedByOfficer({
+    studentName: student.name,
+    certTitle: cert.title,
+    issuer: cert.issuer,
+    remark,
+  });
+
+  return sendEmail({
+    to: student.email,
+    subject,
+    html,
+    dedupeKey,
+    eventType: 'cert_officer_approved',
+    meta: { studentId: student.id, certId: cert.id, critical: true },
+  });
+}
+
+export async function notifyCertificateRejectedByOfficer(student, cert, remark) {
+  if (!student?.email) return;
+  const dedupeKey = `cert:${cert.id}:rejected`;
+  const { subject, html } = templates.certRejectedByOfficer({
+    studentName: student.name,
+    certTitle: cert.title,
+    issuer: cert.issuer,
+    remark,
+  });
+
+  return sendEmail({
+    to: student.email,
+    subject,
+    html,
+    dedupeKey,
+    eventType: 'cert_officer_rejected',
+    meta: { studentId: student.id, certId: cert.id, critical: true },
+  });
+}
+
+export async function notifyCertificateFlagged(student, cert, reason) {
+  const dedupeKey = `cert:${cert.id}:flagged`;
+
+  // 1. Notify student of flag
+  if (student?.email) {
+    const { subject, html } = templates.certSentToReview({
+      studentName: student.name,
+      certTitle: cert.title,
+      issuer: cert.issuer,
+      reasons: `Flagged: ${reason}`,
+    });
+    sendEmail({
+      to: student.email,
+      subject,
+      html,
+      dedupeKey: `${dedupeKey}:student`,
+      eventType: 'cert_flagged_student',
+      meta: { studentId: student.id, certId: cert.id, critical: true },
+    }).catch(() => {});
+  }
+
+  // 2. Alert University Placement Officer immediately
+  try {
+    const officerRes = await query(`
+      SELECT email, name FROM users 
+      WHERE role = 'university' 
+      ORDER BY created_at ASC 
+      LIMIT 1
+    `);
+    const officer = officerRes.rows[0];
+    if (officer?.email) {
+      const { subject, html } = templates.certFlaggedAlert({
+        officerName: officer.name || 'Placement Officer',
+        studentName: student.name,
+        regNo: student.regNo,
+        certTitle: cert.title,
+        issuer: cert.issuer,
+        reason,
+      });
+
+      await sendEmail({
+        to: officer.email,
+        subject,
+        html,
+        dedupeKey: `${dedupeKey}:officer`,
+        eventType: 'cert_flagged_officer_alert',
+        meta: { studentId: student.id, certId: cert.id, critical: true },
+      });
+    }
+  } catch (_) {}
+}
+
+export async function notifyCertificateRevoked(student, cert) {
+  if (!student?.email) return;
+  const dedupeKey = `cert:${cert.id}:revoked`;
+  const { subject, html } = templates.certRevokedAlert({
+    studentName: student.name,
+    certTitle: cert.title,
+    issuer: cert.issuer,
+  });
+
+  return sendEmail({
+    to: student.email,
+    subject,
+    html,
+    dedupeKey,
+    eventType: 'cert_revoked',
+    meta: { studentId: student.id, certId: cert.id, critical: true },
+  });
+}
+

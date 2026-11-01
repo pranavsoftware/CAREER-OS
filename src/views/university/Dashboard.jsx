@@ -103,9 +103,15 @@ export default function UniversityDashboard() {
                 Action Required: Exceptions Queue ({exceptionStudents.length})
               </h2>
             </div>
-            <Link to="/university/records-import" style={{ fontSize: 12, color: '#2563EB', fontWeight: 600 }}>
-              Registrar Sync →
-            </Link>
+            <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+              <Link to="/university/certificate-review" style={{ fontSize: 12, color: '#DC2626', fontWeight: 600 }}>
+                Certificates Audit →
+              </Link>
+              <span style={{ color: '#CBD5E1' }}>|</span>
+              <Link to="/university/records-import" style={{ fontSize: 12, color: '#2563EB', fontWeight: 600 }}>
+                Registrar Sync →
+              </Link>
+            </div>
           </div>
           <p style={{ margin: '0 0 14px', fontSize: 12, color: '#64748B' }}>
             The automated rule engine has auto-verified matching profiles. Only students with registry discrepancies (CGPA/backlogs mismatch) require manual officer action.

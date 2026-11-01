@@ -153,22 +153,37 @@ export default function StudentProfile() {
     return Math.min(100, score);
   }
 
+  async function persistStudentUpdate(updatedPayload) {
+    if (!student?.id) return;
+    try {
+      await fetch(`/api/students/${student.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(updatedPayload),
+      });
+    } catch (err) {
+      console.error('Failed to persist student profile to database:', err);
+    }
+  }
+
   function startEdit(section) {
     setEditing(section);
     setEditData({ ...student });
     setMessage(null);
   }
 
-  function saveSection(section) {
+  async function saveSection(section) {
     const updated = { ...student, ...editData };
     const profileCompletion = computeCompletion(updated);
-    dispatch({ type: 'UPDATE_STUDENT', payload: { id: student.id, ...editData, profileCompletion } });
+    const payload = { ...editData, profileCompletion };
+    dispatch({ type: 'UPDATE_STUDENT', payload: { id: student.id, ...payload } });
     setEditing(null);
     setMessage({ type: 'success', text: `${section} updated successfully. Profile completion: ${profileCompletion}%.` });
     setTimeout(() => setMessage(null), 3500);
+    await persistStudentUpdate(payload);
   }
 
-  function addSkill(nameOverride = null, levelOverride = null) {
+  async function addSkill(nameOverride = null, levelOverride = null) {
     const targetName = (nameOverride || newSkill.name || skillSearch).trim();
     if (!targetName) return;
     const targetLevel = levelOverride !== null ? Number(levelOverride) : Number(newSkill.level || 3);
@@ -187,21 +202,25 @@ export default function StudentProfile() {
       skills = [...(student.skills || []), { name: targetName, level: targetLevel, source: 'manual' }];
     }
     const profileCompletion = computeCompletion({ ...student, skills });
-    dispatch({ type: 'UPDATE_STUDENT', payload: { id: student.id, skills, profileCompletion } });
+    const payload = { skills, profileCompletion };
+    dispatch({ type: 'UPDATE_STUDENT', payload: { id: student.id, ...payload } });
     setNewSkill({ name: '', level: 3 });
     setSkillSearch('');
     setIsSkillDropdownOpen(false);
+    await persistStudentUpdate(payload);
   }
 
-  function removeSkill(name, targetIdx) {
+  async function removeSkill(name, targetIdx) {
     const skills = (student.skills || []).filter((s, idx) =>
       targetIdx !== undefined ? idx !== targetIdx : s.name !== name
     );
     const profileCompletion = computeCompletion({ ...student, skills });
-    dispatch({ type: 'UPDATE_STUDENT', payload: { id: student.id, skills, profileCompletion } });
+    const payload = { skills, profileCompletion };
+    dispatch({ type: 'UPDATE_STUDENT', payload: { id: student.id, ...payload } });
+    await persistStudentUpdate(payload);
   }
 
-  function addProject() {
+  async function addProject() {
     const proj = {
       ...newProject,
       id: `p${Date.now()}`,
@@ -210,18 +229,23 @@ export default function StudentProfile() {
     };
     const projects = [...(student.projects || []), proj];
     const profileCompletion = computeCompletion({ ...student, projects });
-    dispatch({ type: 'UPDATE_STUDENT', payload: { id: student.id, projects, profileCompletion } });
+    const payload = { projects, profileCompletion };
+    dispatch({ type: 'UPDATE_STUDENT', payload: { id: student.id, ...payload } });
     setNewProject({ title: '', description: '', technologies: '', link: '', year: 2026 });
     setAddingProject(false);
+    await persistStudentUpdate(payload);
   }
 
-  function handleCompleteAndUnlock() {
+  async function handleCompleteAndUnlock() {
+    const payload = {
+      profileCompletion: 100,
+      profileStatus: student.profileStatus === 'Verified' ? 'Verified' : 'Pending',
+    };
     dispatch({
       type: 'UPDATE_STUDENT',
       payload: {
         id: student.id,
-        profileCompletion: 100,
-        profileStatus: student.profileStatus === 'Verified' ? 'Verified' : 'Pending',
+        ...payload,
       },
     });
     setMessage({
@@ -229,12 +253,15 @@ export default function StudentProfile() {
       text: 'Profile submitted and fully activated. All placement features and drives are now unlocked.',
     });
     setTimeout(() => setMessage(null), 5000);
+    await persistStudentUpdate(payload);
   }
 
-  function deleteProject(id) {
+  async function deleteProject(id) {
     const projects = (student.projects || []).filter(p => p.id !== id);
     const profileCompletion = computeCompletion({ ...student, projects });
-    dispatch({ type: 'UPDATE_STUDENT', payload: { id: student.id, projects, profileCompletion } });
+    const payload = { projects, profileCompletion };
+    dispatch({ type: 'UPDATE_STUDENT', payload: { id: student.id, ...payload } });
+    await persistStudentUpdate(payload);
   }
 
   async function handleQuickGithubSync(e) {
@@ -377,10 +404,10 @@ export default function StudentProfile() {
           <div><span style={{ color: '#6B7280' }}>Name:</span> <strong>{student.name}</strong></div>
           <div><span style={{ color: '#6B7280' }}>Reg No:</span> <strong>{student.regNo}</strong></div>
           <div><span style={{ color: '#6B7280' }}>Email:</span> <strong>{student.email}</strong></div>
-          <div><span style={{ color: '#6B7280' }}>Phone:</span> <strong>{student.phone || <span style={{ color: '#9CA3AF', fontStyle: 'italic', fontWeight: 400 }}>Not added — click Edit</span>}</strong></div>
-          <div><span style={{ color: '#6B7280' }}>DOB:</span> <strong>{student.dob || <span style={{ color: '#9CA3AF', fontStyle: 'italic', fontWeight: 400 }}>Not added — click Edit</span>}</strong></div>
-          <div><span style={{ color: '#6B7280' }}>Gender:</span> <strong>{student.gender || <span style={{ color: '#9CA3AF', fontStyle: 'italic', fontWeight: 400 }}>Not added — click Edit</span>}</strong></div>
-          <div style={{ gridColumn: 'span 2' }}><span style={{ color: '#6B7280' }}>Address:</span> <strong>{student.address || <span style={{ color: '#9CA3AF', fontStyle: 'italic', fontWeight: 400 }}>Not added — click Edit</span>}</strong></div>
+          <div><span style={{ color: '#6B7280' }}>Phone:</span> <strong>{student.phone || <span style={{ color: '#9CA3AF', fontStyle: 'italic', fontWeight: 400 }}>Not added - click Edit</span>}</strong></div>
+          <div><span style={{ color: '#6B7280' }}>DOB:</span> <strong>{student.dob || <span style={{ color: '#9CA3AF', fontStyle: 'italic', fontWeight: 400 }}>Not added - click Edit</span>}</strong></div>
+          <div><span style={{ color: '#6B7280' }}>Gender:</span> <strong>{student.gender || <span style={{ color: '#9CA3AF', fontStyle: 'italic', fontWeight: 400 }}>Not added - click Edit</span>}</strong></div>
+          <div style={{ gridColumn: 'span 2' }}><span style={{ color: '#6B7280' }}>Address:</span> <strong>{student.address || <span style={{ color: '#9CA3AF', fontStyle: 'italic', fontWeight: 400 }}>Not added - click Edit</span>}</strong></div>
         </div>,
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
           <FormField label="Phone" id="phone" value={editData.phone || ''} placeholder="e.g. +919876543210" onChange={v => setEditData({ ...editData, phone: v })} />
@@ -393,33 +420,67 @@ export default function StudentProfile() {
       {/* Education */}
       {sectionCard('Education', 'education',
         <div style={{ fontSize: 13, display: 'flex', flexDirection: 'column', gap: 10 }}>
-          {student.education?.tenth?.school ? (
-            <div style={{ borderBottom: '1px solid #F3F4F6', paddingBottom: 8 }}>
-              <strong>10th</strong> — {student.education.tenth.school} ({student.education.tenth.board}, {student.education.tenth.year}) — {student.education.tenth.percentage}%
-            </div>
-          ) : (
-            <div style={{ borderBottom: '1px solid #F3F4F6', paddingBottom: 8, color: '#9CA3AF', fontStyle: 'italic' }}>
-              <strong style={{ color: '#374151', fontStyle: 'normal' }}>10th</strong> — Not filled yet. Click Edit to add details.
-            </div>
-          )}
-          {student.education?.twelfth?.school ? (
-            <div style={{ borderBottom: '1px solid #F3F4F6', paddingBottom: 8 }}>
-              <strong>12th</strong> — {student.education.twelfth.school} ({student.education.twelfth.board}, {student.education.twelfth.year}) — {student.education.twelfth.percentage}%
-            </div>
-          ) : (
-            <div style={{ borderBottom: '1px solid #F3F4F6', paddingBottom: 8, color: '#9CA3AF', fontStyle: 'italic' }}>
-              <strong style={{ color: '#374151', fontStyle: 'normal' }}>12th</strong> — Not filled yet. Click Edit to add details.
-            </div>
-          )}
-          {student.education?.btech?.college ? (
-            <div>
-              <strong>B.Tech</strong> — {student.education.btech.college} — {student.education.btech.branch} — CGPA: {student.education.btech.cgpa} — Sem {student.education.btech.currentSemester} ({student.education.btech.startYear}–{student.education.btech.endYear})
-            </div>
-          ) : (
-            <div style={{ color: '#9CA3AF', fontStyle: 'italic' }}>
-              <strong style={{ color: '#374151', fontStyle: 'normal' }}>B.Tech</strong> — Not filled yet. Click Edit to add details.
-            </div>
-          )}
+          {(() => {
+            const tenth = student.education?.tenth;
+            const hasTenth = Boolean(tenth?.school?.trim() || tenth?.board?.trim() || tenth?.percentage);
+            return hasTenth ? (
+              <div style={{ borderBottom: '1px solid #F3F4F6', paddingBottom: 8 }}>
+                <strong>10th:</strong> {[
+                  tenth.school?.trim(),
+                  (tenth.board?.trim() || tenth.year) ? `(${[tenth.board?.trim(), tenth.year].filter(Boolean).join(', ')})` : null,
+                  tenth.percentage ? `${tenth.percentage}%` : null
+                ].filter(Boolean).join(' · ')}
+              </div>
+            ) : (
+              <div style={{ borderBottom: '1px solid #F3F4F6', paddingBottom: 8, color: '#9CA3AF', fontStyle: 'italic' }}>
+                <strong style={{ color: '#374151', fontStyle: 'normal' }}>10th:</strong> Not filled yet. Click Edit to add details.
+              </div>
+            );
+          })()}
+
+          {(() => {
+            const twelfth = student.education?.twelfth;
+            const hasTwelfth = Boolean(twelfth?.school?.trim() || twelfth?.board?.trim() || twelfth?.percentage);
+            return hasTwelfth ? (
+              <div style={{ borderBottom: '1px solid #F3F4F6', paddingBottom: 8 }}>
+                <strong>12th:</strong> {[
+                  twelfth.school?.trim(),
+                  (twelfth.board?.trim() || twelfth.year) ? `(${[twelfth.board?.trim(), twelfth.year].filter(Boolean).join(', ')})` : null,
+                  twelfth.percentage ? `${twelfth.percentage}%` : null
+                ].filter(Boolean).join(' · ')}
+              </div>
+            ) : (
+              <div style={{ borderBottom: '1px solid #F3F4F6', paddingBottom: 8, color: '#9CA3AF', fontStyle: 'italic' }}>
+                <strong style={{ color: '#374151', fontStyle: 'normal' }}>12th:</strong> Not filled yet. Click Edit to add details.
+              </div>
+            );
+          })()}
+
+          {(() => {
+            const btech = student.education?.btech;
+            const hasBtech = Boolean(btech?.college?.trim() || btech?.branch?.trim() || btech?.cgpa || student.branch);
+            const college = btech?.college?.trim() || 'University Campus';
+            const branch = btech?.branch?.trim() || student.branch || 'Engineering';
+            const cgpa = btech?.cgpa || student.cgpa;
+            const sem = btech?.currentSemester ? `Semester ${btech.currentSemester}` : null;
+            const years = (btech?.startYear && btech?.endYear) ? `(${btech.startYear} - ${btech.endYear})` : (student.batch ? `(Batch ${student.batch})` : null);
+
+            return hasBtech ? (
+              <div>
+                <strong>B.Tech:</strong> {[
+                  college,
+                  branch,
+                  cgpa ? `CGPA: ${cgpa}` : null,
+                  sem,
+                  years
+                ].filter(Boolean).join(' · ')}
+              </div>
+            ) : (
+              <div style={{ color: '#9CA3AF', fontStyle: 'italic' }}>
+                <strong style={{ color: '#374151', fontStyle: 'normal' }}>B.Tech:</strong> Not filled yet. Click Edit to add details.
+              </div>
+            );
+          })()}
         </div>,
         <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
           {/* 10th */}
