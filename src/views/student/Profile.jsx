@@ -139,6 +139,14 @@ export default function StudentProfile() {
     } catch (_) {}
   }
 
+  function computeCompletion(st) {
+    let score = 25;
+    if (st.phone && (st.address || st.gender || st.dob)) score += 25;
+    if (Array.isArray(st.skills) && st.skills.length >= 1) score += (st.skills.length >= 2 ? 25 : 15);
+    if (Array.isArray(st.projects) && st.projects.length >= 1) score += 25;
+    return Math.min(100, score);
+  }
+
   function startEdit(section) {
     setEditing(section);
     setEditData({ ...student });
@@ -146,10 +154,12 @@ export default function StudentProfile() {
   }
 
   function saveSection(section) {
-    dispatch({ type: 'UPDATE_STUDENT', payload: { id: student.id, ...editData } });
+    const updated = { ...student, ...editData };
+    const profileCompletion = computeCompletion(updated);
+    dispatch({ type: 'UPDATE_STUDENT', payload: { id: student.id, ...editData, profileCompletion } });
     setEditing(null);
-    setMessage({ type: 'success', text: `${section} updated successfully.` });
-    setTimeout(() => setMessage(null), 3000);
+    setMessage({ type: 'success', text: `${section} updated successfully. Profile completion: ${profileCompletion}%.` });
+    setTimeout(() => setMessage(null), 3500);
   }
 
   function addSkill(nameOverride = null, levelOverride = null) {
@@ -170,7 +180,8 @@ export default function StudentProfile() {
     } else {
       skills = [...(student.skills || []), { name: targetName, level: targetLevel, source: 'manual' }];
     }
-    dispatch({ type: 'UPDATE_STUDENT', payload: { id: student.id, skills } });
+    const profileCompletion = computeCompletion({ ...student, skills });
+    dispatch({ type: 'UPDATE_STUDENT', payload: { id: student.id, skills, profileCompletion } });
     setNewSkill({ name: '', level: 3 });
     setSkillSearch('');
     setIsSkillDropdownOpen(false);
@@ -180,7 +191,8 @@ export default function StudentProfile() {
     const skills = (student.skills || []).filter((s, idx) =>
       targetIdx !== undefined ? idx !== targetIdx : s.name !== name
     );
-    dispatch({ type: 'UPDATE_STUDENT', payload: { id: student.id, skills } });
+    const profileCompletion = computeCompletion({ ...student, skills });
+    dispatch({ type: 'UPDATE_STUDENT', payload: { id: student.id, skills, profileCompletion } });
   }
 
   function addProject() {
@@ -191,9 +203,26 @@ export default function StudentProfile() {
       year: Number(newProject.year),
     };
     const projects = [...(student.projects || []), proj];
-    dispatch({ type: 'UPDATE_STUDENT', payload: { id: student.id, projects } });
+    const profileCompletion = computeCompletion({ ...student, projects });
+    dispatch({ type: 'UPDATE_STUDENT', payload: { id: student.id, projects, profileCompletion } });
     setNewProject({ title: '', description: '', technologies: '', link: '', year: 2026 });
     setAddingProject(false);
+  }
+
+  function handleCompleteAndUnlock() {
+    dispatch({
+      type: 'UPDATE_STUDENT',
+      payload: {
+        id: student.id,
+        profileCompletion: 100,
+        profileStatus: student.profileStatus === 'Verified' ? 'Verified' : 'Pending',
+      },
+    });
+    setMessage({
+      type: 'success',
+      text: '🎉 Profile submitted and fully activated! All placement features and drives are now unlocked.',
+    });
+    setTimeout(() => setMessage(null), 5000);
   }
 
   function deleteProject(id) {
@@ -251,13 +280,37 @@ export default function StudentProfile() {
       )}
 
       {/* Profile completion */}
-      <div style={{ background: '#fff', border: '1px solid #E5E7EB', borderRadius: 6, padding: '12px 20px', marginBottom: 16, display: 'flex', alignItems: 'center', gap: 16 }}>
-        <span style={{ fontSize: 13, color: '#374151', fontWeight: 500 }}>Profile completion:</span>
-        <div style={{ flex: 1, height: 8, background: '#F3F4F6', borderRadius: 4, overflow: 'hidden' }}>
-          <div style={{ width: `${student.profileCompletion}%`, height: '100%', background: '#2563EB', borderRadius: 4 }} />
+      <div style={{ background: '#fff', border: '1px solid #E5E7EB', borderRadius: 8, padding: '16px 20px', marginBottom: 16 }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10, flexWrap: 'wrap', gap: 10 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <span style={{ fontSize: 14, color: '#111827', fontWeight: 600 }}>Profile Completion:</span>
+            <span style={{ fontSize: 15, fontWeight: 700, color: '#2563EB' }}>{student.profileCompletion || 25}%</span>
+            <Badge variant={getBadgeVariant(student.profileStatus)}>{student.profileStatus}</Badge>
+          </div>
+          {(student.profileCompletion || 0) < 100 && (
+            <button
+              onClick={handleCompleteAndUnlock}
+              style={{
+                padding: '6px 14px',
+                borderRadius: 6,
+                border: 'none',
+                background: '#16A34A',
+                color: '#fff',
+                fontSize: 12,
+                fontWeight: 600,
+                cursor: 'pointer',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 6,
+              }}
+            >
+              ✓ Submit &amp; Unlock All Features
+            </button>
+          )}
         </div>
-        <span style={{ fontSize: 14, fontWeight: 600, color: '#2563EB' }}>{student.profileCompletion}%</span>
-        <Badge variant={getBadgeVariant(student.profileStatus)}>{student.profileStatus}</Badge>
+        <div style={{ width: '100%', height: 8, background: '#F3F4F6', borderRadius: 4, overflow: 'hidden' }}>
+          <div style={{ width: `${student.profileCompletion || 25}%`, height: '100%', background: '#2563EB', borderRadius: 4, transition: 'width 0.3s ease' }} />
+        </div>
       </div>
 
       {/* Personal Info */}

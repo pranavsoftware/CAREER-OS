@@ -869,6 +869,7 @@ async function runMigrationAndSeed() {
 
     ALTER TABLE users ADD COLUMN IF NOT EXISTS email_preferences JSONB
       DEFAULT '{"drives":true,"reminders":true,"circulars":true,"marketing":true}'::jsonb;
+    ALTER TABLE users ADD COLUMN IF NOT EXISTS must_reset_password BOOLEAN DEFAULT FALSE;
   `);
 
   console.log('Seeded Phase 4 aspirant schemas & user.');

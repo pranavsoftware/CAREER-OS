@@ -169,3 +169,4 @@ export async function sendBulkEmail(items = []) {
 
   return { ok: true, total: items.length, sentCount, failedCount, results };
 }
+

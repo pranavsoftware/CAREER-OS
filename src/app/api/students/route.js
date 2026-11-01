@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { query } from '@/lib/db';
+import { notifyWelcomeStudent } from '@/lib/emailEvents';
 
 export async function GET(request) {
   try {
@@ -150,14 +151,27 @@ export async function POST(request) {
         s.resumeUrl || null
       ]);
 
-      // Create matching user record for student login
+      // Generate secure temporary password and create user account
+      const tempPassword = s.tempPassword || `Temp@${Math.random().toString(36).slice(2, 6).toUpperCase()}${Math.floor(10 + Math.random() * 90)}`;
       const userId = `user_${id}`;
       const initials = name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase() || 'ST';
+
       await query(`
-        INSERT INTO users (id, name, email, password, role, student_id, display_role, avatar)
-        VALUES ($1, $2, $3, 'demo', 'student', $4, $5, $6)
-        ON CONFLICT (id) DO UPDATE SET name = EXCLUDED.name, email = EXCLUDED.email
-      `, [userId, name, email, id, `B.Tech ${branch} - Batch ${batch}`, initials]);
+        INSERT INTO users (id, name, email, password, role, student_id, display_role, avatar, must_reset_password)
+        VALUES ($1, $2, $3, $4, 'student', $5, $6, $7, TRUE)
+        ON CONFLICT (id) DO UPDATE SET 
+          name = EXCLUDED.name, 
+          email = EXCLUDED.email, 
+          password = EXCLUDED.password, 
+          must_reset_password = TRUE
+      `, [userId, name, email, tempPassword, id, `B.Tech ${branch} - Batch ${batch}`, initials]);
+
+      // Automatically dispatch email credentials to student
+      try {
+        await notifyWelcomeStudent({ id, name, email }, tempPassword);
+      } catch (mailErr) {
+        console.warn('Welcome student email error:', mailErr.message);
+      }
 
       insertedStudents.push({
         id,
@@ -169,6 +183,8 @@ export async function POST(request) {
         cgpa,
         backlogs,
         phone,
+        tempPassword,
+        mustResetPassword: true,
         profileStatus: s.profileStatus || 'Pending',
         placementStatus: s.placementStatus || 'In process',
         profileCompletion: 20,

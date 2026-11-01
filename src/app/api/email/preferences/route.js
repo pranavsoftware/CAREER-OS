@@ -66,3 +66,4 @@ export async function PATCH(request) {
     return NextResponse.json({ error: 'Failed to update preferences' }, { status: 500 });
   }
 }
+

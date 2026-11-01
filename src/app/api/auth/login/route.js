@@ -12,9 +12,9 @@ export async function POST(request) {
       let res;
       if (role && !email) {
         // Role-based quick switch
-        res = await query('SELECT id, name, email, role, student_id AS "studentId", company_id AS "companyId", company, display_role AS "displayRole", avatar FROM users WHERE role = $1 LIMIT 1', [role]);
+        res = await query('SELECT id, name, email, role, student_id AS "studentId", company_id AS "companyId", company, display_role AS "displayRole", avatar, COALESCE(must_reset_password, false) AS "mustResetPassword" FROM users WHERE role = $1 LIMIT 1', [role]);
       } else if (email) {
-        res = await query('SELECT id, name, email, role, student_id AS "studentId", company_id AS "companyId", company, display_role AS "displayRole", avatar, password FROM users WHERE email = $1', [email]);
+        res = await query('SELECT id, name, email, role, student_id AS "studentId", company_id AS "companyId", company, display_role AS "displayRole", avatar, password, COALESCE(must_reset_password, false) AS "mustResetPassword" FROM users WHERE email = $1', [email]);
         if (res.rows.length > 0 && password && res.rows[0].password !== password) {
           return NextResponse.json({ error: 'Invalid password' }, { status: 401 });
         }

@@ -147,23 +147,31 @@ export function renderEmailLayout({
    ========================================================================== */
 
 // 1. Welcome / account created
-export function welcomeStudent({ name, loginUrl = `${APP_URL}/login`, unsubToken }) {
+export function welcomeStudent({ name, email, tempPassword, loginUrl = `${APP_URL}/login`, unsubToken }) {
   const title = 'Welcome to CAREER-OS Campus Placement Portal';
   return {
-    subject: `Welcome to CAREER-OS, ${name}! Your Campus Placement Account is Ready`,
+    subject: `Welcome to CAREER-OS, ${name}! Your Campus Placement Credentials Inside`,
     html: renderEmailLayout({
       title,
-      heading: `Welcome aboard, ${name}!`,
+      heading: `Welcome to the Placement Portal, ${name}!`,
       bodyHtml: `
-        <p>Your official student profile has been created on the University Placement Portal.</p>
-        <p>To ensure eligibility for upcoming campus recruitment drives, please log in and complete your profile sections:</p>
-        <ul style="padding-left: 20px; color: #E2E8F0; margin: 12px 0;">
-          <li>Academic details (verified CGPA &amp; department records)</li>
-          <li>Technical skill tags &amp; verified project repository links</li>
-          <li>Standardized resume upload &amp; certificate proofs</li>
-        </ul>
+        <p>Your official student profile has been registered in the University Placement Directory by the CDC.</p>
+        
+        <div style="background: rgba(15, 23, 42, 0.7); border: 1px solid #334155; border-radius: 8px; padding: 18px; margin: 18px 0;">
+          <p style="margin: 0 0 8px; font-size: 13px; color: #94A3B8;">Registered Email: <strong style="color: #F8FAFC;">${escapeHtml(email || '')}</strong></p>
+          <p style="margin: 0 0 8px; font-size: 13px; color: #94A3B8;">Temporary Password: <code style="display: inline-block; background: #0F172A; color: #38BDF8; padding: 4px 10px; border-radius: 4px; font-weight: 700; font-size: 15px; border: 1px dashed #0284C7; letter-spacing: 0.5px;">${escapeHtml(tempPassword || 'demo')}</code></p>
+          <p style="margin: 0; font-size: 12px; color: #94A3B8;">Login Portal: <a href="${escapeHtml(loginUrl)}" style="color: #38BDF8; text-decoration: underline;">${escapeHtml(loginUrl)}</a></p>
+        </div>
+
+        <div style="background: rgba(245, 158, 11, 0.12); border-left: 4px solid #F59E0B; padding: 12px 16px; margin: 16px 0; border-radius: 4px;">
+          <p style="margin: 0; font-size: 13px; color: #FCD34D;"><strong>⚠️ Required First-Time Steps:</strong></p>
+          <p style="margin: 6px 0 0; font-size: 12px; color: #E2E8F0; line-height: 1.5;">
+            &bull; Upon signing in with this temporary password, you will be prompted to reset your password.<br/>
+            &bull; Next, you must fill and submit your profile sections (Academic Records, Technical Skills, and Projects). All other platform features (Drives, AI Mock Interviews, Applications) remain locked until your profile is completed.
+          </p>
+        </div>
       `,
-      ctaText: 'Access Placement Portal',
+      ctaText: 'Sign In & Activate Profile',
       ctaUrl: loginUrl,
       unsubToken,
     }),
@@ -919,3 +927,4 @@ export function passwordResetLink({ name = 'User', resetLink, expiresInMinutes =
     }),
   };
 }
+

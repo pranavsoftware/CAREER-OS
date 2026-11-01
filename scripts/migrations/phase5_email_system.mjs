@@ -39,6 +39,7 @@ export async function runPhase5EmailMigrations() {
 
     ALTER TABLE users ADD COLUMN IF NOT EXISTS email_preferences JSONB
       DEFAULT '{"drives":true,"reminders":true,"circulars":true,"marketing":true}'::jsonb;
+    ALTER TABLE users ADD COLUMN IF NOT EXISTS must_reset_password BOOLEAN DEFAULT FALSE;
   `);
 
   console.log('Phase 5 Email System migrations completed.');
@@ -51,3 +52,4 @@ if (process.argv[1]?.endsWith('phase5_email_system.mjs')) {
     process.exit(1);
   });
 }
+

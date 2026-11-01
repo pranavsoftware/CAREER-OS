@@ -103,16 +103,21 @@ export function generateICS({ title, description, startTime, endTime, location, 
    STUDENT EVENT DISPATCHERS
    ========================================================================== */
 
-export async function notifyWelcomeStudent(student) {
+export async function notifyWelcomeStudent(student, tempPassword) {
   if (!student?.email) return;
   const unsubToken = generateUnsubscribeToken(student.email);
-  const { subject, html } = templates.welcomeStudent({ name: student.name, unsubToken });
+  const { subject, html } = templates.welcomeStudent({
+    name: student.name,
+    email: student.email,
+    tempPassword,
+    unsubToken,
+  });
   return sendEmail({
     to: student.email,
     subject,
     html,
     eventType: 'welcome_student',
-    meta: { studentId: student.id, dedupeKey: `welcome_${student.id}` },
+    meta: { studentId: student.id, dedupeKey: `welcome_${student.id}_${Date.now()}` },
   });
 }
 
@@ -829,3 +834,4 @@ export async function notifyPasswordReset(user, resetLink) {
     meta: { userId: user.id, critical: true },
   });
 }
+

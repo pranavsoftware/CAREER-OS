@@ -579,9 +579,9 @@ export default function UniversityStudents() {
                 </FormField>
               </div>
 
-              <div style={{ padding: '8px 12px', background: '#F0F9FF', border: '1px solid #BAE6FD', borderRadius: 6, fontSize: 12, color: '#0369A1', marginTop: 8, display: 'flex', gap: 8, alignItems: 'flex-start' }}>
-                <Info size={15} style={{ flexShrink: 0, marginTop: 2, color: '#0284C7' }} />
-                <span>Upon registration, a corresponding student portal login account is automatically initialized with the provided email and default password: <strong>demo</strong>.</span>
+              <div style={{ padding: '10px 14px', background: '#F0F9FF', border: '1px solid #BAE6FD', borderRadius: 6, fontSize: 12, color: '#0369A1', marginTop: 8, display: 'flex', gap: 8, alignItems: 'flex-start' }}>
+                <Info size={16} style={{ flexShrink: 0, marginTop: 2, color: '#0284C7' }} />
+                <span>Upon registration, an automated welcome email with a <strong>temporary password</strong> and login link is dispatched to the student. On first login, they must reset their password and complete their profile section before other placement features unlock.</span>
               </div>
 
               <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 16 }}>

@@ -97,8 +97,20 @@ export function AuthProvider({ children }) {
     }
   }
 
+  function updateUser(updates) {
+    if (state.user) {
+      const updated = { ...state.user, ...updates };
+      dispatch({ type: 'LOGIN', payload: updated });
+      if (typeof window !== 'undefined') {
+        try {
+          localStorage.setItem(STORAGE_KEY, JSON.stringify({ user: updated, isAuthenticated: true }));
+        } catch (_) {}
+      }
+    }
+  }
+
   return (
-    <AuthContext.Provider value={{ ...state, login, logout, availableUsers, isLoaded }}>
+    <AuthContext.Provider value={{ ...state, login, logout, updateUser, availableUsers, isLoaded }}>
       {children}
     </AuthContext.Provider>
   );
