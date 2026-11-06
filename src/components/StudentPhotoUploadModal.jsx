@@ -675,3 +675,4 @@ export default function StudentPhotoUploadModal({ isOpen, onClose, currentAvatar
     </Modal>
   );
 }
+

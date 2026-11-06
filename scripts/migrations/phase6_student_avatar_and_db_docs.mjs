@@ -48,3 +48,4 @@ if (process.argv[1]?.endsWith('phase6_student_avatar_and_db_docs.mjs')) {
       process.exit(1);
     });
 }
+

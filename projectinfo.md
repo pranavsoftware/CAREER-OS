@@ -1,4 +1,4 @@
-# CAREER-OS — Comprehensive Technical Project Documentation & System Reference
+# CAREER-OS: Comprehensive Technical Project Documentation & System Reference
 
 > **Autonomous Campus Placement & Verified Career Operating System**  
 > *A unified, multi-tenant platform bridging University Placement Cells, Corporate Recruiters, and Graduating Students with 100% private, self-hosted AI, WebRTC video interview studios, and verifiable credential auditing.*
@@ -21,6 +21,7 @@
 7. [Client State Architecture & Offline Mutation Pipeline](#7-client-state-architecture--offline-mutation-pipeline)
 8. [Deployment & Environment Configuration](#8-deployment--environment-configuration)
 9. [Email Notification System & Resend Integration](#9-email-notification-system--resend-integration)
+10. [Platform Production Standards, Vercel Hobby Infrastructure & Custom Domain Setup](#10-platform-production-standards-vercel-hobby-infrastructure--custom-domain-setup)
 
 ---
 
@@ -82,14 +83,20 @@ CAREER-OS is an enterprise-grade placement operating system that eliminates resu
 - **Data Visualization**: Recharts v3.10.1 (Bar charts, line graphs, radar distribution)
 - **3D Graphics & Canvas**: Three.js v0.186.1 (`three`) with GLTFLoader, OrbitControls, and ACES Filmic Tone Mapping
 
-### 2.2 Client-Side AI & Vision
+### 2.2 Client-Side AI, Computer Vision & Verification
 - **MediaPipe Tasks Vision**: `@mediapipe/tasks-vision` v1.1.0 (Face Landmarker with 468 3D landmarks + Hand Landmarker with 21 skeletal joints executing inside WebAssembly)
+- **Face Visibility & Framing Analyzer**: Dual-engine 75% face visibility detection:
+  - *Primary*: Chromium Shape Detection API (`window.FaceDetector` in fast mode) evaluating face bounding box vertical proportion and area against portrait frame.
+  - *Universal Fallback*: Algorithmic canvas-based skin-tone luminosity & facial contrast centroid scanner (eye/eyebrow contrast bands at 35-50% Y, nose bridge at 50-65% Y, and mouth/chin contrast at 65-80% Y) enforcing >= 75% facial coverage.
+- **QR Code Extraction & Parsing**: `jsqr` v1.4.0 with `@napi-rs/canvas`, `pngjs`, `jpeg-js`, and `pdfjs-dist` for multi-format credential decoding.
 - **Code Execution**: In-browser Node.js isolated VM sandbox (`vm.Script` in API) and browser JavaScript evaluations
 
-### 2.3 Backend & Database
+### 2.3 Backend, Security & Database Storage
 - **Database Driver**: `pg` v8.23.1 (PostgreSQL client with dynamic serverless pooling)
 - **Target Database**: Supabase PostgreSQL / AWS RDS / Local Postgres (SSL enabled)
 - **Connection Management**: Singleton pool (`globalThis._pgPool`) configuring max 2 connections in serverless lambda environments and 10 in standard server mode to prevent connection exhaustion
+- **100% Database Storage Architecture**: Zero reliance on local ephemeral disk (`fs.writeFileSync`). All binary documents, certificates, and student portraits are base64-encoded and persisted directly in PostgreSQL (`internship_documents`, `certificates.file_data`, `students.avatar`).
+- **SSRF Protection Subsystem**: Multi-layer safe fetch guard (`safeFetch.js`) enforcing issuer domain allowlists, comprehensive DNS resolution checks, private/loopback/link-local IP filtering (IPv4 & IPv6), 8-second execution timeouts, and 1MB response stream limits.
 
 ### 2.4 Self-Hosted Python AI Engine (`ai-service/`)
 - **Framework**: FastAPI (Uvicorn ASGI runner on port 8000)
@@ -101,14 +108,16 @@ CAREER-OS is an enterprise-grade placement operating system that eliminates resu
 
 ## 3. Database Architecture & Complete PostgreSQL Schemas
 
-The database contains **20 relational tables** supporting multi-tenancy, verified records, dynamic question generation, live WebRTC signaling, and resume snapshots.
+The database contains **32 relational and audit tables** supporting multi-tenancy, verified records, dynamic question generation, live WebRTC signaling, document storage, and institutional compliance ledgers.
 
 ### 3.1 Table Index & Entity Relationship Map
 ```
 users (Auth & RBAC)
-  ├── students (Master Academic Profile)
+  ├── students (Master Academic Profile & 75% Face Verified Avatar)
   │     ├── applications (Drive Submissions) ── drives / jobs
-  │     ├── certificates (Verified Credentials)
+  │     ├── certificates (Verified Credentials with QR & SSRF Checks)
+  │     │     └── certificate_audit (Cryptographic & Review Audit Ledger)
+  │     ├── internship_documents (100% DB-Persisted Binary Artifacts)
   │     ├── resume_versions (Saved ATS Snapshots)
   │     ├── test_attempts (Mock Test History)
   │     ├── roadmap_progress (Learning Milestones)
@@ -116,13 +125,24 @@ users (Auth & RBAC)
   ├── candidate_pipelines (Recruiter Pipeline Stages)
   ├── interviews (Scheduled Live Video Rounds)
   │     ├── interview_questions (Dynamic MCQs & Coding Challenges)
-  │     └── meeting_signals (WebRTC Signaling Exchange)
-  ├── materials (University Placement Resources & Playlists)
+  │     ├── meeting_signals (WebRTC Signaling Exchange)
+  │     └── reschedule_requests (Student Conflict Reschedule Desk)
+  ├── materials (University Placement Resources & Branch Playlists)
+  │     ├── material_enrollments (Student Course Completion)
+  │     └── material_ratings (Bayesian 5-Star Reviews)
   ├── mails (Inbound Recruiter Communications)
   ├── sent_mails (Placement Broadcast Dispatches)
+  ├── email_logs (Transactional Resend Dispatch & Dedupe Queue)
   ├── notifications (Student In-App Notices)
   ├── question_bank (Standardized Practice Problems)
-  └── skill_taxonomy (Role-Specific Benchmarks)
+  ├── skill_taxonomy (Role-Specific Benchmarks)
+  ├── job_shortlists (Deterministic 40/20/20/20 CDC Shortlists)
+  ├── university_records (Official Registrar Master Baseline)
+  ├── verification_audit & verification_settings (Automated Rule Tolerances)
+  ├── universities (Institutional Rankings & Multi-Factor Benchmarks)
+  ├── higher_ed_programs (Curated Graduate Degree Matcher)
+  ├── referrals, reward_ledger & recommendation_requests (Endorsements & Coins)
+  └── colleges, aspirant_profiles & college_applications (12th Pass-Out Admissions)
 ```
 
 ---
@@ -168,6 +188,8 @@ CREATE TABLE IF NOT EXISTS students (
   profile_completion INT DEFAULT 0,
   github TEXT,
   linkedin TEXT,
+  avatar TEXT,                             -- High quality 400x400 JPEG data URI verified for >= 75% face visibility
+  university_id TEXT DEFAULT 'univ_apex',  -- Multi-tenant institutional partition
   verification_status JSONB DEFAULT '{}'::jsonb, 
   -- Example: {"personal": "Verified", "education": "Verified", "skills": "Pending", "projects": "Verified", "experience": "Verified"}
   verification_remarks JSONB DEFAULT '{}'::jsonb,
@@ -179,7 +201,30 @@ CREATE TABLE IF NOT EXISTS students (
   projects JSONB DEFAULT '[]'::jsonb,
   -- Example: [{"id": "gh_123", "title": "Microservices Engine", "description": "...", "technologies": ["Go"], "link": "...", "stars": 12, "isGithub": true, "featured": true}]
   experience JSONB DEFAULT '[]'::jsonb,
-  -- Example: [{"company": "Google", "role": "SWE Intern", "duration": "Summer 2025", "description": "..."}]
+  -- Comprehensive Internship Schema:
+  -- [{
+  --   "studentName": "Pranav Mahesh Rayban",
+  --   "company": "Infosys",
+  --   "companyWebsite": "https://infosys.com",
+  --   "role": "Software Developer Intern",
+  --   "type": "Hybrid",                   -- 'Remote' | 'On-site' | 'Hybrid'
+  --   "startDate": "2025-06-01",
+  --   "endDate": "2025-08-31",
+  --   "stipend": "Paid",                  -- 'Paid' | 'Unpaid'
+  --   "stipendAmount": "25000",
+  --   "supervisorName": "Dr. R. Venkat",
+  --   "supervisorEmail": "r.venkat@infosys.com",
+  --   "hrContact": "hr.campus@infosys.com",
+  --   "skillsUsed": "React, Node.js, PostgreSQL",
+  --   "projectDetails": "Engineered real-time pipeline telemetry dashboard",
+  --   "documents": {
+  --     "offerLetter": {"fileName": "offer_doc_1.pdf", "uploadedAt": "..."},
+  --     "completionCert": {"fileName": "cert_doc_2.pdf", "uploadedAt": "..."},
+  --     "experienceLetter": {"fileName": "exp_doc_3.pdf", "uploadedAt": "..."},
+  --     "projectReport": {"fileName": "report_doc_4.pdf", "uploadedAt": "..."},
+  --     "hrEmailProof": {"fileName": "hr_email_5.png", "uploadedAt": "..."}
+  --   }
+  -- }]
   resume_url TEXT,
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()
@@ -253,7 +298,7 @@ CREATE TABLE IF NOT EXISTS applications (
 ```
 
 #### 6. `certificates`
-Student uploaded credentials with simulated OCR metadata.
+Student uploaded credentials with automated QR extraction, SSRF safe verification, issuer comparison, and university review routing.
 ```sql
 CREATE TABLE IF NOT EXISTS certificates (
   id TEXT PRIMARY KEY,
@@ -265,10 +310,26 @@ CREATE TABLE IF NOT EXISTS certificates (
   skills JSONB DEFAULT '[]'::jsonb,
   status TEXT DEFAULT 'Valid',              -- 'Valid' | 'Expiring Soon' | 'Expired'
   file_name TEXT,
-  verified BOOLEAN DEFAULT TRUE,
-  verification_score INT DEFAULT 95,
+  credential_id TEXT,
+  verification_url TEXT,
+  file_hash TEXT,                           -- SHA-256 hash for anti-fraud duplicate detection
+  file_data TEXT,                           -- Base64 encoded document buffer (100% DB persistence)
+  file_mime_type TEXT,                      -- 'application/pdf', 'image/png', 'image/jpeg'
+  trust_level TEXT DEFAULT 'Unverified',    -- 'Issuer Verified' | 'Placement Cell Verified' | 'Auto-checked' | 'Unverified' | 'Flagged' | 'Rejected'
+  check_results JSONB DEFAULT '{}'::jsonb,  -- {"pageValid": true, "nameMatch": 0.95, "titleMatch": true, "dateMatch": true}
+  review_status TEXT DEFAULT 'Not Required',-- 'Not Required' | 'Pending Review' | 'Approved' | 'Rejected'
+  reviewed_by TEXT,
+  reviewed_at TIMESTAMPTZ,
+  review_remark TEXT,
+  last_verified_at TIMESTAMPTZ,
+  verified BOOLEAN DEFAULT FALSE,
+  verification_score INT DEFAULT 0,
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
+
+CREATE INDEX IF NOT EXISTS idx_cert_hash ON certificates(file_hash);
+CREATE INDEX IF NOT EXISTS idx_cert_cred ON certificates(credential_id);
+CREATE INDEX IF NOT EXISTS idx_cert_review ON certificates(review_status, created_at);
 ```
 
 #### 7. `mails`
@@ -725,6 +786,63 @@ CREATE TABLE IF NOT EXISTS college_applications (
 );
 ```
 
+#### 30. `certificate_audit`
+Immutable institutional audit ledger recording every lifecycle transition for student certificates and credentials.
+```sql
+CREATE TABLE IF NOT EXISTS certificate_audit (
+  id TEXT PRIMARY KEY,
+  certificate_id TEXT NOT NULL,
+  student_id TEXT NOT NULL,
+  action TEXT NOT NULL,                     -- 'uploaded' | 'auto_verified' | 'flagged' | 'sent_to_review' | 'approved' | 'rejected' | 're_verified' | 'revoked'
+  actor TEXT,                               -- 'system' | Placement Officer User ID
+  details JSONB DEFAULT '{}'::jsonb,        -- Check scores, reason codes, OCR metadata diffs
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_cert_audit_cert ON certificate_audit(certificate_id);
+CREATE INDEX IF NOT EXISTS idx_cert_audit_student ON certificate_audit(student_id);
+```
+
+#### 31. `internship_documents`
+PostgreSQL database-persisted binary document store (zero local disk storage) for student internship verification artifacts.
+```sql
+CREATE TABLE IF NOT EXISTS internship_documents (
+  id TEXT PRIMARY KEY,
+  student_id TEXT NOT NULL,
+  file_name TEXT NOT NULL UNIQUE,           -- Unique sanitized hash filename
+  original_name TEXT NOT NULL,              -- Original uploaded document name
+  doc_type TEXT NOT NULL,                   -- 'offerLetter' | 'completionCert' | 'experienceLetter' | 'projectReport' | 'hrEmailProof'
+  mime_type TEXT NOT NULL,                  -- 'application/pdf' | 'image/png' | 'image/jpeg'
+  file_size INTEGER NOT NULL,               -- Byte length of document
+  file_data TEXT NOT NULL,                  -- Base64 encoded document buffer
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_internship_docs_student ON internship_documents(student_id);
+CREATE INDEX IF NOT EXISTS idx_internship_docs_filename ON internship_documents(file_name);
+```
+
+#### 32. `email_logs`
+Transactional email queue, retry dispatcher, and deduplication ledger powered by Resend.
+```sql
+CREATE TABLE IF NOT EXISTS email_logs (
+  id TEXT PRIMARY KEY,
+  to_email TEXT NOT NULL,
+  subject TEXT NOT NULL,
+  event_type TEXT,                          -- 'drive_created' | 'interview_scheduled' | 'shortlist_selected' | 'offer_received'
+  status TEXT DEFAULT 'queued',             -- 'queued' | 'sent' | 'failed' | 'suppressed'
+  error TEXT,
+  attempts INT DEFAULT 0,
+  provider_id TEXT,                         -- Resend message ID
+  meta JSONB DEFAULT '{}'::jsonb,           -- Payload metadata and dedupeKey
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  sent_at TIMESTAMPTZ
+);
+
+CREATE INDEX IF NOT EXISTS idx_email_logs_status ON email_logs(status, created_at);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_email_logs_dedupe ON email_logs(event_type, to_email, (meta->>'dedupeKey')) WHERE meta->>'dedupeKey' IS NOT NULL;
+```
+
 ---
 
 ## 4. Exhaustive REST API Reference
@@ -733,24 +851,41 @@ All Next.js API endpoints reside in `src/app/api/` and output standard JSON resp
 
 | Route Path | HTTP Methods | RBAC Role | Purpose & Parameters |
 |:---|:---|:---|:---|
-| `/api/initial-data` | `GET` | Public / All | Returns completely hydrated state of all collections for bootstrap. |
+| **Core & Authentication** | | | |
+| `/api/initial-data` | `GET` | Public / All | Returns completely hydrated state of all collections for instant bootstrap. |
 | `/api/auth/login` | `POST` | Public | Authenticates via email/password or 1-click demo role switcher. |
 | `/api/auth/users` | `GET` | Public / All | Lists system users with role partitions. |
-| `/api/students` | `GET`, `POST` | All / Admin | Lists students or registers new student profiles. |
-| `/api/students/[id]` | `GET`, `PUT` | Student / Admin | Fetches profile or updates verification stamps and sections. |
-| `/api/students/github-sync` | `POST` | Student | Synchronizes public repositories and metadata via GitHub REST API. |
+| `/api/auth/change-password` | `POST` | Authenticated | Updates account password with current credential verification. |
+| `/api/auth/reset-password` | `POST` | Public | Triggers secure password reset tokens or handles forced first-login reset. |
+| **Students & Profiles** | | | |
+| `/api/students` | `GET`, `POST` | All / Admin | Lists students with filtering or registers new student profiles. |
+| `/api/students/[id]` | `GET`, `PUT` | Student / Admin | Fetches profile or updates verification stamps, avatar, and section data. |
+| `/api/students/[id]/internship-docs` | `POST` | Student | Uploads base64 internship verification documents directly into PostgreSQL. |
+| `/api/students/[id]/internship-docs/[filename]` | `GET` | All (Auth) | Streams binary internship document (PDF/PNG) directly from PostgreSQL. |
+| `/api/students/github-sync` | `POST` | Student | Synchronizes public repositories, stars, and languages via GitHub REST API. |
+| **Certificates & Verification** | | | |
+| `/api/certificates` | `GET`, `POST`, `DELETE`| Student | Ingests certificates with QR extraction, SSRF safe verification, or deletes. |
+| `/api/certificates/[id]/file` | `GET` | All (Auth) | Streams certificate binary buffer directly from PostgreSQL `certificates.file_data`. |
+| `/api/certificates/[id]/reverify` | `POST` | Admin / Student | Triggers live on-demand re-verification against external issuer portal. |
+| **University & Placement Cell** | | | |
+| `/api/university/records` | `GET`, `POST` | University | Ingests official registrar CSV batches or retrieves baseline directory. |
+| `/api/university/verification` | `GET`, `POST` | University | Evaluates automated rule engine tolerances against student submissions. |
+| `/api/university/certificates/review` | `GET` | University | Retrieves placement audit review queue for pending and flagged certificates. |
+| `/api/university/certificates/[id]/review` | `POST` | University | Placement officer manual approve/reject action with remarks and student notice. |
+| `/api/university/email-logs` | `GET` | University | Audits transactional email dispatch logs, delivery statuses, and retry queues. |
+| `/api/university/referrals` | `GET`, `POST` | University | Institutional referral tree monitoring and faculty recommendation endorsements. |
+| `/api/university/admissions` | `GET`, `PATCH` | University | Reviews, accepts, waitlists, or rejects 12th pass-out admissions applicants. |
+| **Jobs, Drives & Shortlisting** | | | |
 | `/api/drives` | `GET`, `POST` | All / Admin | Lists campus drives or posts new placement drives. |
-| `/api/drives/[id]` | `GET`, `PUT` | All / Admin | Fetches single drive or updates drive eligibility and status. |
+| `/api/drives/[id]` | `GET`, `PUT` | All / Admin | Fetches single drive or updates drive eligibility and lifecycle status. |
 | `/api/jobs` | `GET`, `POST` | Recruiter | Lists job requisitions or submits new requisition for university review. |
 | `/api/jobs/[id]` | `GET`, `PUT` | Recruiter | Retrieves single job or updates requisition criteria. |
 | `/api/jobs/[id]/shortlist/generate`| `POST` | University | Generates deterministic CDC candidate shortlist (40/20/20/20 scoring). |
 | `/api/jobs/[id]/shortlist` | `GET`, `PATCH` | University / Recruiter| Reads ranked shortlist roster or updates candidate shortlist approval status. |
 | `/api/jobs/[id]/shortlist/send` | `POST` | University | Dispatches approved candidates to corporate recruiter pipeline & notifies students. |
-| `/api/university/records` | `GET`, `POST` | University | Ingests official registrar CSV batches or retrieves official academic directory. |
-| `/api/university/verification` | `GET`, `POST` | University | Evaluates automated rule engine tolerances against student profile submissions. |
-| `/api/applications` | `GET`, `POST`, `PATCH` | Student / Recruiter | Submits student application or advances candidate status. |
-| `/api/certificates` | `GET`, `POST`, `DELETE`| Student | Ingests new certificates, performs OCR extraction, or deletes credentials. |
+| `/api/applications` | `GET`, `POST`, `PATCH` | Student / Recruiter | Submits student application or advances candidate hiring status. |
 | `/api/pipeline` | `GET`, `POST` | Recruiter | Reads candidate Kanban pipeline or updates candidate stage. |
+| **Interviews & WebRTC Rooms** | | | |
 | `/api/interviews` | `GET`, `POST`, `PATCH` | Recruiter / Student| Fetches scheduled interviews, books new panel rounds, saves evaluations. |
 | `/api/interviews/reschedule` | `GET`, `POST` | Student / Recruiter | Submits candidate reschedule request or fetches active requests. |
 | `/api/interviews/reschedule/[id]` | `PATCH` | Recruiter | Approves or rejects student interview reschedule request. |
@@ -758,25 +893,9 @@ All Next.js API endpoints reside in `src/app/api/` and output standard JSON resp
 | `/api/interviews/messages` | `GET`, `POST` | All | Reads or posts in-call live chat messages for a meeting. |
 | `/api/interviews/questions` | `GET`, `POST` | Recruiter / Candidate| Fetches room questions, synthesizes dynamic on-the-spot questions. |
 | `/api/meeting-signal` | `GET`, `POST`, `HEAD` | All (WebRTC) | High-speed WebRTC P2P signaling exchange and latency health checks. |
+| **AI Mock Interviews & Practice** | | | |
 | `/api/ai-interview` | `GET`, `POST` | Student | Lists historical AI sessions or records completed 3D AI interview dossiers. |
 | `/api/ai-interview/evaluate`| `POST` | Student (AI) | Evaluates answer against rubric via MiniLM ONNX or heuristic fallback. |
-| `/api/materials` | `GET`, `POST` | All / Admin | Lists study materials or uploads new notes and playlists. |
-| `/api/materials/[id]` | `GET`, `PUT`, `DELETE`| All / Admin | Fetches, updates, or deletes placement study materials. |
-| `/api/materials/[id]/enroll` | `POST` | Student | Enrolls or marks completion status for placement courses and playlists. |
-| `/api/materials/[id]/rate` | `POST` | Student | Submits 1-5 star review and student feedback comment. |
-| `/api/materials/top` | `GET` | All | Returns Bayesian-weighted top courses (`0.5*stars + 0.3*enrol + 0.2*completion`). |
-| `/api/materials/[id]/media` | `GET` | All | Streams binary media (PDF/video) with HTTP range seeking support. |
-| `/api/mails` | `GET`, `PATCH` | Admin | Fetches inbound recruiter emails or marks them as converted/processed. |
-| `/api/sent-mails` | `GET`, `POST` | Admin | Records dispatched broadcast communications sent to student batches. |
-| `/api/company/university-ranking` | `GET` | Recruiter / University| Evaluates multi-university placement performance & skill readiness benchmarks. |
-| `/api/higher-education` | `GET` | Student | Returns matched graduate programs, exam syllabi, and study abroad guides. |
-| `/api/student/referrals` | `GET`, `POST` | Student | Generates unique referral links, tracks rewards coins, and requests faculty endorsements. |
-| `/api/university/referrals` | `GET`, `POST` | University | Institutional referral tree monitoring and faculty recommendation endorsements. |
-| `/api/aspirant/profile` | `GET`, `POST` | Aspirant | Reads or updates 12th pass-out academic scores and target college preferences. |
-| `/api/aspirant/colleges` | `GET` | Aspirant / Public | Searches colleges with automated stream & percentile eligibility filtering. |
-| `/api/aspirant/applications` | `GET`, `POST` | Aspirant | Submits or tracks higher secondary college admission applications. |
-| `/api/university/admissions` | `GET`, `PATCH` | University | Reviews, accepts, waitlists, or rejects 12th pass-out admissions applicants. |
-| `/api/notifications` | `GET`, `POST`, `PATCH`| All | Lists notifications, dispatches announcements, marks read. |
 | `/api/prep` | `GET` | Student | Fetches practice questions from question bank categorized by topic. |
 | `/api/prep/execute-code` | `POST` | Student | Executes user submitted code against test cases in isolated runtime. |
 | `/api/prep/generate-question`| `POST` | Student | Dynamically generates next-tier coding challenge or targeted MCQs. |
@@ -785,6 +904,33 @@ All Next.js API endpoints reside in `src/app/api/` and output standard JSON resp
 | `/api/test-attempts` | `GET`, `POST` | Student | Records mock test score and diagnostic weak areas. |
 | `/api/tts` | `GET`, `POST` | Student (AI) | Returns pre-rendered audio prompt or proxies to Piper Neural TTS. |
 | `/api/stt` | `POST` | Student (AI) | Proxies audio recordings to self-hosted Faster-Whisper transcriber. |
+| **Study Materials & Playlists** | | | |
+| `/api/materials` | `GET`, `POST` | All / Admin | Lists study materials (strictly branch-scoped for students) or uploads new. |
+| `/api/materials/[id]` | `GET`, `PUT`, `DELETE`| All / Admin | Fetches, updates, or deletes placement study materials. |
+| `/api/materials/[id]/enroll` | `POST` | Student | Enrolls or marks completion status for placement courses and playlists. |
+| `/api/materials/[id]/rate` | `POST` | Student | Submits 1-5 star review and student feedback comment. |
+| `/api/materials/top` | `GET` | All | Returns Bayesian-weighted top courses (`0.5*stars + 0.3*enrol + 0.2*completion`). |
+| `/api/materials/[id]/media` | `GET` | All | Streams binary media (PDF/video) with HTTP range seeking support. |
+| **Communications & Notifications** | | | |
+| `/api/mails` | `GET`, `PATCH` | Admin | Fetches inbound recruiter emails or marks them as converted/processed. |
+| `/api/sent-mails` | `GET`, `POST` | Admin | Records dispatched broadcast communications sent to student batches. |
+| `/api/notifications` | `GET`, `POST`, `PATCH`| All | Lists notifications, dispatches announcements, marks read. |
+| `/api/email/preferences` | `GET`, `POST` | Student / User | Manages email notification subscriptions (drives, reminders, circulars). |
+| `/api/email/unsubscribe` | `GET`, `POST` | Public | One-click unsubscribe handler for CAN-SPAM compliant notification emails. |
+| **Scheduled Cron Workers** | | | |
+| `/api/cron/daily` | `GET` | Vercel Cron / System| Consolidated master daily cron runner (Hobby plan compatible at `0 0 * * *`). |
+| `/api/cron/send-emails` | `GET` | Cron / System | Processes queued transactional emails and executes retry sweeps. |
+| `/api/cron/interview-reminders` | `GET` | Cron / System | Dispatches 24-hour and 1-hour interview reminder alerts. |
+| `/api/cron/certificate-expiry` | `GET` | Cron / System | Scans credentials and notifies students 30 days prior to expiry. |
+| `/api/cron/university-digest` | `GET` | Cron / System | Compiles and dispatches daily placement executive digest to coordinators. |
+| `/api/cron/certificate-reverify`| `GET` | Cron / System | Weekly automated re-audit of issuer verification links. |
+| **Aspirants & Higher Education** | | | |
+| `/api/aspirant/profile` | `GET`, `POST` | Aspirant | Reads or updates 12th pass-out academic scores and target college preferences. |
+| `/api/aspirant/colleges` | `GET` | Aspirant / Public | Searches colleges with automated stream & percentile eligibility filtering. |
+| `/api/aspirant/applications` | `GET`, `POST` | Aspirant | Submits or tracks higher secondary college admission applications. |
+| `/api/higher-education` | `GET` | Student | Returns matched graduate programs, exam syllabi, and study abroad guides. |
+| `/api/student/referrals` | `GET`, `POST` | Student | Generates unique referral links, tracks rewards coins, and requests endorsements. |
+| `/api/company/university-ranking` | `GET` | Recruiter / University| Evaluates multi-university placement performance & skill readiness benchmarks. |
 
 ---
 
@@ -832,7 +978,26 @@ All Next.js API endpoints reside in `src/app/api/` and output standard JSON resp
 - **File**: `src/views/student/Profile.jsx`
 - **Access**: Role `student`
 - **Key Features**:
-  - **5 Audited Sections**: Personal Information, Academic Standing, Technical Skills, Projects & Publications, and Work Experience.
+  - **Official Student Profile Picture (75% Face Visibility Detection & Verification)**:
+    - **Interactive Alignment & Framing Guide (`StudentPhotoUploadModal.jsx`)**: Interactive viewport with 1.0x to 3.0x zoom slider, pan drag controls, and framing reset.
+    - **75% Face Target Oval Guide**: Visual overlay with explicit "TOP OF HEAD" and "CHIN LEVEL (75% TARGET)" boundaries.
+    - **Dual-Engine Face Visibility Scanner**:
+      - *Primary Engine*: Modern Chromium Shape Detection API (`window.FaceDetector` in fast mode) evaluating face bounding box vertical proportion and area ratio against the circular portrait frame.
+      - *Universal Fallback Engine*: Algorithmic canvas pixel analyzer evaluating relative skin-tone luminosity and facial feature contrast bands (eyebrows/eyes at 35–50% Y, nose bridge at 50–65% Y, and lip line at 65–80% Y) to compute an objective face visibility percentage (0–100%).
+    - **Strict Threshold Enforcement**: If face coverage is $<75\%$, the save button is disabled and displays an instructional warning banner. When $\ge 75\%$, it displays an emerald "75%+ Face Visibility Verified" check badge and unlocks upload.
+    - **100% Database Storage**: Crops to a clean 400x400 JPEG data URI and saves directly to PostgreSQL (`students.avatar` and `users.avatar`) with zero local disk writes.
+  - **Comprehensive Internship Ingestion & Multi-Document Verification Suite**:
+    - **13 Mandatory Internship Fields**: Student Name, Registered Company Name, Official Company Website, Internship Role, Internship Type (`Remote` / `On-site` / `Hybrid`), Start Date, End Date, Stipend (`Paid` / `Unpaid` with numeric amount), Supervisor Name, Supervisor Official Company Email, HR Contact Info, Skills Used, and Project Details.
+    - **5 Mandatory Verification Document Uploads**:
+      1. Internship Offer Letter (PDF / PNG / JPG)
+      2. Internship Completion Certificate (for completed stints)
+      3. Internship Experience Letter
+      4. Internship Project Report
+      5. HR / Supervisor Official Email ID Proof
+    - **Zero Local Disk Files**: Documents are base64-encoded and persisted directly in PostgreSQL `internship_documents` with streaming route `/api/students/[id]/internship-docs/[filename]`.
+    - Integrated document inspection drawers accessible to University Placement Officers and Corporate Recruiters.
+  - **Quick GitHub Connect**: In-profile GitHub synchronizer fetching public repositories, stars, and languages without navigating away.
+  - **5 Audited Sections**: Personal Information, Academic Standing, Technical Skills, Projects & Publications, and Work Experience / Internships.
   - **Immutable Verification Badges**: Every section renders an emerald `Verified by University`, amber `Pending Review`, or rose `Action Required` badge with placement officer notes.
   - **Auto-Downgrade Safeguard**: Modifying an already verified section automatically resets its status to `Pending` and alerts the placement cell audit desk.
   - **Interactive Skill Matrix**: Add skills with category tags (Frontend, Backend, Cloud, Core) and 1–5 visual proficiency rating bars.
@@ -856,13 +1021,26 @@ All Next.js API endpoints reside in `src/app/api/` and output standard JSON resp
   - **Detailed Application Drawer**: Displays complete status transition audit history (`statusHistory`) with date stamps and private recruiter feedback notes.
   - **Off-Campus Application Modal**: Allows students to track independent job applications outside campus drives.
 
-#### 5. Smart Certificates & OCR Ingestion (`/student/certificates`)
+#### 5. Smart Certificates & Credential Verification Subsystem (`/student/certificates`)
 - **File**: `src/views/student/Certificates.jsx`
 - **Access**: Role `student`
 - **Key Features**:
-  - **Simulated OCR File Ingestion**: Upload PDF or image credentials; triggers 600ms scanning animation extracting title, issuer, issue date, expiry date, and verified skill tags.
-  - **Anti-Fraud Duplicate Detection**: Flags duplicate submissions matching title, issuer, and issue date against existing database entries.
-  - **Skill Synchronization**: Saving a verified certificate automatically syncs verified skills directly into the student's technical skills matrix.
+  - **Automated QR Code Extraction (`qr.js`)**: Decodes QR verification links from uploaded PNG/JPEG images via `jsqr` and multi-page PDFs rendered via `pdfjs-dist` and `@napi-rs/canvas`.
+  - **Server-Side SSRF Protection Guard (`safeFetch.js`)**:
+    - Validates parsed hostnames strictly against the allowed issuer registry (never using substring matches).
+    - Resolves DNS via `dns.promises.lookup` across all resolved addresses; rejects any private, loopback, link-local, or reserved IPs (`127.0.0.0/8`, `10.0.0.0/8`, `172.16.0.0/12`, `192.168.0.0/16`, `169.254.0.0/16`, `::1`, `fc00::/7`, `fe80::/10`).
+    - Enforces 8-second execution timeout, max 3 manual redirect hops (re-validating allowlist and IP on each hop), and max 1MB response stream limits.
+  - **Issuer Allowlist & Parsers (`allowlist.js` & `parsers/`)**: Dedicated parsers for Credly (`credly.com`), Coursera (`coursera.org`), NPTEL (`nptel.ac.in`), Udemy (`udemy.com`), and Accredible (`credential.net`) extracting structured Open Badges, JSON-LD, Open Graph, and DOM metadata.
+  - **Levenshtein Fuzzy Name Matching (`compare.js`)**: Compares parsed recipient name against student's university-verified legal name using Jaro-Winkler/Levenshtein distance ($\ge 0.85$ threshold), matching issue dates, titles, and credential IDs.
+  - **Deterministic Trust Level Classification**:
+    - `Issuer Verified`: Verified directly via issuer API/webpage with recipient name match $\ge 0.85$.
+    - `Auto-checked`: Domain allowlisted and parsed but requires human review confirmation.
+    - `Unverified`: No verification URL or non-allowlisted domain; routed to placement officer review.
+    - `Flagged`: Name mismatch, duplicate credential ID on another student, or revoked credential.
+  - **Placement Review Queue Routing**: Credentials with `Unverified` or `Flagged` trust levels are routed to `/university/certificate-review` with `review_status = 'Pending Review'`.
+  - **100% Database Storage & Streaming**: Certificate binary buffers are stored in PostgreSQL `certificates.file_data` and streamed via `/api/certificates/[id]/file`. Zero files saved to disk.
+  - **SHA-256 Anti-Fraud Duplicate Detection**: Computes cryptographic hash of uploaded file to prevent identical re-uploads across different student accounts.
+  - **Verified Skill Synchronization**: Only credentials with `Issuer Verified` or `Placement Cell Verified` status count toward CDC shortlist scoring and the student's technical skills matrix.
 
 #### 6. Skill Gap Analysis & Phased Roadmap (`/student/skill-gap`)
 - **File**: `src/views/student/SkillGap.jsx`
@@ -894,7 +1072,8 @@ All Next.js API endpoints reside in `src/app/api/` and output standard JSON resp
 - **File**: `src/views/student/Materials.jsx`
 - **Access**: Role `student`
 - **Key Features**:
-  - Categorized materials (DSA, System Design, Placement Prep, Core Engineering).
+  - **Strict Branch-Specific Curriculum Filtering**: Automatically filters study modules, video lectures, and notes to match the authenticated student's enrolled engineering branch (e.g., `CSE`, `ECE`, `MECH`, `EEE`, `IT`, `CIVIL`). Students only see departmental and cross-disciplinary placement content assigned to them.
+  - **Categorized Materials**: DSA, System Design, Placement Prep, Core Engineering, Aptitude & Reasoning.
   - **Course Enrollment & Completion Tracking**: 1-click "Enroll Course" with optimistic state updates, tracking progress percentage and completion badges.
   - **Interactive 5-Star Rating Widget**: Submit verified course reviews with star ratings (1–5) and written feedback comments.
   - **Bayesian-Ranked Top Courses Tab**: Dynamic leaderboard ranked using $0.5 \times \text{weightedStars} + 0.3 \times \text{enrolmentVolume} + 0.2 \times \text{completionRate}$.
@@ -961,16 +1140,22 @@ All Next.js API endpoints reside in `src/app/api/` and output standard JSON resp
 - **File**: `src/views/university/Students.jsx`
 - **Access**: Role `university`
 - **Key Features**:
+  - **Verified Student Portraits**: Displays circular student profile picture (verified for $\ge 75\%$ face visibility) alongside candidate name and email, with initial fallback badge.
   - Multi-parameter filter bar: Name/Registration number search, Branch dropdown, CGPA range slider, Backlog filter (0 vs >0), and Verification status filter (`Verified`, `Partial`, `Pending`).
-  - Paginated roster with quick "Inspect Profile" buttons routing to student audit desk.
+  - Student table with inline verified status badges, placement indicators (`Placed` vs `In process`), and direct row navigation to audit dossier.
+  - **Locking Safeguard**: Verified profiles are locked for university placement audit compliance and cannot be deleted.
 
 #### 3. Granular Profile Verification Audit (`/university/students/[id]`)
 - **File**: `src/views/university/StudentDetail.jsx`
 - **Access**: Role `university`
 - **Key Features**:
-  - **Section-by-Section Audit**: Independent review cards for Personal Information, Academic Records, Technical Skills, Projects, and Experience.
-  - **One-Click Approval / Rejection**: Approve sections with emerald verification stamps or reject with specific officer remarks sent to student dashboard.
-  - Automatic recalculation of overall profile status (`Verified` if all pass, `Partial` if some pass, `Pending` otherwise).
+  - **Student Overview Hero**: Prominently renders the student's 68px official verified portrait with emerald border, registration details, CGPA, and registrar baseline comparison.
+  - **Section-by-Section Verification Stamps**: Placement officers independently review and toggle status (`Verified`, `Pending`, `Needs Revision`) for Personal Info, Education, Skills, and Projects.
+  - **Automated Registrar Diffing Table**: Highlights field discrepancies (e.g. self-reported CGPA vs Registrar Master DB) with severity indicators (`Major Mismatch`, `Minor Diff`, `Exact Match`).
+  - **Internship Multi-Document Audit Suite**:
+    - Inspects all 13 reported internship parameters (Company, Role, Type, Duration, Paid/Unpaid, Supervisor Name, Official Supervisor Email, HR Contact, Skills Used, Project Details).
+    - **Document Viewers**: Preview and download all 5 verification documents (Offer Letter, Completion Certificate, Experience Letter, Project Report, HR Official Email Proof) directly streamed from PostgreSQL.
+  - **Audit Remark Drawer**: Submit structured audit feedback alerting the student of required corrections.
 
 #### 4. Campus Placement Drives & CDC Shortlisting Hub (`/university/drives`)
 - **File**: `src/views/university/Drives.jsx`
@@ -1036,6 +1221,22 @@ All Next.js API endpoints reside in `src/app/api/` and output standard JSON resp
   - Real-time applicant roster displaying 12th PCM/PCB percentages, JEE percentiles, statements of purpose (SOP), and program preferences.
   - 1-click status actions: `Accept`, `Waitlist`, `Reject`, or `Mark Under Review`.
 
+#### 11. Placement Certificate Review Queue (`/university/certificate-review`)
+- **File**: `src/views/university/CertificateReview.jsx` $\to$ `src/app/university/certificate-review/page.jsx`
+- **Access**: Role `university`
+- **Key Features**:
+  - **Automated Verification Audit Queue**: Real-time review queue populated with student-uploaded credentials that require placement officer clearance (status `Pending Review` or trust level `Flagged` / `Unverified`).
+  - **Automated Check Inspection**: Displays detailed check results:
+    - Issuer domain allowlist verification
+    - Levenshtein candidate name match ratio vs university records ($\ge 0.85$ pass)
+    - Title match, issue date, and credential ID uniqueness
+    - SHA-256 duplicate file detection across different students
+  - **Document Inspection Drawer**: In-browser document viewer for uploaded PDF and image credentials streamed from PostgreSQL `certificates.file_data`.
+  - **Officer Adjudication Actions**:
+    - **Approve Certificate**: Sets `trust_level = 'Placement Cell Verified'`, `review_status = 'Approved'`, `verified = TRUE`, logs entry in `certificate_audit`, syncs certified skills to the student's verified skills matrix, and dispatches approval email.
+    - **Reject Certificate**: Prompts for mandatory audit remark explaining reason (e.g. name mismatch, blurred QR, invalid credential ID), sets `review_status = 'Rejected'`, logs audit entry, and notifies student.
+    - **Re-Verify**: Triggers live serverless re-fetch against issuer portal.
+
 ---
 
 ### 5.4 Corporate Recruiter Portal Pages
@@ -1059,6 +1260,7 @@ All Next.js API endpoints reside in `src/app/api/` and output standard JSON resp
 - **File**: `src/views/company/Candidates.jsx`
 - **Access**: Role `company`
 - **Key Features**:
+  - **Verified Candidate Portraits**: Candidate Name column renders circular student portraits (verified for $\ge 75\%$ face visibility) with fallback initials.
   - **Zero Resume Fraud Guarantee**: Search pool exclusively surfaces students with `Verified` placement cell verification status.
   - **Dynamic Skill Match %**: Select an active job requisition to calculate real-time percentage match against candidate skills.
   - **Advanced Certification Filters**: Filter by certificate title (AWS, Google Cloud, Docker, Kubernetes) and minimum certification count.
@@ -1068,6 +1270,8 @@ All Next.js API endpoints reside in `src/app/api/` and output standard JSON resp
 - **File**: `src/views/company/CandidateDetail.jsx`
 - **Access**: Role `company`
 - **Key Features**:
+  - **Header Profile Summary**: Prominently renders 68px candidate photo, verified face status, degree, branch, registration number, and CGPA.
+  - **Verified Internship Dossier**: Inspect candidate's 13 reported internship parameters and review official verification documents (Offer Letter, Completion Certificate, Experience Letter, Project Report, HR Official Email Proof) directly streamed from PostgreSQL.
   - Complete candidate dossier: verified academic record, university verification stamps, skill ratings, GitHub repositories, and verified certificates.
   - Recruiter evaluation notes panel: record round-by-round comments, ratings, and advance candidates directly into interview scheduling.
 
@@ -1077,6 +1281,7 @@ All Next.js API endpoints reside in `src/app/api/` and output standard JSON resp
 - **Key Features**:
   - Switch between active company job postings.
   - 5-column Kanban board: `Shortlisted` $\to$ `Interview Scheduled` $\to$ `Selected` $\to$ `Offer Sent` $\to$ `Rejected`.
+  - **Candidate Portraits on Kanban Cards**: Each candidate card displays the verified student photo alongside name, branch, and CGPA.
   - **CDC Shortlist Integration**: Surfaces pre-screened, university-approved candidates tagged with deterministic match scores and CDC approval badges.
   - Moving candidate to `Interview Scheduled` launches scheduler modal (date, time, mode, notes), updates pipeline, and sends automated candidate notifications.
 
@@ -1084,7 +1289,7 @@ All Next.js API endpoints reside in `src/app/api/` and output standard JSON resp
 - **File**: `src/views/company/Interviews.jsx`
 - **Access**: Role `company`
 - **Key Features**:
-  - Manage scheduled live video interviews across technical and HR rounds.
+  - Manage scheduled live video interviews across technical and HR rounds with candidate photo badges rendered in selection rosters and meeting tags.
   - **Universal Meeting Provider Configuration**: Select between native CareerOS WebRTC, Microsoft Teams, Google Meet, Zoom, or Custom URL with live URL format validation.
   - **Student Reschedule Request Review Desk**: Inspect candidate conflict reasons and proposed time slots with 1-click Accept or Decline.
   - 1-click launch into WebRTC `/interview-room/:id` with real-time status badges, join request alerts, and candidate evaluation summaries.
@@ -1350,9 +1555,47 @@ CAREER-OS incorporates a production-ready, transactional and queued email notifi
 7. **`scripts/migrations/phase5_email_system.mjs`**: Idempotent database schema adding `email_logs` and `users.email_preferences`.
 8. **`scripts/test-emails.mjs`**: 18-point verification test suite (`npm run email:test`) checking layout rendering, token validation, live delivery, deduplication, and PostgreSQL audit logging.
 
-### 9.3 Vercel Scheduled Cron Workers
-Configured via `vercel.json` and secured by `CRON_SECRET`:
-- **`/api/cron/send-emails`** (`*/10 * * * *`): Processes `queued` messages respecting daily free-tier limits and throttling chunks to prevent exceeding rate limits.
-- **`/api/cron/interview-reminders`** (`0 * * * *`): Scans scheduled interviews occurring in the next 24 hours and 1 hour, dispatching reminder notifications with `.ics` meeting room attachments.
-- **`/api/cron/certificate-expiry`** (`0 0 * * *`): Evaluates student certificates expiring within 30 days and notifies students to submit renewals.
-- **`/api/cron/university-digest`** (`30 2 * * *` / 8:00 AM IST): Compiles daily placement counts, open drives, and pending verification queues into an executive digest for university officers.
+### 9.3 Consolidated Master Cron Architecture
+To support both Vercel Hobby tier limitations (which strictly permit at most 1 daily cron job scheduled at `0 0 * * *`) and enterprise high-availability production clusters, all scheduled maintenance workflows are orchestrated through a single unified endpoint:
+
+- **Primary Cron Runner (`/api/cron/daily`)**: Scheduled daily at midnight (`0 0 * * *` in `vercel.json`).
+  Executes an atomic coordinated pipeline secured by `CRON_SECRET`:
+  1. **`/api/cron/send-emails`**: Flushes the queued transactional email pipeline and retries temporary delivery errors.
+  2. **`/api/cron/interview-reminders`**: Dispatches 24-hour and 1-hour interview reminder alerts with attached RFC 5545 `.ics` iCalendar invites.
+  3. **`/api/cron/certificate-expiry`**: Audits all student certifications and dispatches renewal notifications for credentials expiring within 30 days.
+  4. **`/api/cron/university-digest`**: Aggregates batch placement statistics, new drive applications, and pending profile audit queues into an executive briefing for placement coordinators.
+  5. **`/api/cron/certificate-reverify`**: Re-queries issuer endpoints for allowlisted credentials to detect unauthorized revocations or tampered links.
+
+---
+
+## 10. Platform Production Standards, Vercel Hobby Infrastructure & Custom Domain Setup
+
+### 10.1 Custom Domain & DNS Architecture (`career-os.in`)
+The production system is mapped to the custom domain `career-os.in` hosted across Vercel's global Edge network (`sin1` / `bom1` regions):
+- **DNS Host Records (Domain Registrar / GoDaddy Configuration)**:
+  - **Type A Record**: Host `@` $\to$ Points to `76.76.21.21` (TTL: `600 seconds`). Replaces default parking server IPs (`3.33.130.190`, `15.197.148.33`).
+  - **Type CNAME Record**: Host `www` $\to$ Points to `cname.vercel-dns.com` (TTL: `1 Hour`).
+- **SSL / TLS Certificate Provisioning**: Automatic Let's Encrypt / DigiCert wildcard SSL issued via Vercel edge routers with HTTP-to-HTTPS permanent redirects.
+- **Vercel Deployment Protection Toggle**: Disabled on Production domain to permit immediate, uninhibited access from mobile browsers (iOS Safari, Android Chrome, and WhatsApp in-app browser) without requiring a Vercel team SSO login.
+
+### 10.2 100% Database Storage Architecture (Zero Local Disk Writes)
+In standard serverless environments (e.g. Vercel lambdas), the local filesystem is ephemeral and read-only. CAREER-OS implements a strict zero-local-disk policy:
+- **Zero Local Filesystem Writes**: Deprecated all `fs.writeFileSync` operations in upload routes.
+- **PostgreSQL Binary Storage**:
+  - **Student Official Portraits**: Cropped to 400x400 JPEG data URIs (`data:image/jpeg;base64,...`) and stored in `students.avatar` and `users.avatar`.
+  - **Certificates**: Stored as base64 buffers in `certificates.file_data` with content type in `certificates.file_mime_type`. Streamed to authorized users via `/api/certificates/[id]/file`.
+  - **Internship Documents**: Stored with file size, original filename, and MIME type in `internship_documents` table. Streamed via `/api/students/[id]/internship-docs/[filename]`.
+
+### 10.3 75% Face Visibility Detection Specification
+To comply with official university placement records and corporate recruiter vetting, student profile pictures undergo real-time biometric framing checks:
+- **Interactive Viewport**: 1.0x to 3.0x zoom slider, pan drag controls, and reset framing.
+- **Facial Target Oval Guide**: Visual overlay guiding the student to position their head within the central 75% framing zone ("TOP OF HEAD", "CHIN LEVEL (75% TARGET)").
+- **Dual-Engine Face Analyzer**:
+  1. *Native FaceDetector API*: Chromium Shape Detection API (`new window.FaceDetector({ fastMode: true, maxDetectedFaces: 1 })`) calculating face bounding box height and area relative to portrait frame.
+  2. *Algorithmic Contrast & Luminance Scanner*: Fallback canvas scanner evaluating central skin-tone luminosity against boundary pixels and measuring horizontal contrast gradient transitions (eyebrow/eyes zone at 35–50% Y, nose bridge at 50–65% Y, lip contour at 65–80% Y).
+- **Threshold Enforcement**: Face visibility percentage must be $\ge 75\%$ to unlock the "Confirm & Save Photo" button.
+
+### 10.4 UI Governance: 100% SVG Iconography & Native In-App Modals
+- **Zero Raw Unicode Emojis**: To prevent platform-dependent rendering glitches across Android, iOS, Windows, and macOS, all raw Unicode emojis have been replaced with clean, scalable SVG vector icons from `lucide-react`.
+- **Zero Native Browser Popups**: Browser-native `window.confirm()` and `window.alert()` dialogs are completely eliminated in favor of clean in-app confirmation modals (`Modal.jsx`) and contextual alert banners, providing seamless keyboard and touch navigation on mobile and desktop devices.
+- **Typography Standards**: Strict adherence to clean typographic dashes (en dashes and standard hyphens), avoiding untranslated em-dash artifacts in minified bundles.
