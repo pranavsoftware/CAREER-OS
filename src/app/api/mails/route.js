@@ -1,6 +1,16 @@
 import { NextResponse } from 'next/server';
 import { query } from '@/lib/db';
 
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Methods': 'GET, POST, PATCH, OPTIONS',
+  'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+};
+
+export async function OPTIONS() {
+  return new NextResponse(null, { status: 204, headers: corsHeaders });
+}
+
 export async function GET() {
   try {
     const res = await query(`
@@ -10,10 +20,10 @@ export async function GET() {
       FROM mails
       ORDER BY received_at DESC
     `);
-    return NextResponse.json({ mails: res.rows });
+    return NextResponse.json({ mails: res.rows }, { headers: corsHeaders });
   } catch (error) {
     console.error('Mails GET API error:', error);
-    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
+    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500, headers: corsHeaders });
   }
 }
 
@@ -35,10 +45,10 @@ export async function POST(request) {
       m.processed ?? false, m.driveId || null
     ]);
 
-    return NextResponse.json({ mail: res.rows[0] });
+    return NextResponse.json({ mail: res.rows[0] }, { headers: corsHeaders });
   } catch (error) {
     console.error('Mails POST API error:', error);
-    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
+    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500, headers: corsHeaders });
   }
 }
 
@@ -56,9 +66,9 @@ export async function PATCH(request) {
         received_at AS "receivedAt", criteria, processed, drive_id AS "driveId"
     `, [processed ?? null, driveId ?? null, id]);
 
-    return NextResponse.json({ mail: res.rows[0] });
+    return NextResponse.json({ mail: res.rows[0] }, { headers: corsHeaders });
   } catch (error) {
     console.error('Mails PATCH API error:', error);
-    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
+    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500, headers: corsHeaders });
   }
 }

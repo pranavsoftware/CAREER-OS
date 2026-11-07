@@ -32,6 +32,49 @@ export default function RootLayout({ children }) {
   return (
     <html lang="en" data-scroll-behavior="smooth">
       <head>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              (function() {
+                function isIgnored(msg) {
+                  if (!msg) return false;
+                  var str = typeof msg === 'string' ? msg : (msg.message || String(msg));
+                  return (
+                    str.indexOf('Could not establish connection. Receiving end does not exist') !== -1 ||
+                    str.indexOf('The message port closed before a response was received') !== -1 ||
+                    str.indexOf('Extension context invalidated') !== -1
+                  );
+                }
+                var origError = console.error;
+                console.error = function() {
+                  for (var i = 0; i < arguments.length; i++) {
+                    if (isIgnored(arguments[i])) return;
+                  }
+                  return origError.apply(console, arguments);
+                };
+                var origWarn = console.warn;
+                console.warn = function() {
+                  for (var i = 0; i < arguments.length; i++) {
+                    if (isIgnored(arguments[i])) return;
+                  }
+                  return origWarn.apply(console, arguments);
+                };
+                window.addEventListener('unhandledrejection', function(event) {
+                  if (isIgnored(event.reason)) {
+                    event.preventDefault();
+                    event.stopImmediatePropagation();
+                  }
+                }, true);
+                window.addEventListener('error', function(event) {
+                  if (isIgnored(event.message) || isIgnored(event.error)) {
+                    event.preventDefault();
+                    event.stopImmediatePropagation();
+                  }
+                }, true);
+              })();
+            `
+          }}
+        />
         <link rel="manifest" href="/manifest.json" />
 
         {/* Viewport & Safe-Area for iPhone */}

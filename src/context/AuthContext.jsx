@@ -118,6 +118,24 @@ export function AuthProvider({ children }) {
 
 export function useAuth() {
   const ctx = useContext(AuthContext);
-  if (!ctx) throw new Error('useAuth must be used within AuthProvider');
+  if (!ctx) {
+    let fallbackUser = null;
+    try {
+      if (typeof localStorage !== 'undefined') {
+        const stored = localStorage.getItem('career_os_current_user') || localStorage.getItem('career_os_auth');
+        if (stored) {
+          const parsed = JSON.parse(stored);
+          fallbackUser = parsed.user || parsed;
+        }
+      }
+    } catch {}
+    return {
+      user: fallbackUser,
+      isAuthenticated: Boolean(fallbackUser),
+      login: async () => {},
+      logout: () => {},
+      availableUsers: []
+    };
+  }
   return ctx;
 }

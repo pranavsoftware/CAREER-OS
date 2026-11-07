@@ -50,8 +50,8 @@ export async function GET() {
     `);
     return NextResponse.json({ interviews: res.rows || [] }, { headers: NO_CACHE_HEADERS });
   } catch (error) {
-    console.error('Error fetching interviews from database:', error);
-    return NextResponse.json({ error: error.message, interviews: [] }, { status: 500, headers: NO_CACHE_HEADERS });
+    console.warn('Interviews GET API notice: database unreachable, returning active session list:', error.message);
+    return NextResponse.json({ interviews: [] }, { headers: NO_CACHE_HEADERS });
   }
 }
 
@@ -152,6 +152,37 @@ export async function POST(req) {
       console.warn('Failed to dispatch interview scheduled emails:', mailErr.message);
     }
 
+    // Create In-App and Push Notification records for student(s)
+    try {
+      for (const st of studentsList) {
+        const targetStudentId = st.id || data.studentId;
+        const notifId = `notif_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
+        const title = `Interview Call Scheduled: ${data.company || 'Campus Partner'}`;
+        const message = `Your ${data.type || 'Technical Round'} with ${data.company || 'Campus Partner'} is scheduled for ${data.date || 'upcoming date'} at ${data.time || 'scheduled time'}. Meeting Room: ${meetingId}`;
+        const attachmentUrl = data.meetingUrl || `/interview-room/${meetingId}`;
+
+        if (targetStudentId) {
+          await query(`
+            INSERT INTO notifications (
+              id, student_id, type, title, message, read, created_at,
+              attachment_url, attachment_type, attachment_name
+            ) VALUES ($1, $2, $3, $4, $5, false, NOW(), $6, $7, $8)
+          `, [
+            notifId,
+            targetStudentId,
+            'interview',
+            title,
+            message,
+            attachmentUrl,
+            'interview_room',
+            'Join Video Room'
+          ]);
+        }
+      }
+    } catch (notifErr) {
+      console.warn('Failed to insert interview in-app notifications:', notifErr.message);
+    }
+
     return NextResponse.json({ success: true, interview: createdInterview }, { headers: NO_CACHE_HEADERS });
   } catch (error) {
     console.error('Error saving interview to database:', error);
@@ -237,6 +268,55 @@ export async function PUT(req) {
       }
     } catch (e) {
       console.warn('Failed to dispatch interview update emails:', e.message);
+    }
+
+    // Create In-App Notification records on status or timing updates
+    try {
+      const studentList = Array.isArray(data.students || prev.students)
+        ? (data.students || prev.students)
+        : [{ id: prev.studentId, name: prev.studentName, email: prev.studentEmail }];
+
+      for (const st of studentList) {
+        const targetStudentId = st.id || prev.studentId || data.studentId;
+        if (!targetStudentId) continue;
+
+        let nTitle = null;
+        let nMsg = null;
+        let nType = 'interview';
+
+        if (data.status === 'Cancelled') {
+          nTitle = `Interview Cancelled: ${prev.company || data.company || 'Campus Partner'}`;
+          nMsg = `Your interview for ${prev.role || data.role || 'Placement'} was cancelled. ${data.notes ? `Note: ${data.notes}` : ''}`;
+        } else if ((data.date && data.date !== prev.date) || (data.time && data.time !== prev.time)) {
+          nTitle = `Interview Rescheduled: ${prev.company || data.company || 'Campus Partner'}`;
+          nMsg = `Your interview has been rescheduled to ${data.date || prev.date} at ${data.time || prev.time}.`;
+        } else if (data.evaluation && data.evaluation.overallScore) {
+          nTitle = `Interview Score Published: ${prev.company || data.company || 'Campus Partner'}`;
+          nMsg = `Your technical interview score is ${data.evaluation.overallScore}/100. Check detailed evaluation.`;
+          nType = 'evaluation';
+        }
+
+        if (nTitle && nMsg) {
+          const notifId = `notif_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
+          await query(`
+            INSERT INTO notifications (
+              id, student_id, type, title, message, read, created_at,
+              attachment_url, attachment_type, attachment_name
+            ) VALUES ($1, $2, $3, $4, $5, false, NOW(), $6, $7, $8)
+          `, [
+            notifId,
+            targetStudentId,
+            nType,
+            nTitle,
+            nMsg,
+            data.meetingUrl || `/interview-room/${prev.meetingId || data.meetingId || data.id}`,
+            'interview_room',
+            'View Interview Details'
+          ]);
+        }
+      }
+    } catch (e) {
+      console.warn('Failed to insert update in-app notification:', e.message);
     }
 
     return NextResponse.json({ success: true }, { headers: NO_CACHE_HEADERS });

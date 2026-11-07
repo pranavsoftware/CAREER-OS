@@ -15,6 +15,19 @@ if (!fs.existsSync(UPLOAD_DIR)) {
 // In-memory rate limiting map: studentId -> array of timestamps
 const uploadRateLimits = new Map();
 
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Methods': 'GET, POST, DELETE, OPTIONS',
+  'Access-Control-Allow-Headers': 'Content-Type, Authorization, x-user-role',
+};
+
+export async function OPTIONS() {
+  return new NextResponse(null, {
+    status: 204,
+    headers: corsHeaders,
+  });
+}
+
 function isRateLimited(studentId, maxPerHour = 10) {
   const now = Date.now();
   const windowMs = 60 * 60 * 1000;
@@ -55,10 +68,10 @@ export async function GET(request) {
     sql += ` ORDER BY created_at DESC, id ASC`;
 
     const res = await query(sql, [studentId]);
-    return NextResponse.json({ certificates: res.rows });
+    return NextResponse.json({ certificates: res.rows }, { headers: corsHeaders });
   } catch (error) {
     console.error('Certificates GET API error:', error);
-    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
+    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500, headers: corsHeaders });
   }
 }
 
@@ -153,13 +166,18 @@ export async function POST(request) {
       const initialRecord = insertRes.rows[0];
 
       // Run automated verification synchronously within budget (< 8s)
-      const verifyRes = await verifyCertificate({
-        certificateId: id,
-        fileBuffer: buffer,
-        mimeType,
-        typedUrl: verificationUrl,
-        actor: studentId,
-      });
+      let verifyRes = null;
+      try {
+        verifyRes = await verifyCertificate({
+          certificateId: id,
+          fileBuffer: buffer,
+          mimeType,
+          typedUrl: verificationUrl,
+          actor: studentId,
+        });
+      } catch (vErr) {
+        console.warn('verifyCertificate caught:', vErr);
+      }
 
       // Refetch final certificate status
       const updatedRes = await query(`
@@ -177,7 +195,7 @@ export async function POST(request) {
         success: true,
         certificate: updatedRes.rows[0] || initialRecord,
         verification: verifyRes,
-      });
+      }, { headers: corsHeaders });
     }
 
     // 2. JSON Fallback support
@@ -187,17 +205,20 @@ export async function POST(request) {
     if (isRateLimited(studentId, 10)) {
       return NextResponse.json(
         { error: 'Rate limit exceeded: Maximum 10 certificate uploads per hour.' },
-        { status: 429 }
+        { status: 429, headers: corsHeaders }
       );
     }
 
     const id = c.id || `cert_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;
+    const fileBase64 = c.fileData ? String(c.fileData).replace(/^data:[^;]+;base64,/, '') : null;
+    const fileMime = c.fileData && String(c.fileData).includes(';') ? String(c.fileData).split(';')[0].replace('data:', '') : null;
+
     const res = await query(`
       INSERT INTO certificates (
         id, student_id, title, issuer, issue_date, expiry_date, skills, status, 
         file_name, verified, verification_score, credential_id, verification_url, 
-        trust_level, review_status
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, false, 0, $10, $11, 'Unverified', 'Pending Review')
+        trust_level, review_status, file_data, file_mime_type
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, false, 0, $10, $11, 'Unverified', 'Pending Review', $12, $13)
       RETURNING 
         id, student_id AS "studentId", title, issuer, issue_date AS "issueDate",
         expiry_date AS "expiryDate", skills, status, file_name AS "fileName",
@@ -207,16 +228,22 @@ export async function POST(request) {
     `, [
       id, studentId, c.title, c.issuer, c.issueDate, c.expiryDate || null,
       JSON.stringify(c.skills || []), c.status || 'Valid', c.fileName || null,
-      c.credentialId || null, c.verificationUrl || null
+      c.credentialId || null, c.verificationUrl || null,
+      fileBase64, fileMime
     ]);
 
     const record = res.rows[0];
 
-    const verifyRes = await verifyCertificate({
-      certificateId: id,
-      typedUrl: c.verificationUrl || null,
-      actor: studentId,
-    });
+    let verifyRes = null;
+    try {
+      verifyRes = await verifyCertificate({
+        certificateId: id,
+        typedUrl: c.verificationUrl || null,
+        actor: studentId,
+      });
+    } catch (vErr) {
+      console.warn('verifyCertificate caught:', vErr);
+    }
 
     const updatedRes = await query(`
       SELECT 
@@ -233,10 +260,10 @@ export async function POST(request) {
       success: true,
       certificate: updatedRes.rows[0] || record,
       verification: verifyRes,
-    });
+    }, { headers: corsHeaders });
   } catch (error) {
     console.error('Certificates POST API error:', error);
-    return NextResponse.json({ error: 'Internal Server Error', details: error.message }, { status: 500 });
+    return NextResponse.json({ error: 'Internal Server Error', details: error.message }, { status: 500, headers: corsHeaders });
   }
 }
 
@@ -267,9 +294,9 @@ export async function DELETE(request) {
     await query('DELETE FROM certificates WHERE id = $1', [id]);
     await query('DELETE FROM certificate_audit WHERE certificate_id = $1', [id]);
 
-    return NextResponse.json({ success: true, studentId });
+    return NextResponse.json({ success: true, studentId }, { headers: corsHeaders });
   } catch (error) {
     console.error('Certificates DELETE API error:', error);
-    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
+    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500, headers: corsHeaders });
   }
 }

@@ -1,6 +1,16 @@
 import { NextResponse } from 'next/server';
 import { query } from '@/lib/db';
 
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+  'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+};
+
+export async function OPTIONS() {
+  return new NextResponse(null, { status: 204, headers: corsHeaders });
+}
+
 export async function GET(request) {
   try {
     const { searchParams } = new URL(request.url);
@@ -23,10 +33,10 @@ export async function GET(request) {
       roadmapProgress[key][row.stepId] = row.completed;
     }
 
-    return NextResponse.json({ roadmapProgress, rows: res.rows });
+    return NextResponse.json({ roadmapProgress, rows: res.rows }, { headers: corsHeaders });
   } catch (error) {
     console.error('Roadmap GET API error:', error);
-    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
+    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500, headers: corsHeaders });
   }
 }
 
@@ -44,9 +54,9 @@ export async function POST(request) {
       RETURNING student_id AS "studentId", role, step_id AS "stepId", completed
     `, [studentId, role, stepId, completed ?? true]);
 
-    return NextResponse.json({ progress: res.rows[0] });
+    return NextResponse.json({ progress: res.rows[0] }, { headers: corsHeaders });
   } catch (error) {
     console.error('Roadmap POST API error:', error);
-    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
+    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500, headers: corsHeaders });
   }
 }

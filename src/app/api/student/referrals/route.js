@@ -4,6 +4,16 @@ import { enforceRole } from '@/lib/rbac';
 
 export const dynamic = 'force-dynamic';
 
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+  'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+};
+
+export async function OPTIONS() {
+  return new NextResponse(null, { status: 204, headers: corsHeaders });
+}
+
 export async function GET(request) {
   try {
     const { searchParams } = new URL(request.url);
@@ -58,10 +68,10 @@ export async function GET(request) {
       ledger: ledgerRes.rows,
       recommendations: recsRes.rows,
       perks: redemptionPerks,
-    });
+    }, { headers: corsHeaders });
   } catch (error) {
     console.error('Student referrals API error:', error);
-    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
+    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500, headers: corsHeaders });
   }
 }
 
@@ -71,20 +81,20 @@ export async function POST(request) {
     const { action, studentId } = body;
 
     if (!studentId) {
-      return NextResponse.json({ error: 'Student ID required' }, { status: 400 });
+      return NextResponse.json({ error: 'Student ID required' }, { status: 400, headers: corsHeaders });
     }
 
     // Action 1: Invite a friend by email
     if (action === 'invite') {
       const { email, code } = body;
       if (!email || !email.includes('@')) {
-        return NextResponse.json({ error: 'Valid email address required' }, { status: 400 });
+        return NextResponse.json({ error: 'Valid email address required' }, { status: 400, headers: corsHeaders });
       }
 
       // Anti-abuse check: no self-referral
       const studentRes = await query('SELECT email FROM students WHERE id = $1', [studentId]);
       if (studentRes.rows[0]?.email?.toLowerCase() === email.toLowerCase()) {
-        return NextResponse.json({ error: 'Self-referral is not permitted by anti-abuse safeguards.' }, { status: 400 });
+        return NextResponse.json({ error: 'Self-referral is not permitted by anti-abuse safeguards.' }, { status: 400, headers: corsHeaders });
       }
 
       // Check monthly cap: max 10 invites per month
@@ -93,7 +103,7 @@ export async function POST(request) {
         WHERE referrer_id = $1 AND created_at > NOW() - INTERVAL '30 days'
       `, [studentId]);
       if (parseInt(countRes.rows[0]?.count || '0', 10) >= 10) {
-        return NextResponse.json({ error: 'Monthly referral invitation cap (10) reached.' }, { status: 400 });
+        return NextResponse.json({ error: 'Monthly referral invitation cap (10) reached.' }, { status: 400, headers: corsHeaders });
       }
 
       const id = `ref_${Date.now()}`;
@@ -102,14 +112,14 @@ export async function POST(request) {
         VALUES ($1, $2, $3, $4, 'Invited')
       `, [id, studentId, email, code || `REF-${studentId.toUpperCase()}`]);
 
-      return NextResponse.json({ success: true, message: `Invite dispatched to ${email}` });
+      return NextResponse.json({ success: true, message: `Invite dispatched to ${email}` }, { headers: corsHeaders });
     }
 
     // Action 2: Request Faculty Recommendation
     if (action === 'request_recommendation') {
       const { facultyName, role, message } = body;
       if (!facultyName) {
-        return NextResponse.json({ error: 'Faculty name is required' }, { status: 400 });
+        return NextResponse.json({ error: 'Faculty name is required' }, { status: 400, headers: corsHeaders });
       }
 
       const id = `rec_${Date.now()}`;
@@ -118,7 +128,7 @@ export async function POST(request) {
         VALUES ($1, $2, $3, $4, $5, 'Pending')
       `, [id, studentId, facultyName, role || 'Placement Coordinator', message || '']);
 
-      return NextResponse.json({ success: true, message: 'Recommendation request submitted to faculty.' });
+      return NextResponse.json({ success: true, message: 'Recommendation request submitted to faculty.' }, { headers: corsHeaders });
     }
 
     // Action 3: Redeem Points for Perk
@@ -132,7 +142,7 @@ export async function POST(request) {
       const currentBalance = Number(ledgerRes.rows[0]?.total || 0);
 
       if (currentBalance < pointsCost) {
-        return NextResponse.json({ error: `Insufficient points. You have ${currentBalance} points, but ${pointsCost} are required.` }, { status: 400 });
+        return NextResponse.json({ error: `Insufficient points. You have ${currentBalance} points, but ${pointsCost} are required.` }, { status: 400, headers: corsHeaders });
       }
 
       // Insert negative deduction in ledger
@@ -142,13 +152,13 @@ export async function POST(request) {
         VALUES ($1, $2, $3, $4, $5)
       `, [id, studentId, -Math.abs(pointsCost), `Redeemed: ${perkTitle}`, perkId]);
 
-      return NextResponse.json({ success: true, message: `Successfully redeemed "${perkTitle}"! Placement cell will contact you.` });
+      return NextResponse.json({ success: true, message: `Successfully redeemed "${perkTitle}"! Placement cell will contact you.` }, { headers: corsHeaders });
     }
 
-    return NextResponse.json({ error: 'Invalid action' }, { status: 400 });
+    return NextResponse.json({ error: 'Invalid action' }, { status: 400, headers: corsHeaders });
   } catch (error) {
     console.error('Referrals POST error:', error);
-    return NextResponse.json({ error: error.message || 'Internal Server Error' }, { status: 500 });
+    return NextResponse.json({ error: error.message || 'Internal Server Error' }, { status: 500, headers: corsHeaders });
   }
 }
 

@@ -12,7 +12,7 @@ import {
   Subtitles, AlertCircle, Sparkles, Lock,
   Heart, ThumbsUp, PartyPopper, Flame, Radio, UserPlus, Clock,
   Wifi, WifiOff, Activity, Signal, Zap, Gauge,
-  HelpCircle, CheckSquare, Code2, UserMinus, Tv, ListPlus, Play, RefreshCw
+  HelpCircle, CheckSquare, Code2, UserMinus, Tv, ListPlus, Play, RefreshCw, Mail
 } from 'lucide-react';
 
 const REACTION_TYPES = [
@@ -334,6 +334,13 @@ export default function InterviewRoom({ meetingId: meetingIdProp }) {
 
   // Google Meet Lobby (Pre-Join screen) vs In-Call Room state
   const [inLobby, setInLobby] = useState(true);
+  const [isMobile, setIsMobile] = useState(() => (typeof window !== 'undefined' ? window.innerWidth < 768 : false));
+
+  useEffect(() => {
+    const handleResize = () => setIsMobile(window.innerWidth < 768);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   // Google Meet Host Admission & Candidate Waiting State
   // For candidate/student: 'idle' | 'waiting' | 'admitted' | 'denied'
@@ -2168,17 +2175,28 @@ console.log(twoSum([2, 7, 11, 15], 9)); // Output: [0, 1]
     return (
       <div style={{ minHeight: '100vh', width: '100vw', background: '#202124', color: '#fff', display: 'flex', flexDirection: 'column', fontFamily: 'Roboto, system-ui, sans-serif' }}>
         {/* Top Minimal Header */}
-        <header style={{ height: 60, display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 32px', borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <div style={{ width: 34, height: 34, borderRadius: 8, background: '#1A73E8', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <VideoIcon size={20} color="#fff" />
+        <header
+          style={{
+            height: isMobile ? 56 : 60,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            padding: isMobile ? '0 14px' : '0 32px',
+            borderBottom: '1px solid rgba(255,255,255,0.08)',
+            position: 'relative',
+            zIndex: 10,
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: isMobile ? 8 : 10 }}>
+            <div style={{ width: 32, height: 32, borderRadius: 8, background: '#1A73E8', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+              <VideoIcon size={18} color="#fff" />
             </div>
-            <span style={{ fontSize: 18, fontWeight: 700, color: '#E8EAED', letterSpacing: '-0.3px' }}>
+            <span style={{ fontSize: isMobile ? 16 : 18, fontWeight: 700, color: '#E8EAED', letterSpacing: '-0.3px', whiteSpace: 'nowrap' }}>
               Career-OS Meet
             </span>
           </div>
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12, fontSize: 13, color: '#9AA0A6' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, color: '#9AA0A6' }}>
             {/* Live Network Status Indicator */}
             <button
               type="button"
@@ -2192,20 +2210,21 @@ console.log(twoSum([2, 7, 11, 15], 9)); // Output: [0, 1]
                   'rgba(52,168,83,0.4)'
                 }`,
                 borderRadius: 9999,
-                padding: '4px 12px',
+                padding: '3px 9px',
                 color: '#E8EAED',
                 display: 'flex',
                 alignItems: 'center',
-                gap: 7,
-                fontSize: 12,
+                gap: 5,
+                fontSize: 11,
                 fontWeight: 600,
                 cursor: 'pointer',
+                whiteSpace: 'nowrap',
               }}
             >
               <span
                 style={{
-                  width: 7,
-                  height: 7,
+                  width: 6,
+                  height: 6,
                   borderRadius: '50%',
                   background:
                     networkStats.status === 'poor' ? '#EA4335' :
@@ -2213,27 +2232,29 @@ console.log(twoSum([2, 7, 11, 15], 9)); // Output: [0, 1]
                     '#34A853',
                 }}
               />
-              <Activity size={13} color={networkStats.status === 'poor' ? '#EA4335' : networkStats.status === 'fair' ? '#F9AB00' : '#81C995'} />
-              <span>Network: {networkStats.status.toUpperCase()} ({networkStats.latency} ms)</span>
+              <Activity size={12} color={networkStats.status === 'poor' ? '#EA4335' : networkStats.status === 'fair' ? '#F9AB00' : '#81C995'} />
+              <span>{networkStats.latency} ms</span>
             </button>
 
-            <span style={{ background: 'rgba(255,255,255,0.08)', padding: '4px 10px', borderRadius: 9999 }}>
-              {currentInterview.company}
-            </span>
-            <span>{user?.email || 'authenticated.user@career-os.local'}</span>
+            {currentInterview?.company && (
+              <span style={{ background: 'rgba(255,255,255,0.08)', padding: '3px 9px', borderRadius: 9999, fontSize: 11, fontWeight: 600, whiteSpace: 'nowrap', maxWidth: 120, overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                {currentInterview.company}
+              </span>
+            )}
           </div>
         </header>
 
         {/* Lobby Center Content */}
-        <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px 32px' }}>
-          <div style={{ maxWidth: 1040, width: '100%', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(360px, 1fr))', gap: 48, alignItems: 'center' }}>
+        <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: isMobile ? '16px 14px 40px' : '24px 32px', overflowY: 'auto' }}>
+          <div style={{ maxWidth: 1040, width: '100%', display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(auto-fit, minmax(360px, 1fr))', gap: isMobile ? 20 : 48, alignItems: 'center' }}>
             
             {/* Left: Camera & Mic Preview Box */}
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16 }}>
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 14, width: '100%' }}>
               <div
                 style={{
                   width: '100%',
                   aspectRatio: '16/9',
+                  maxHeight: isMobile ? 230 : 'none',
                   background: '#3C4043',
                   borderRadius: 16,
                   overflow: 'hidden',
@@ -2260,13 +2281,13 @@ console.log(twoSum([2, 7, 11, 15], 9)); // Output: [0, 1]
                 )}
 
                 {/* Mic & Cam Quick Controls pill inside video */}
-                <div style={{ position: 'absolute', bottom: 16, left: '50%', transform: 'translateX(-50%)', display: 'flex', gap: 16 }}>
+                <div style={{ position: 'absolute', bottom: isMobile ? 10 : 16, left: '50%', transform: 'translateX(-50%)', display: 'flex', gap: isMobile ? 12 : 16 }}>
                   <button
                     type="button"
                     onClick={toggleMic}
                     style={{
-                      width: 48,
-                      height: 48,
+                      width: isMobile ? 42 : 48,
+                      height: isMobile ? 42 : 48,
                       borderRadius: '50%',
                       border: 'none',
                       background: micMuted ? '#EA4335' : 'rgba(32,33,36,0.85)',
@@ -2278,15 +2299,15 @@ console.log(twoSum([2, 7, 11, 15], 9)); // Output: [0, 1]
                       boxShadow: '0 2px 10px rgba(0,0,0,0.3)',
                     }}
                   >
-                    {micMuted ? <MicOff size={20} /> : <Mic size={20} />}
+                    {micMuted ? <MicOff size={isMobile ? 18 : 20} /> : <Mic size={isMobile ? 18 : 20} />}
                   </button>
 
                   <button
                     type="button"
                     onClick={toggleVideo}
                     style={{
-                      width: 48,
-                      height: 48,
+                      width: isMobile ? 42 : 48,
+                      height: isMobile ? 42 : 48,
                       borderRadius: '50%',
                       border: 'none',
                       background: videoOff ? '#EA4335' : 'rgba(32,33,36,0.85)',
@@ -2298,15 +2319,15 @@ console.log(twoSum([2, 7, 11, 15], 9)); // Output: [0, 1]
                       boxShadow: '0 2px 10px rgba(0,0,0,0.3)',
                     }}
                   >
-                    {videoOff ? <VideoOff size={20} /> : <VideoIcon size={20} />}
+                    {videoOff ? <VideoOff size={isMobile ? 18 : 20} /> : <VideoIcon size={isMobile ? 18 : 20} />}
                   </button>
                 </div>
               </div>
 
               {/* Hardware & Network diagnostics */}
               <div style={{ display: 'flex', flexDirection: 'column', gap: 8, width: '100%' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, color: '#34A853' }}>
-                  <ShieldCheck size={16} />
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12, color: '#34A853' }}>
+                  <ShieldCheck size={15} />
                   <span>Camera and microphone hardware ready</span>
                 </div>
                 <div
@@ -2315,47 +2336,48 @@ console.log(twoSum([2, 7, 11, 15], 9)); // Output: [0, 1]
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'space-between',
-                    padding: '8px 14px',
+                    padding: '8px 12px',
                     background: '#303134',
                     borderRadius: 10,
                     border: '1px solid #3C4043',
                     cursor: 'pointer',
+                    gap: 8,
                   }}
                   title="Click to check detailed network latency, packet loss, and connection diagnostics"
                 >
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12, color: '#E8EAED' }}>
-                    <Activity size={14} color={networkStats.status === 'poor' ? '#EA4335' : networkStats.status === 'fair' ? '#F9AB00' : '#34A853'} />
-                    <span>Network Health: <strong style={{ color: networkStats.status === 'poor' ? '#EA4335' : networkStats.status === 'fair' ? '#F9AB00' : '#34A853' }}>{networkStats.status.toUpperCase()}</strong> ({networkStats.latency} ms ping • {networkStats.packetLoss}% loss)</span>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 11, color: '#E8EAED', flexWrap: 'wrap' }}>
+                    <Activity size={13} color={networkStats.status === 'poor' ? '#EA4335' : networkStats.status === 'fair' ? '#F9AB00' : '#34A853'} />
+                    <span>Network Health: <strong style={{ color: networkStats.status === 'poor' ? '#EA4335' : networkStats.status === 'fair' ? '#F9AB00' : '#34A853' }}>{networkStats.status.toUpperCase()}</strong> ({networkStats.latency} ms ping)</span>
                   </div>
-                  <span style={{ fontSize: 11, color: '#8AB4F8', fontWeight: 600 }}>Check Speed</span>
+                  <span style={{ fontSize: 11, color: '#8AB4F8', fontWeight: 600, whiteSpace: 'nowrap' }}>Check Speed</span>
                 </div>
               </div>
             </div>
 
             {/* Right: Meeting Join Details & CTA */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: isMobile ? 14 : 20, width: '100%' }}>
               <div>
-                <div style={{ fontSize: 13, fontWeight: 700, color: '#8AB4F8', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 6 }}>
+                <div style={{ fontSize: 12, fontWeight: 700, color: '#8AB4F8', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 4 }}>
                   {currentInterview.company} • Live Video Interview
                 </div>
-                <h1 style={{ fontSize: 28, fontWeight: 800, color: '#E8EAED', margin: '0 0 8px', letterSpacing: '-0.02em' }}>
+                <h1 style={{ fontSize: isMobile ? 22 : 28, fontWeight: 800, color: '#E8EAED', margin: '0 0 6px', letterSpacing: '-0.02em' }}>
                   Ready to join?
                 </h1>
-                <p style={{ fontSize: 14, color: '#9AA0A6', margin: 0, lineHeight: 1.5 }}>
+                <p style={{ fontSize: isMobile ? 13 : 14, color: '#9AA0A6', margin: 0, lineHeight: 1.4 }}>
                   Round: <strong>{currentInterview.type}</strong> ({currentInterview.role})
                 </p>
               </div>
 
               {/* Role badge */}
-              <div style={{ background: '#303134', border: '1px solid #3C4043', borderRadius: 12, padding: '14px 18px', display: 'flex', alignItems: 'center', gap: 14 }}>
-                <div style={{ width: 44, height: 44, borderRadius: '50%', background: '#1A73E8', color: '#fff', fontSize: 18, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <div style={{ background: '#303134', border: '1px solid #3C4043', borderRadius: 12, padding: isMobile ? '10px 14px' : '14px 18px', display: 'flex', alignItems: 'center', gap: 12 }}>
+                <div style={{ width: 38, height: 38, borderRadius: '50%', background: '#1A73E8', color: '#fff', fontSize: 16, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                   {myName?.charAt(0) || 'U'}
                 </div>
                 <div>
-                  <div style={{ fontSize: 14, fontWeight: 700, color: '#E8EAED' }}>
+                  <div style={{ fontSize: 13, fontWeight: 700, color: '#E8EAED' }}>
                     Joining as {myName}
                   </div>
-                  <div style={{ fontSize: 12, color: '#9AA0A6' }}>
+                  <div style={{ fontSize: 11, color: '#9AA0A6' }}>
                     {isRecruiter ? 'Interviewer / Meeting Host' : 'Candidate Participant'}
                   </div>
                 </div>
@@ -2447,7 +2469,8 @@ console.log(twoSum([2, 7, 11, 15], 9)); // Output: [0, 1]
                           type="button"
                           onClick={handleAskToJoin}
                           style={{
-                            padding: '12px 36px',
+                            width: isMobile ? '100%' : 'auto',
+                            padding: isMobile ? '13px 20px' : '12px 36px',
                             borderRadius: 9999,
                             border: 'none',
                             background: '#1A73E8',
@@ -2458,6 +2481,7 @@ console.log(twoSum([2, 7, 11, 15], 9)); // Output: [0, 1]
                             boxShadow: '0 4px 16px rgba(26,115,232,0.4)',
                             display: 'inline-flex',
                             alignItems: 'center',
+                            justifyContent: 'center',
                             gap: 8,
                             transition: 'background 0.2s ease',
                           }}
@@ -3449,13 +3473,18 @@ console.log(twoSum([2, 7, 11, 15], 9)); // Output: [0, 1]
         {activeSidebar && (
           <aside
             style={{
-              width: 380,
+              width: isMobile ? '100%' : 380,
+              maxWidth: '100%',
+              position: isMobile ? 'absolute' : 'relative',
+              top: 0,
+              bottom: 0,
+              right: 0,
               background: '#282A2D',
-              borderLeft: '1px solid #3C4043',
+              borderLeft: isMobile ? 'none' : '1px solid #3C4043',
               display: 'flex',
               flexDirection: 'column',
               boxShadow: '-4px 0 24px rgba(0,0,0,0.4)',
-              zIndex: 50,
+              zIndex: 60,
             }}
           >
             {/* Drawer Header */}
@@ -3495,6 +3524,12 @@ console.log(twoSum([2, 7, 11, 15], 9)); // Output: [0, 1]
                   <>
                     <Award size={18} color="#EA4335" />
                     <span>Candidate Evaluation Scorecard</span>
+                  </>
+                )}
+                {activeSidebar === 'mail' && (
+                  <>
+                    <Mail size={18} color="#EA4335" />
+                    <span>Placement Notices & Mail</span>
                   </>
                 )}
               </div>
@@ -3944,6 +3979,44 @@ console.log(twoSum([2, 7, 11, 15], 9)); // Output: [0, 1]
                       </button>
                     </div>
                   )}
+                </div>
+              )}
+
+              {/* 7. PLACEMENT NOTICES & IN-CALL MAIL */}
+              {activeSidebar === 'mail' && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+                  <div>
+                    <div style={{ fontSize: 14, fontWeight: 700, color: '#E8EAED' }}>Placement Notices & In-Call Mail</div>
+                    <div style={{ fontSize: 12, color: '#9AA0A6', marginTop: 2 }}>
+                      Official campus drive briefing, company requirements, and circular updates.
+                    </div>
+                  </div>
+
+                  <div style={{ background: '#303134', border: '1px solid #3C4043', borderRadius: 10, padding: 12 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
+                      <span style={{ fontSize: 12, fontWeight: 700, color: '#8AB4F8' }}>{currentInterview.company} Notice</span>
+                      <span style={{ fontSize: 10, background: '#1A73E8', color: '#fff', padding: '2px 8px', borderRadius: 9999 }}>Active Round</span>
+                    </div>
+                    <p style={{ fontSize: 12, color: '#BDC1C6', margin: 0, lineHeight: 1.5 }}>
+                      Official interview round for {currentInterview.role}. Candidate will be assessed on core algorithms, system design trade-offs, and communication.
+                    </p>
+                  </div>
+
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                    <div style={{ fontSize: 12, fontWeight: 700, color: '#E8EAED' }}>Send Quick Follow-up Note to Cell</div>
+                    <textarea
+                      rows={3}
+                      placeholder="Type a note or message to be sent to the Placement Cell / Recruiter inbox..."
+                      style={{ width: '100%', background: '#303134', color: '#fff', border: '1px solid #5F6368', padding: '8px 10px', borderRadius: 6, fontSize: 12, outline: 'none' }}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => alert('Message delivered to Placement Cell dispatch.')}
+                      style={{ padding: '8px 14px', borderRadius: 6, border: 'none', background: '#1A73E8', color: '#fff', fontSize: 12, fontWeight: 700, cursor: 'pointer', alignSelf: 'flex-start' }}
+                    >
+                      Dispatch Note
+                    </button>
+                  </div>
                 </div>
               )}
 
@@ -4539,17 +4612,21 @@ console.log(twoSum([2, 7, 11, 15], 9)); // Output: [0, 1]
       </div>
 
       {/* ─── BOTTOM CONTROL BAR (GOOGLE MEET STYLE) ─── */}
-      <footer style={{ height: 80, background: '#202124', borderTop: '1px solid rgba(255,255,255,0.08)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 24px', position: 'relative' }}>
+      <footer style={{ height: isMobile ? 68 : 80, background: '#202124', borderTop: '1px solid rgba(255,255,255,0.08)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: isMobile ? '0 10px' : '0 24px', position: 'relative', zIndex: 50 }}>
         
         {/* Left: Meeting Time, ID & Real-time Network Indicator */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-          <div style={{ fontSize: 14, fontWeight: 600, color: '#E8EAED' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: isMobile ? 8 : 14 }}>
+          <div style={{ fontSize: isMobile ? 12 : 14, fontWeight: 700, color: '#E8EAED', whiteSpace: 'nowrap' }}>
             {formatTime(callDuration)}
           </div>
-          <div style={{ height: 16, width: 1, background: '#5F6368' }} />
-          <div style={{ fontSize: 13, color: '#9AA0A6' }}>
-            {meetingId}
-          </div>
+          {!isMobile && (
+            <>
+              <div style={{ height: 16, width: 1, background: '#5F6368' }} />
+              <div style={{ fontSize: 13, color: '#9AA0A6' }}>
+                {meetingId}
+              </div>
+            </>
+          )}
           <div style={{ height: 16, width: 1, background: '#5F6368' }} />
           {/* Network Quality Pill */}
           <button
@@ -4564,15 +4641,16 @@ console.log(twoSum([2, 7, 11, 15], 9)); // Output: [0, 1]
                 'rgba(52,168,83,0.35)'
               }`,
               borderRadius: 9999,
-              padding: '4px 10px',
+              padding: isMobile ? '3px 7px' : '4px 10px',
               color: '#E8EAED',
               display: 'flex',
               alignItems: 'center',
-              gap: 6,
+              gap: 5,
               fontSize: 11,
               fontWeight: 600,
               cursor: 'pointer',
               transition: 'all 0.2s ease',
+              whiteSpace: 'nowrap',
             }}
           >
             <span
@@ -4587,20 +4665,20 @@ console.log(twoSum([2, 7, 11, 15], 9)); // Output: [0, 1]
               }}
             />
             <Activity size={12} color={networkStats.status === 'poor' ? '#EA4335' : networkStats.status === 'fair' ? '#F9AB00' : '#81C995'} />
-            <span>{networkStats.latency} ms ({networkStats.status.toUpperCase()})</span>
+            <span>{isMobile ? `${networkStats.latency}ms` : `${networkStats.latency} ms (${networkStats.status.toUpperCase()})`}</span>
           </button>
         </div>
 
         {/* Center: Essential Call Controls */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: isMobile ? 6 : 12 }}>
           {/* Mic */}
           <button
             type="button"
             onClick={toggleMic}
             title={micMuted ? 'Turn on microphone' : 'Turn off microphone'}
             style={{
-              width: 44,
-              height: 44,
+              width: isMobile ? 38 : 44,
+              height: isMobile ? 38 : 44,
               borderRadius: '50%',
               border: 'none',
               background: micMuted ? '#EA4335' : '#3C4043',
@@ -4611,7 +4689,7 @@ console.log(twoSum([2, 7, 11, 15], 9)); // Output: [0, 1]
               justifyContent: 'center',
             }}
           >
-            {micMuted ? <MicOff size={18} /> : <Mic size={18} />}
+            {micMuted ? <MicOff size={isMobile ? 16 : 18} /> : <Mic size={isMobile ? 16 : 18} />}
           </button>
 
           {/* Camera */}
@@ -4620,8 +4698,8 @@ console.log(twoSum([2, 7, 11, 15], 9)); // Output: [0, 1]
             onClick={toggleVideo}
             title={videoOff ? 'Turn on camera' : 'Turn off camera'}
             style={{
-              width: 44,
-              height: 44,
+              width: isMobile ? 38 : 44,
+              height: isMobile ? 38 : 44,
               borderRadius: '50%',
               border: 'none',
               background: videoOff ? '#EA4335' : '#3C4043',
@@ -4632,7 +4710,7 @@ console.log(twoSum([2, 7, 11, 15], 9)); // Output: [0, 1]
               justifyContent: 'center',
             }}
           >
-            {videoOff ? <VideoOff size={18} /> : <VideoIcon size={18} />}
+            {videoOff ? <VideoOff size={isMobile ? 16 : 18} /> : <VideoIcon size={isMobile ? 16 : 18} />}
           </button>
 
           {/* Reactions */}
@@ -4752,8 +4830,8 @@ console.log(twoSum([2, 7, 11, 15], 9)); // Output: [0, 1]
             onClick={handleEndCall}
             title="Leave call"
             style={{
-              height: 44,
-              padding: '0 20px',
+              height: isMobile ? 38 : 44,
+              padding: isMobile ? '0 12px' : '0 20px',
               borderRadius: 24,
               border: 'none',
               background: '#EA4335',
@@ -4762,18 +4840,18 @@ console.log(twoSum([2, 7, 11, 15], 9)); // Output: [0, 1]
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              gap: 8,
+              gap: isMobile ? 4 : 8,
               fontWeight: 700,
-              fontSize: 13,
+              fontSize: isMobile ? 12 : 13,
             }}
           >
-            <PhoneOff size={18} />
+            <PhoneOff size={isMobile ? 16 : 18} />
             <span>Leave</span>
           </button>
         </div>
 
         {/* Right: Drawer toggles */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: isMobile ? 4 : 10 }}>
           {/* Info */}
           <button
             type="button"
@@ -4845,6 +4923,16 @@ console.log(twoSum([2, 7, 11, 15], 9)); // Output: [0, 1]
             style={{ background: activeSidebar === 'code' ? '#1A73E8' : 'none', border: 'none', color: '#fff', width: 40, height: 40, borderRadius: '50%', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
           >
             <FileCode size={18} />
+          </button>
+
+          {/* Mail & Placement Circulars */}
+          <button
+            type="button"
+            onClick={() => setActiveSidebar(activeSidebar === 'mail' ? null : 'mail')}
+            title="Placement Circulars & Mail"
+            style={{ background: activeSidebar === 'mail' ? '#1A73E8' : 'none', border: 'none', color: '#fff', width: 40, height: 40, borderRadius: '50%', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+          >
+            <Mail size={18} />
           </button>
 
           {/* Network Health Check Telemetry */}

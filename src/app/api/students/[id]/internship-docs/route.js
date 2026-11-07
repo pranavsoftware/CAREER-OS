@@ -1,6 +1,39 @@
 import { NextResponse } from 'next/server';
 import { query } from '@/lib/db.js';
 
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+  'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Requested-With',
+};
+
+export async function OPTIONS() {
+  return new NextResponse(null, { status: 204, headers: corsHeaders });
+}
+
+export async function GET(request, { params }) {
+  try {
+    const { id: studentId } = await params;
+    const res = await query(`
+      SELECT id, student_id AS "studentId", file_name AS "fileName", original_name AS "originalName",
+             doc_type AS "docType", mime_type AS "mimeType", file_size AS "size", created_at AS "uploadedAt"
+      FROM internship_documents
+      WHERE student_id = $1
+      ORDER BY created_at DESC
+    `, [studentId]);
+
+    const docs = (res.rows || []).map((row) => ({
+      ...row,
+      url: `/api/students/${studentId}/internship-docs/${row.fileName}`
+    }));
+
+    return NextResponse.json({ success: true, documents: docs }, { headers: corsHeaders });
+  } catch (error) {
+    console.error('Internship document list error:', error);
+    return NextResponse.json({ success: true, documents: [] }, { headers: corsHeaders });
+  }
+}
+
 export async function POST(request, { params }) {
   try {
     const { id: studentId } = await params;
@@ -9,7 +42,7 @@ export async function POST(request, { params }) {
     const docType = formData.get('docType') || 'general';
 
     if (!file) {
-      return NextResponse.json({ error: 'No file provided' }, { status: 400 });
+      return NextResponse.json({ error: 'No file provided' }, { status: 400, headers: corsHeaders });
     }
 
     const arrayBuffer = await file.arrayBuffer();
@@ -17,7 +50,7 @@ export async function POST(request, { params }) {
 
     // Validate max size: 10 MB
     if (buffer.length > 10 * 1024 * 1024) {
-      return NextResponse.json({ error: 'File size exceeds maximum allowed 10 MB limit' }, { status: 400 });
+      return NextResponse.json({ error: 'File size exceeds maximum allowed 10 MB limit' }, { status: 400, headers: corsHeaders });
     }
 
     // Magic bytes check: PDF, PNG, JPEG
@@ -28,7 +61,7 @@ export async function POST(request, { params }) {
     if (!isPng && !isJpeg && !isPdf) {
       return NextResponse.json(
         { error: 'Invalid file format: Only genuine PDF, PNG, or JPG/JPEG documents are accepted' },
-        { status: 400 }
+        { status: 400, headers: corsHeaders }
       );
     }
 
@@ -62,9 +95,9 @@ export async function POST(request, { params }) {
         mimeType,
         uploadedAt: new Date().toISOString(),
       },
-    });
+    }, { headers: corsHeaders });
   } catch (error) {
     console.error('Internship document upload error:', error);
-    return NextResponse.json({ error: error.message || 'Internal Server Error' }, { status: 500 });
+    return NextResponse.json({ error: error.message || 'Internal Server Error' }, { status: 500, headers: corsHeaders });
   }
 }

@@ -309,6 +309,27 @@ export default function CompanyInterviews() {
     };
 
     dispatch({ type: 'SCHEDULE_INTERVIEW', payload: newInterview });
+
+    // Send immediate in-app and push notification record to backend for each selected student
+    selectedStudents.forEach(st => {
+      const targetId = st.id || st.studentId;
+      if (targetId) {
+        fetch('/api/notifications', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            studentId: targetId,
+            type: 'interview',
+            title: `Interview Call Scheduled: ${myCompany}`,
+            message: `Your ${formData.type || 'Technical Round'} with ${myCompany} is scheduled for ${formData.date} at ${formData.time}. Meeting Room: ${meetingId}`,
+            attachmentUrl: `/interview-room/${meetingId}`,
+            attachmentType: 'interview_room',
+            attachmentName: 'Join Video Room',
+            read: false,
+          }),
+        }).catch(() => {});
+      }
+    });
     handleCopyLink(instantId);
     setInlineMsg({
       type: 'success',
@@ -400,6 +421,27 @@ export default function CompanyInterviews() {
     };
 
     dispatch({ type: 'SCHEDULE_INTERVIEW', payload: newInterview });
+
+    // Send immediate in-app and push notification record to backend for each selected student
+    selectedStudents.forEach(st => {
+      const targetId = st.id || st.studentId;
+      if (targetId) {
+        fetch('/api/notifications', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            studentId: targetId,
+            type: 'interview',
+            title: `Interview Call Scheduled: ${myCompany}`,
+            message: `Your ${formData.type || 'Technical Round'} with ${myCompany} is scheduled for ${formData.date} at ${formData.time}. Meeting Room: ${meetingId}`,
+            attachmentUrl: `/interview-room/${meetingId}`,
+            attachmentType: 'interview_room',
+            attachmentName: 'Join Video Room',
+            read: false,
+          }),
+        }).catch(() => {});
+      }
+    });
 
     // Update student recruitment pipeline stage for all selected candidates
     if (targetJob) {
